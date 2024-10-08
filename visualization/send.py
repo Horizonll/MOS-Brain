@@ -53,4 +53,4 @@ while True:
     robot_data["orientation"] = int(np.clip(robot_data["orientation"], -180, 180))
     send_robot_data(robot_data)
     # print(robot_data)
-    time.sleep(0.1)
+    time.sleep(0.5)
