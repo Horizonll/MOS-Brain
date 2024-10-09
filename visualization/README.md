@@ -8,7 +8,7 @@
 
 ```shell
 python server.py
-python -m http.server 8080 --bind 0.0.0.0
+python -m http.server 8080 --bind 0.0.0.0 # 在index.html所在目录
 ```
 
 浏览器打开

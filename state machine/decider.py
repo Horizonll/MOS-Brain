@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# coding=UTF-8
 
 import rospy
 from std_msgs.msg import Bool
@@ -8,8 +7,8 @@ from sensor_msgs.msg import JointState
 from decision_subscriber import Decision_Pos, Decision_Vision, Decision_Motion
 from receiver import Receiver
 from utils import config
-import threading
 
+import threading
 from transitions import Machine
 import time
 import numpy as np
@@ -40,7 +39,7 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision):
         self.speed_controller(0, 0, 0)
         time.sleep(sleep_time)
 
-    def kick_ball(self):
+    def kick(self):
         self.speed_controller(0, 0, 0)
         time.sleep(1)
         self.head_set(head=0.1, neck=0)
@@ -68,11 +67,6 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision):
         print("Adjusting position")
         self.adjust_position_state_machine = AdjustPositionStateMachine(self)
         self.adjust_position_state_machine.run()
-
-    def kick(self):
-        print("Kicking the ball")
-        self.kick_state_machine = KickStateMachine(self)
-        self.kick_state_machine.run()
 
     def no_ball(self):
         return not self.ifBall
@@ -400,29 +394,6 @@ class AdjustPositionStateMachine:
     def good_fb(self):
         self.agent.ready_to_kick = 420 <= self.agent.ball_y
         return 420 <= self.agent.ball_y
-
-
-class KickStateMachine:
-    def __init__(self, agent: Agent):
-        self.agent = agent
-        self.states = ["kick", "kicked"]
-        self.transitions = [
-            {
-                "trigger": "kick",
-                "source": "kick",
-                "dest": "kicked",
-            }
-        ]
-        self.machine = Machine(
-            model=self,
-            states=self.states,
-            initial="kick",
-            transitions=self.transitions,
-        )
-
-    def run(self):
-        print("Kicking the ball...")
-        self.agent.kick_ball()
 
 
 def main():

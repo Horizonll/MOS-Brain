@@ -107,7 +107,7 @@ function drawRobots(ctx, robots) {
       num++;
     }
   });
-  if (num > 0) {
+  if (num) {
     ballx /= num;
     bally /= num;
     drawBall(ctx, ballx, bally);
