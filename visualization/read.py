@@ -6,11 +6,19 @@ from config import *
 
 
 def process_data(received_data):
+    """
+    处理接收到的数据，打印每个机器人的时间戳。
+    :param received_data: 接收到的包含机器人数据的字典
+    """
     for robot in received_data["robots"]:
         print(robot["timestamp"])
 
 
 async def websocket_client():
+    """
+    异步函数，用于实现WebSocket客户端。
+    客户端连接到指定的WebSocket服务器，接收数据并在新线程中处理数据。
+    """
     uri = f"ws://{IP}:8001"
     with ThreadPoolExecutor() as executor:
         while True:

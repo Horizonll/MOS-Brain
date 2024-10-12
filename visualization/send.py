@@ -5,6 +5,7 @@ import random
 import argparse
 import logging
 import numpy as np
+from config import *
 
 logging.basicConfig(level=logging.INFO)
 
@@ -12,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 def send_robot_data(robot_data):
     try:
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.connect(("localhost", 8002))
+        client_socket.connect((IP, 8002))
         client_socket.sendall(json.dumps(robot_data).encode("utf-8"))
     except Exception as e:
         logging.error(f"Error in send_robot_data: {e}")
