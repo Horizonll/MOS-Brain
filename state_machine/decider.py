@@ -31,6 +31,7 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision):
         self.state_machine = StateMachine(self)
         self.ifBall = False
         self.ready_to_kick = False
+        self.t_no_ball = 0
 
     def loop(self):
         return not rospy.is_shutdown()
@@ -69,9 +70,13 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision):
         self.adjust_position_state_machine.run()
 
     def no_ball(self):
-        return not self.ifBall
+        if self.ifBall:
+            self.t_no_ball = time.time()
+        return time.time() - self.t_no_ball > 5
 
     def ball_in_sight(self):
+        if self.ifBall:
+            self.t_no_ball = time.time()
         return self.ifBall
 
     def close_to_ball(self):
