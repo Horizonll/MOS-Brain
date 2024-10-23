@@ -270,7 +270,6 @@ class ChaseBallStateMachine:
                 )
 
             elif abs(self.cam_neck) <= ang:
-                self.motionState = "Forward"
                 self.speed_controller(
                     config.walk_x_vel, 0, 2.5 * self.cam_neck * config.walk_theta_vel
                 )
