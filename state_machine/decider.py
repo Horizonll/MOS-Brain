@@ -80,6 +80,11 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
         self.find_ball_state_machine = FindBallStateMachine(self)
         self.find_ball_state_machine.run()
 
+    def cannot_find_ball(self):
+        print("Not finding the ball")
+        self.cannot_find_ball_state_machine = CanNotFindBallStateMachine(self)
+        self.cannot_find_ball_state_machine.run()
+
     def chase_ball(self):
         print("Chasing the ball")
         self.chase_ball_state_machine = ChaseBallStateMachine(self)
@@ -123,6 +128,7 @@ class StateMachine:
         self.states = [
             "go_back_to_field",
             "find_ball",
+            "cannot_find_ball",
             "chase_ball",
             "adjust_position",
             "kick",
@@ -161,6 +167,11 @@ class StateMachine:
                 "source": "kick",
                 "dest": "find_ball",
             },
+            {
+                "trigger": "run",
+                "source": "cannot_find_ball",
+                "dest": "find_ball",
+            },
         ]
         self.machine = Machine(
             model=model,
@@ -174,6 +185,9 @@ class StateMachine:
 
     def find_ball(self):
         self.machine.model.find_ball()
+
+    def cannot_find_ball(self):
+        self.machine.model.cannot_find_ball() 
 
     def chase_ball(self):
         self.machine.model.chase_ball()
@@ -642,6 +656,37 @@ class AdjustPositionStateMachine:
     def good_fb(self):
         self.agent.ready_to_kick = 420 <= self.agent.ball_y
         return 420 <= self.agent.ball_y
+
+
+class CanNotFindBallStateMachine:
+    def __init__(self, agent: Agent):
+        self.agent = agent
+        self.states = ["cannot_find_ball","going_back_to_field","ball_in_sight"]
+        self.transitions = [
+            {
+                "trigger": "going_back_to_field",
+                "source": "cannot_find_ball",
+                "dest": "ball_in_sight",
+            },
+        ]
+        self.machine = Machine(
+            model=self,
+            states=self.states,
+            initial="cannot_find_ball",
+            transitions=self.transitions,
+        )
+        self.lock = threading.Lock()
+
+    def cannot_find_ball(self):
+        return not self.agent.ball_in_sight()
+
+    def go_back_to_field(self):
+        self.agent.go_back_to_field(self.agent.field_aim_x, self.agent.field_aim_y)
+
+    def run(self):
+        while self.state != "ball_in_sight":
+            print("Cannot find the ball. Going back to the field...")
+            self.machine.model.trigger("going_back_to_field")
 
 
 class DribbleStateMachine:
