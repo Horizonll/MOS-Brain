@@ -31,7 +31,7 @@ robot_data = {
     "y": 0,
     "ballx": 0,
     "bally": 0,
-    "orientation": 0,
+    "yaw": 0,
     "info": "moving to target",
 }
 

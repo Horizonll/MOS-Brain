@@ -9,6 +9,10 @@ import math
 from subscriber import *
 from receiver import Receiver
 from config import *
+import socket
+import json
+import asyncio
+import websockets
 
 
 class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
@@ -24,29 +28,89 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
         self.receiver = Receiver(
             team=team, player=player, goal_keeper=goal_keeper, debug=rec_debug
         )
-
-        self._state = None
-        self.state_machine = StateMachine(self)
+        self.info = self.command = "stop"
         self.ready_to_kick = False
         self.t_no_ball = 0
         self.is_going_back_to_field = False
         self.go_back_to_field_dist = None
         self.go_back_to_field_dir = None
         self.go_back_to_field_yaw_bias = None
+        send_thread = threading.Thread(target=self.send_loop)
+        send_thread.daemon = True
+        send_thread.start()
+        websocket_thread = threading.Thread(
+            target=lambda: asyncio.run(self.websocket_client())
+        )
+        websocket_thread.daemon = True
+        websocket_thread.start()
+
+    def send_loop(self):
+        while True:
+            try:
+                robot_data = {
+                    "id": self.id,
+                    "x": self.pos_x,
+                    "y": self.pos_y,
+                    "ballx": self.ball_x_in_map,
+                    "bally": self.ball_y_in_map,
+                    "yaw": self.pos_yaw,
+                    "info": self.info,
+                }
+                if not self.ifBall:
+                    robot_data["ballx"] = robot_data["bally"] = None
+                self.send_robot_data(robot_data)
+                time.sleep(0.5)
+            except Exception as e:
+                print(f"Error in send: {e}")
+
+    def send_robot_data(self, robot_data):
+        try:
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.connect((self.IP, 8002))
+            client_socket.sendall(json.dumps(robot_data).encode("utf-8"))
+        except Exception as e:
+            print(f"Error in send_robot_data: {e}")
+        finally:
+            client_socket.close()
+
+    async def websocket_client(self):
+        uri = f"ws://{self.IP}:8001"
+        while True:
+            try:
+                async with websockets.connect(uri) as websocket:
+                    while True:
+                        data = await websocket.recv()
+                        try:
+                            received_data = json.loads(data)
+                            robot = next(
+                                (
+                                    r
+                                    for r in received_data["robots"]
+                                    if r["id"] == self.id
+                                ),
+                                None,
+                            )
+                            if robot:
+                                self.command = robot["info"]
+                            if not self.ifBall:
+                                self.ball_x_in_map, self.ball_y_in_map = (
+                                    received_data["ball"]["x"],
+                                    received_data["ball"]["y"],
+                                )
+                        except json.JSONDecodeError as e:
+                            print(f"JSON decode error: {e}")
+            except websockets.ConnectionClosed as e:
+                print(f"Connection closed: {e}")
+            except ConnectionRefusedError as e:
+                print(f"Connection refused: {e}. Retrying")
+            except Exception as e:
+                print(f"Error: {e}")
 
     def loop(self):
-        return self.receiver.game_state != "STATE_SET"
-
-    def stop(self, sleep_time):
-        self.speed_controller(0, 0, 0)
-        time.sleep(sleep_time)
-
-    def kick(self):
-        self.speed_controller(0, 0, 0)
-        self.head_set(head=0.1, neck=0)
-        time.sleep(1)
-        self.doKick()
-        time.sleep(2)
+        return (
+            self.receiver.game_state != "STATE_SET"
+            and self.receiver.game_state != "STATE_READY"
+        )
 
     def speed_controller(self, x, y, theta):
         move_cmd = Twist()
@@ -67,8 +131,17 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
             )
         )
 
+    def stop(self, sleep_time):
+        self.speed_controller(0, 0, 0)
+        time.sleep(sleep_time)
+
+    def kick(self):
+        print("kick")
+        self.kick_state_machine = KickStateMachine(self)
+        self.kick_state_machine.run()
+
     def go_back_to_field(self, aim_x, aim_y, min_dist=300):
-        print("Going back to field")
+        print("go back to field")
         self.head_set(0.05, 0)
         go_back_to_field_machine = GoBackToFieldStateMachine(
             self, aim_x, aim_y, min_dist
@@ -76,29 +149,19 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
         go_back_to_field_machine.run()
 
     def find_ball(self):
-        print("Looking for the ball")
+        print("find ball")
         self.find_ball_state_machine = FindBallStateMachine(self)
         self.find_ball_state_machine.run()
 
-    def cannot_find_ball(self):
-        print("Not finding the ball")
-        self.cannot_find_ball_state_machine = CanNotFindBallStateMachine(self)
-        self.cannot_find_ball_state_machine.run()
-
     def chase_ball(self):
-        print("Chasing the ball")
+        print("chase ball")
         self.chase_ball_state_machine = ChaseBallStateMachine(self)
         self.chase_ball_state_machine.run()
 
-    def adjust_position(self):
-        print("Adjusting position")
-        self.adjust_position_state_machine = AdjustPositionStateMachine(self)
-        self.adjust_position_state_machine.run()
-
-    def no_ball(self):
-        if self.ifBall:
-            self.t_no_ball = time.time()
-        return time.time() - self.t_no_ball > 5
+    def dribble(self):
+        print("dribble")
+        self.dribble_state_machine = DribbleStateMachine(self)
+        self.dribble_state_machine.run()
 
     def ball_in_sight(self):
         if self.ifBall:
@@ -106,100 +169,34 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
         return self.ifBall
 
     def close_to_ball(self):
-        return 0.1 <= self.ball_distance <= 0.35
+        if self.ifBall:
+            return 0.1 <= self.ball_distance <= 0.35
+        return (
+            math.sqrt(self.pos_x - self.ball_x_in_map) ** 2
+            + (self.pos_y - self.ball_y_in_map) ** 2
+            <= 100
+        )
 
     def ready_to_kick(self):
         return self.ready_to_kick
 
-    @property
-    def state(self):
-        return self._state
-
-    @state.setter
-    def state(self, value):
-        self._state = value
-
     def run(self):
-        self.state_machine.run()
-
-
-class StateMachine:
-    def __init__(self, model: Agent):
-        self.states = [
-            "go_back_to_field",
-            "find_ball",
-            "cannot_find_ball",
-            "chase_ball",
-            "adjust_position",
-            "kick",
-        ]
-        self.transitions = [
-            {
-                "trigger": "run",
-                "source": "*",
-                "dest": "find_ball",
-                "conditions": "no_ball",
-                "after": "find_ball",
-            },
-            {
-                "trigger": "run",
-                "source": "find_ball",
-                "dest": "chase_ball",
-                "conditions": "ball_in_sight",
-                "after": "chase_ball",
-            },
-            {
-                "trigger": "run",
-                "source": "chase_ball",
-                "dest": "adjust_position",
-                "conditions": "close_to_ball",
-                "after": "adjust_position",
-            },
-            {
-                "trigger": "run",
-                "source": "adjust_position",
-                "dest": "kick",
-                "conditions": "ready_to_kick",
-                "after": "kick",
-            },
-            {
-                "trigger": "run",
-                "source": "kick",
-                "dest": "find_ball",
-            },
-            {
-                "trigger": "run",
-                "source": "cannot_find_ball",
-                "dest": "find_ball",
-            },
-        ]
-        self.machine = Machine(
-            model=model,
-            states=self.states,
-            initial="find_ball",
-            transitions=self.transitions,
-        )
-
-    def go_back_to_field(self):
-        self.machine.model.go_back_to_field()
-
-    def find_ball(self):
-        self.machine.model.find_ball()
-
-    def cannot_find_ball(self):
-        self.machine.model.cannot_find_ball() 
-
-    def chase_ball(self):
-        self.machine.model.chase_ball()
-
-    def adjust_position(self):
-        self.machine.model.adjust_position()
-
-    def kick(self):
-        self.machine.model.kick()
-
-    def run(self):
-        self.machine.model.trigger("run")
+        self.info = self.command
+        match self.command:
+            case "find_ball":
+                self.find_ball()
+            case "chase_ball":
+                self.chase_ball()
+            case "dribble":
+                self.dribble()
+            case "stop":
+                self.stop(1)
+            case "kick":
+                self.kick()
+            case "go_back_to_field":
+                self.go_back_to_field(self.field_aim_x, self.field_aim_y)
+            case _:
+                self.stop(1)
 
 
 class GoBackToFieldStateMachine:
@@ -208,7 +205,6 @@ class GoBackToFieldStateMachine:
         self.aim_x = aim_x
         self.aim_y = aim_y
         self.min_dist = min_dist
-
         self.states = [
             "moving_to_target",
             "coarse_yaw_adjusting",
@@ -291,13 +287,11 @@ class GoBackToFieldStateMachine:
     def update_status(self):
         with self.lock:
             self.agent.update_go_back_to_field_status(self.aim_x, self.aim_y)
-
             if self.state == "moving_to_target":
                 if self.need_coarse_yaw_adjustment():
                     self.coarse_yaw_adjust()
                 else:
                     self.move_forward()
-
             elif self.state == "coarse_yaw_adjusting":
                 if self.need_fine_yaw_adjustment():
                     self.fine_yaw_adjust()
@@ -305,7 +299,6 @@ class GoBackToFieldStateMachine:
                     self.arrived_at_target_operations()
                 else:
                     self.coarse_yaw_adjust()
-
             elif self.state == "fine_yaw_adjusting":
                 if self.arrived_at_target():
                     self.arrived_at_target_operations()
@@ -431,7 +424,7 @@ class FindBallStateMachine:
                 "source": "search",
                 "dest": "found",
                 "conditions": "ball_in_sight",
-                "before": "search_ball",
+                "prepare": "search_ball",
             }
         ]
         self.machine = Machine(
@@ -440,7 +433,6 @@ class FindBallStateMachine:
             initial="search",
             transitions=self.transitions,
         )
-        self.lock = threading.Lock()
 
     def ball_in_sight(self):
         return self.agent.ball_in_sight()
@@ -448,8 +440,7 @@ class FindBallStateMachine:
     def run(self):
         while self.state != "found":
             print("Searching for the ball...")
-            with self.lock:
-                self.machine.model.trigger("search_ball")
+            self.machine.model.trigger("search_ball")
 
     def search_ball(self):
         with self.lock:
@@ -493,48 +484,41 @@ class FindBallStateMachine:
 class ChaseBallStateMachine:
     def __init__(self, agent: Agent):
         self.agent = agent
-        self.states = ["move", "arrived"]
+        self.states = ["chase", "arrived"]
         self.transitions = [
             {
-                "trigger": "move_to_ball",
-                "source": "move",
+                "trigger": "run",
+                "source": "chase",
                 "dest": "arrived",
                 "conditions": "close_to_ball",
-                "before": "move_to_ball",
+                "prepare": "move_to_ball",
             }
         ]
         self.machine = Machine(
             model=self,
             states=self.states,
-            initial="move",
+            initial="chase",
             transitions=self.transitions,
         )
-        self.lock = threading.Lock()
 
     def close_to_ball(self):
         return self.agent.close_to_ball()
 
     def run(self):
-        while self.state != "arrived":
-            print("Moving to the ball...")
-            with self.lock:
-                self.machine.model.trigger("move_to_ball")
+        while self.state != "arrived" and self.agent.command == self.agent.info:
+            self.machine.model.trigger("chase_ball")
 
     def move_to_ball(self, ang=0.25):
-        with self.lock:
-            if abs(self.cam_neck) > ang:
-                self.speed_controller(
-                    0, 0, np.sign(self.cam_neck) * config.walk_theta_vel
-                )
-
-            elif abs(self.cam_neck) <= ang:
-                self.speed_controller(
-                    config.walk_x_vel, 0, 2.5 * self.cam_neck * config.walk_theta_vel
-                )
-                time.sleep(0.1)
+        if abs(self.cam_neck) > ang:
+            self.speed_controller(0, 0, np.sign(self.cam_neck) * config.walk_theta_vel)
+        elif abs(self.cam_neck) <= ang:
+            self.speed_controller(
+                config.walk_x_vel, 0, 2.5 * self.cam_neck * config.walk_theta_vel
+            )
+            time.sleep(0.1)
 
 
-class AdjustPositionStateMachine:
+class KickStateMachine:
     def __init__(self, agent: Agent):
         self.agent = agent
         self.states = ["angel", "lr", "fb", "finished"]
@@ -544,21 +528,21 @@ class AdjustPositionStateMachine:
                 "source": "angel",
                 "dest": "lr",
                 "conditions": "good_angel",
-                "before": "adjust_angel",
+                "prepare": "adjust_angel",
             },
             {
                 "trigger": "adjust_position",
                 "source": "lr",
                 "dest": "fb",
                 "conditions": "good_lr",
-                "before": "adjust_lr",
+                "prepare": "adjust_lr",
             },
             {
                 "trigger": "adjust_position",
                 "source": "fb",
                 "dest": "finished",
                 "conditions": "good_fb",
-                "before": "adjust_fb",
+                "prepare": "adjust_fb",
             },
         ]
         self.machine = Machine(
@@ -567,30 +551,35 @@ class AdjustPositionStateMachine:
             initial="angel",
             transitions=self.transitions,
         )
-        self.lock = threading.Lock()
 
     def run(self):
-        while self.state != "finished" and self.agent.ifBall:
+        while (
+            self.state != "finished"
+            and self.agent.ifBall
+            and self.agent.command == self.agent.info
+        ):
             print("Adjusting position...")
-            with self.lock:
-                self.machine.model.trigger("adjust_position")
+            self.machine.model.trigger("adjust_position")
+        if self.state == "finished" and self.agent.info == self.agent.command:
+            self.agent.speed_controller(0, 0, 0)
+            self.agent.head_set(head=0.1, neck=0)
+            time.sleep(1)
+            self.agent.doKick()
+            time.sleep(2)
 
     def adjust_angel(self):
-        with self.lock:
-            self.agent.head_set(0.05, 0)
-            target_angle_rad = math.atan(
-                (self.agent.pos_x - 0) / (4500 - self.agent.pos_y)
-            )
-            ang_tar = target_angle_rad * 180 / math.pi
+        self.agent.head_set(0.05, 0)
+        target_angle_rad = math.atan((self.agent.pos_x - 0) / (4500 - self.agent.pos_y))
+        ang_tar = target_angle_rad * 180 / math.pi
+        ang_delta = ang_tar - self.agent.pos_yaw
+        if ang_delta > 10:
+            self.agent.speed_controller(0, -0.05, 0.3)
             ang_delta = ang_tar - self.agent.pos_yaw
-            if ang_delta > 10:
-                self.agent.speed_controller(0, -0.05, 0.3)
-                ang_delta = ang_tar - self.agent.pos_yaw
-                print(f"ang_delta={ang_delta}")
-            elif ang_delta < -10:
-                self.agent.speed_controller(0, 0.05, 0.3)
-                ang_delta = ang_tar - self.agent.pos_yaw
-                print(f"ang_delta={ang_delta}")
+            print(f"ang_delta={ang_delta}")
+        elif ang_delta < -10:
+            self.agent.speed_controller(0, 0.05, 0.3)
+            ang_delta = ang_tar - self.agent.pos_yaw
+            print(f"ang_delta={ang_delta}")
 
     def good_angel(self):
         target_angle_rad = math.atan((self.pos_x - 0) / (4500 - self.agent.pos_y))
@@ -599,59 +588,50 @@ class AdjustPositionStateMachine:
         return abs(ang_delta) < 10
 
     def adjust_lr(self):
-        with self.lock:
-            self.agent.head_set(head=0.9, neck=0)
-            self.agent.stop(1)
-            no_ball_count = 0
-            t0 = time.time()
-            while (
-                self.agent.loop()
-                and (self.agent.ball_x < 600)
-                or (self.agent.ball_x == 0)
-            ):
-                if time.time() - t0 > 10 or no_ball_count > 5:
-                    return
-                if not self.agent.ifBall:
-                    no_ball_count += 1
-                    time.sleep(0.7)
-                    continue
-                self.agent.speed_controller(0, 0.6 * config.walk_y_vel, 0)
-
-            while (
-                self.agent.loop()
-                and (self.agent.ball_x > 660)
-                or (self.agent.ball_x == 0)
-            ):
-                if time.time() - t0 > 10 or no_ball_count > 5:
-                    return
-                if not self.agent.ifBall:
-                    no_ball_count += 1
-                    time.sleep(0.7)
-                    continue
-                self.agent.speed_controller(0, -0.6 * config.walk_y_vel, 0)
-            self.agent.stop(0.5)
+        self.agent.head_set(head=0.9, neck=0)
+        self.agent.stop(1)
+        no_ball_count = 0
+        t0 = time.time()
+        while (
+            self.agent.loop() and (self.agent.ball_x < 600) or (self.agent.ball_x == 0)
+        ):
+            if time.time() - t0 > 10 or no_ball_count > 5:
+                return
+            if not self.agent.ifBall:
+                no_ball_count += 1
+                time.sleep(0.7)
+                continue
+            self.agent.speed_controller(0, 0.6 * config.walk_y_vel, 0)
+        while (
+            self.agent.loop() and (self.agent.ball_x > 660) or (self.agent.ball_x == 0)
+        ):
+            if time.time() - t0 > 10 or no_ball_count > 5:
+                return
+            if not self.agent.ifBall:
+                no_ball_count += 1
+                time.sleep(0.7)
+                continue
+            self.agent.speed_controller(0, -0.6 * config.walk_y_vel, 0)
+        self.agent.stop(0.5)
 
     def good_lr(self):
         return 600 <= self.agent.ball_x <= 660
 
     def adjust_fb(self):
-        with self.lock:
-            self.agent.stop(0.5)
-            t0 = time.time()
-            no_ball_count = 0
-            while (
-                self.agent.loop()
-                and (self.agent.ball_y < 420)
-                or (self.agent.ball_y == 0)
-            ):
-                if time.time() - t0 > 10 or no_ball_count > 5:
-                    return
-                if not self.agent.ifBall:
-                    no_ball_count += 1
-                    time.sleep(0.7)
-                    continue
-                self.agent.speed_controller(0.5 * config.walk_x_vel, 0, 0)
-            self.agent.stop(0.5)
+        self.agent.stop(0.5)
+        t0 = time.time()
+        no_ball_count = 0
+        while (
+            self.agent.loop() and (self.agent.ball_y < 420) or (self.agent.ball_y == 0)
+        ):
+            if time.time() - t0 > 10 or no_ball_count > 5:
+                return
+            if not self.agent.ifBall:
+                no_ball_count += 1
+                time.sleep(0.7)
+                continue
+            self.agent.speed_controller(0.5 * config.walk_x_vel, 0, 0)
+        self.agent.stop(0.5)
 
     def good_fb(self):
         self.agent.ready_to_kick = 420 <= self.agent.ball_y
@@ -661,7 +641,7 @@ class AdjustPositionStateMachine:
 class CanNotFindBallStateMachine:
     def __init__(self, agent: Agent):
         self.agent = agent
-        self.states = ["cannot_find_ball","going_back_to_field","ball_in_sight"]
+        self.states = ["cannot_find_ball", "going_back_to_field", "ball_in_sight"]
         self.transitions = [
             {
                 "trigger": "going_back_to_field",
@@ -786,7 +766,6 @@ class DribbleStateMachine:
 def main():
     agent = Agent()
     while True:
-        agent.ifBall = int(input())
         agent.run()
 
 

@@ -19,4 +19,32 @@
 - walk_theta_vel 转向速度
 - 定位点,x,y
 
-# receiver.py
+# 机器人->主机
+
+```python
+robot_data = {
+    "id": self.id,
+    "x": self.pos_x,
+    "y": self.pos_y,
+    "ballx": self.ball_x_in_map,
+    "bally": self.ball_y_in_map,
+    "orientation": self.pos_yaw,
+    "info": self.info,
+}
+```
+
+# 主机->机器人
+
+```python
+data = {
+    "robots": [
+        {"id": 1, "commamd": "find_ball", "timestamp": 0},
+        {"id": 2, "commamd": "find_ball", "timestamp": 0},
+        {"id": 3, "commamd": "find_ball", "timestamp": 0},
+        {"id": 4, "commamd": "find_ball", "timestamp": 0},
+    ],
+    "ball": {"x": 0, "y": 0},
+}
+```
+
+command: find_ball, chase_ball, dribble, stop, kick, go_back_to_field

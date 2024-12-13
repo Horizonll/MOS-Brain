@@ -1,6 +1,4 @@
-# MOS Brain
-
-## visualization
+# visualization
 
 主机
 
@@ -24,7 +22,3 @@ python send.py
 或者
 
 <http://localhost:8080>
-
-## state machine
-
-基于 python 的 [transitions](state_machine/transitions.md) 库实现的状态机。

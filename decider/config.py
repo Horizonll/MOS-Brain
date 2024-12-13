@@ -15,3 +15,5 @@ class config:
         "RB": [1000, -2500],
         "GK": [0, -4000],
     }
+    id = 1
+    IP = "localhost"  # 主机IP
