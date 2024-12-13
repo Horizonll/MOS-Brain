@@ -1,35 +1,32 @@
 import rospy
-from std_msgs.msg import Bool
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import JointState
-from decision_subscriber import Decision_Pos, Decision_Vision, Decision_Motion
-from receiver import Receiver
-from state_machine.config import config
 import threading
 from transitions import Machine
 import time
 import numpy as np
 import math
 from subscriber import *
+from receiver import Receiver
 from config import *
 
 
 class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
-    def __init__(self):
+    def __init__(self, role="RF", team=1, player=0, goal_keeper=False, rec_debug=False):
         Decision_Pos.__init__(self)
         Decision_Motion.__init__(self)
         Decision_Vision.__init__(self)
-
         rospy.init_node("decider")
         self.speed_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
         self.joint_goal_publisher = rospy.Publisher(
             "motor_goals", JointState, queue_size=1
         )
-        self.can_move_publisher = rospy.Publisher("can_move", Bool, queue_size=1)
+        self.receiver = Receiver(
+            team=team, player=player, goal_keeper=goal_keeper, debug=rec_debug
+        )
 
         self._state = None
         self.state_machine = StateMachine(self)
-        self.ifBall = False
         self.ready_to_kick = False
         self.t_no_ball = 0
         self.is_going_back_to_field = False
@@ -38,7 +35,7 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
         self.go_back_to_field_yaw_bias = None
 
     def loop(self):
-        return not rospy.is_shutdown()
+        return self.receiver.game_state != "STATE_SET"
 
     def stop(self, sleep_time):
         self.speed_controller(0, 0, 0)
@@ -46,8 +43,8 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
 
     def kick(self):
         self.speed_controller(0, 0, 0)
-        time.sleep(1)
         self.head_set(head=0.1, neck=0)
+        time.sleep(1)
         self.doKick()
         time.sleep(2)
 
@@ -55,7 +52,7 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
         move_cmd = Twist()
         move_cmd.linear.x = x
         move_cmd.linear.y = y
-        move_cmd.angular.z = theta
+        move_cmd.angular.theta = theta
         self.speed_pub.publish(move_cmd)
 
     def update_go_back_to_field_status(self, aim_x, aim_y):
