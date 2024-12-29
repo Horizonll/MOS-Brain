@@ -43,7 +43,7 @@ while True:
     robot_data["y"] += random.randint(-100, 100)
     robot_data["ballx"] += random.randint(-100, 100)
     robot_data["bally"] += random.randint(-100, 100)
-    robot_data["orientation"] += random.randint(-100, 100)
+    robot_data["yaw"] += random.randint(-100, 100)
     robot_data["info"] = random.choice(
         ["moving to target", "searching for ball", "kicking ball"]
     )
@@ -51,7 +51,7 @@ while True:
     robot_data["y"] = int(np.clip(robot_data["y"], -400, 400))
     robot_data["ballx"] = int(np.clip(robot_data["ballx"], -250, 250))
     robot_data["bally"] = int(np.clip(robot_data["bally"], -400, 400))
-    robot_data["orientation"] = int(np.clip(robot_data["orientation"], -180, 180))
+    robot_data["yaw"] = int(np.clip(robot_data["yaw"], -180, 180))
     send_robot_data(robot_data)
     # print(robot_data)
     time.sleep(0.5)

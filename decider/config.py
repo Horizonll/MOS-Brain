@@ -1,7 +1,7 @@
 class config:
     walk_x_vel = 0.1  # 行走前向速度
     walk_y_vel = 0.05  # 行走横向速度
-    walk_theta_vel = 0.3  # 转向速度 rad/s
+    walk_theta_vel = 0.3  # 转向速度
 
     # 找球时观察6个点： 正前，左上，左下，正下，右下，右上
     find_head_pos = [0.2, 0.2, 0.85, 1, 0.85, 0.2]

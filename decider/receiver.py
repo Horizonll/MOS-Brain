@@ -1,8 +1,6 @@
-import rospy
 import socket
 import logging
 import threading
-
 from construct import Container, ConstError
 from construct import (
     Byte,
@@ -115,7 +113,6 @@ ReturnData = Struct(
 )
 
 
-# ----------------------------------------------------------------
 # 以下是裁判盒 receiver
 
 """
@@ -202,9 +199,8 @@ class Receiver:
 
     def receive(self):
         # 持续接收消息，单开线程
-        while not rospy.is_shutdown():
+        while True:
             self.receive_once()
-
             # 输出debug信息
             if self.debug:
                 self.debug_print()
@@ -224,9 +220,8 @@ class Receiver:
 
     def initialize(self):
         # 初始化
-        while not rospy.is_shutdown():
+        while True:
             self.receive_once()  # 持续接收消息，直到获取服务器地址
-
             if self.peer:
                 for i in range(5):
                     self.answer_to_gamecontroller()  # 给服务器发送5次信息
@@ -238,7 +233,6 @@ class Receiver:
         return_message = 0 if self.man_penalize else 2
         if self.is_goalkeeper:
             return_message = 3
-
         # 发送的消息
         data = Container(
             header=b"RGrt",
@@ -247,7 +241,6 @@ class Receiver:
             player=self.player,
             message=return_message,
         )
-
         destination = (self.peer[0], self.answer_port)  # 服务器（ip， 端口）
         self.socket1.sendto(ReturnData.build(data), destination)  # 给服务器发消息
 
