@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 
-import rospy
-from std_msgs.msg import Bool, Int32, String
-from geometry_msgs.msg import Twist
-from sensor_msgs.msg import JointState
-from decision_subscriber import Decision_Pos, Decision_Vision, Decision_Motion
-from receiver import Receiver
-from utils import config
+import json
 
 import threading
 from transitions import Machine
+from collections import defaultdict
 import time
 import numpy as np
 import math
+import logging
+
+from state_machine.robot_server import RobotServer
 
 ROLES = {
     "forward_1": 1,
@@ -25,6 +23,10 @@ COMMANDS = {
     "dribble": 'dribble',
     "forward": 'forward',
     "stop": 'stop',
+    "find_ball": 'find_ball',
+    "chase_ball": 'chase_ball',
+    "shoot": 'kick',
+    "go_back_to_field": 'go_back_to_field',
 }
 
 PLAYER_STATES = {
@@ -33,51 +35,42 @@ PLAYER_STATES = {
 
 
 
-class Agent(Decision_Pos, Decision_Motion, Decision_Vision):
+class Agent():
     def __init__(self):
-        # 初始化父类
-        Decision_Pos.__init__(self)
-        Decision_Motion.__init__(self)
-        Decision_Vision.__init__(self)
 
         # 初始化ROS节点
-        rospy.init_node("decider")
+        # rospy.init_node("decider")
 
         # 获取参数 TODO: 确定参数
-        # 是否自动检测球员
-        self.auto_detect_players = rospy.get_param("/auto_detect_players")
 
-        # 开启TCP监听、
-        self.receiver = Receiver()
+        # 机器人状态
+        self.robot_data = defaultdict( lambda: {
+            "last_seen": None, 
+            "status": "disconnected", 
+            "data": {}} 
+        )
+
+        # 开启TCP监听
+        self.robot_server = RobotServer(agent=self)
 
         # 开启UDP监听
-        self.receiver.start_udp_server()
-
-        # 订阅球员心跳
-        self.player_heartbeat_sub = rospy.Subscriber(
-            "/player_heartbeat", Bool, self.player_heartbeat_callback
-        )
 
         # 订阅裁判盒消息
 
         # 获取可用球员
-        self.players = self.get_available_players()
 
         # 根据可用球员初始化球员指令发布器 TODO: 确定指令格式
-        self._init_command_publishers()
 
         # 初始化ROS球位置订阅器 TODO: 确定消息格式
-        self.ball_sub = rospy.Subscriber(
-            "/ball_pos", JointState, self.ball_pos_callback
-        )
 
         self._ball_pos = None
 
         self._state = None
-        self.state_machine = StateMachine(self)
+        
         self.ifBall = False
         self.ready_to_kick = False
         self.t_no_ball = 0
+
 
     def _init_command_publishers(self):
         """
@@ -104,10 +97,36 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision):
                 )
             else:
                 raise ValueError("Invalid player role")
+            
+    def _init_state_machine(self):
+        """
+        初始化状态机。
+        """
+        self.state_machine = StateMachine(self)
+        self.defend_ball_state_machine = DefendBallStateMachine(self)
+        self.dribble_ball_state_machine = DribbleBallStateMachine(self)
+        self.shoot_ball_state_machine = ShootBallStateMachine(self)
 
-    def loop(self):
-        return not rospy.is_shutdown()
-    
+    def read_config(self):
+        """
+        读取配置文件。
+        """
+        # 读取本地json格式的配置文件
+        with open("config.json", "r") as f:
+            config = json.load(f)
+
+        # 是否自动检测球员
+        self.auto_detect_players = config.get("auto_detect_players", False)
+
+        # 是否使用静态IP
+        self.use_static_ip = config.get("use_static_ip", False)
+
+    def update(self, robot_id, robot_data):
+        """
+        更新机器人数据。
+        """
+        self.robot_states[robot_id] = robot_data[data]
+
     # TODO: Implement this method
     def ball_pos_callback(self, msg):
         pass
@@ -116,7 +135,7 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision):
         """
         扫描ROS参数，获取可用球员。
         根据参数，有两种方式获取可用球员：
-        1. 在配置文件中指定可用球员角色、数量及UIID
+        1. 在配置文件中指定可用球员角色、数量及UUID
         2. 在运行时通过扫描心跳消息自动添加可用球员
 
         Returns:
@@ -218,7 +237,28 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision):
             player_role (int): 球员角色
             cmd (): 指令
         """
-        self.command_publishers[player_role].publish(cmd)
+        # 将command, data, player_role, 时间戳等信息打包成字典
+        cmd_data = {
+            "command": cmd,
+            "data": {},
+            "send_time": time.time(),
+        }
+
+        self.robot_server.send(ROLES[player_role], cmd_data)
+
+    def initialize(self):
+        """
+        所有机器人入场
+        """
+        for role, id in ROLES.items():
+            self.publish_command(role, COMMANDS.get("go_back_to_field"))
+
+    def stop(self):
+        """
+        所有机器人停止运行
+        """
+        for role, id in ROLES.items():
+            self.publish_command(role, COMMANDS.get("stop"))
 
     @property
     def state(self):
@@ -241,12 +281,14 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision):
         """
         return self.ifBall 
     
-    def defend_ball(self):
-        self.defend_ball_state_machine = DefendBallStateMachine(self)
+    def run_defend_ball(self):
         self.defend_ball_state_machine.run()
 
-    def play(self):
-        self.state_machine.play()
+    def run_dribble_ball(self):
+        self.dribble_ball_state_machine.run()
+
+    def run_shoot_ball(self):
+        self.shoot_ball_state_machine.run()
 
 
 class StateMachine:
@@ -263,21 +305,21 @@ class StateMachine:
                 "source": "*",
                 "dest": "defend",
                 "conditions": "ball_in_backcourt",
-                "after": "defend_ball",
+                # "after": "defend_ball",
             },
             {
                 "trigger": "play",
                 "source": "*",
                 "dest": "dribble",
                 "conditions": "ball_in_midcourt",
-                "after": "dribble_ball",
+                # "after": "dribble_ball",
             },
             {
                 "trigger": "play",
                 "source": "*",
                 "dest": "shoot",
                 "conditions": "ball_in_frontcourt",
-                "after": "shoot_ball",
+                # "after": "shoot_ball",
             },
             {
                 "trigger": "stop_playing",
@@ -289,6 +331,7 @@ class StateMachine:
                 "trigger": "initialize",
                 "source": "*",
                 "dest": "initial",
+                "after": "initialize",
             },
         ]
         self.machine = Machine(
@@ -312,7 +355,6 @@ class StateMachine:
             return True
         return False
         
-    
     def ball_in_midcourt(self):
         """
         判断球是否在中场。
@@ -339,11 +381,33 @@ class StateMachine:
             return True
         return False
     
-    def defend_ball(self):
-        """
-        进入防守状态。
-        """
-        self.model.defend_ball()
+    def stop(self):
+        self.model.stop()
+
+    def initialize(self):
+        self.model.initialize()
+
+    def run_in_state1(self):
+        while True:
+            self.machine.play()
+            time.sleep(0.1)
+
+            if self.model.state == "stop":
+                pass
+            elif self.model.state == "defend":
+                self.model.run_defend_ball()
+            elif self.model.state == "dribble":
+                self.model.run_dribble_ball()
+            elif self.model.state == "shoot":
+                self.model.run_shoot_ball()
+            elif self.model.state == "initial":
+                pass
+            else:
+                logging.error("Invalid state")
+                pass
+
+        
+
 
 class DefendBallStateMachine:
     def __init__(self, agent: Agent):

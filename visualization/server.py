@@ -8,6 +8,7 @@ from config import *
 # 初始化日志配置
 logging.basicConfig(level=logging.INFO)
 
+IP = '192.168.63.69'
 # 初始化数据字典，包含机器人信息
 data = {
     "robots": [
@@ -81,50 +82,76 @@ async def start_tcp_server():
         logging.error(f"Error in start_tcp_server: {e}")
 
 
-# 定义一个异步函数，用于处理WebSocket服务器
 async def websocket_server(websocket, path):
     """
-    处理WebSocket连接，定期发送机器人的数据。
+    处理WebSocket连接，接收并响应客户端消息，定期发送机器人的数据。
     """
     try:
-        while True:
-            await websocket.send(json.dumps(data))
-            await asyncio.sleep(0.1)
+        # 定期发送机器人的数据给客户端
+        send_task = asyncio.create_task(send_data_periodically(websocket))
+        # 接收并处理来自客户端的数据
+        async for message in websocket:
+            try:
+                robot_data = json.loads(message)
+                await handle_websocket_message(robot_data)
+            except json.JSONDecodeError as e:
+                logging.error(f"Failed to decode JSON: {e}")
+        
+        # 如果连接关闭，取消定时发送任务
+        send_task.cancel()
+        try:
+            await send_task
+        except asyncio.CancelledError:
+            pass
+
     except websockets.ConnectionClosed as e:
         logging.info(f"WebSocket connection closed: {e}")
     except Exception as e:
         logging.error(f"Error in websocket_server: {e}")
 
-
-# 定义一个异步函数，用于读取WebSocket数据
-async def websocket_read_data(websocket, path):
+async def send_data_periodically(websocket):
     """
-    通过WebSocket读取数据。
+    定期向已连接的WebSocket客户端发送机器人的数据。
     """
     try:
         while True:
             await websocket.send(json.dumps(data))
-            await asyncio.sleep(0.1)
-    except websockets.ConnectionClosed as e:
-        logging.info(f"WebSocket connection closed: {e}")
+            await asyncio.sleep(0.1)  # 调整这个值以改变发送频率
+    except asyncio.CancelledError:
+        # 正常处理任务取消的情况
+        raise
     except Exception as e:
-        logging.error(f"Error in websocket_read_data: {e}")
+        logging.error(f"Error in send_data_periodically: {e}")
+
+async def handle_websocket_message(robot_data):
+    """
+    根据从WebSocket接收到的消息更新机器人数据。
+    """
+    try:
+        for robot in data["robots"]:
+            if robot["id"] == robot_data["id"]:
+                robot.update(robot_data)
+                robot["timestamp"] = time.time()
+                break
+    except Exception as e:
+        logging.error(f"Error handling WebSocket message: {e}")
 
 
-# 启动WebSocket服务器
-start_server = websockets.serve(websocket_server, IP, 8000)
-read_data_server = websockets.serve(websocket_read_data, IP, 8001)
-
-# 获取事件循环并运行服务器和数据重置任务
-loop = asyncio.get_event_loop()
-try:
-    loop.run_until_complete(
-        asyncio.gather(
-            start_server, read_data_server, start_tcp_server(), reset_robot_data()
-        )
+# 定义一个异步主函数来管理所有任务
+async def main():
+    # 创建WebSocket服务器的任务
+    start_server_task = websockets.serve(websocket_server, IP, 8000)
+    
+    # 使用 asyncio.gather 来同时运行多个协程
+    await asyncio.gather(
+        start_server_task,  # WebSocket服务器
+        start_tcp_server(), # TCP服务器
+        reset_robot_data()  # 数据重置任务
     )
-    loop.run_forever()
-except Exception as e:
-    logging.error(f"Error in main loop: {e}")
-finally:
-    loop.close()
+
+if __name__ == "__main__":
+    try:
+        # 使用 asyncio.run() 来运行顶层的异步函数，并自动管理事件循环
+        asyncio.run(main())
+    except Exception as e:
+        logging.error(f"Error in main loop: {e}")
