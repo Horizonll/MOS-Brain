@@ -18,7 +18,8 @@ data = {
         {"id": 4, "timestamp": 0},
         {"id": 5, "timestamp": 0},
         {"id": 6, "timestamp": 0},
-    ]
+    ],
+    "ball": {"x": 0, "y": 0},
 }
 
 
