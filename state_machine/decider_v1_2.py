@@ -12,12 +12,7 @@ import logging
 
 from state_machine.robot_server import RobotServer
 
-ROLES = {
-    "forward_1": 1,
-    "forward_2": 2,
-    "defender_1": 3,
-    "goalkeeper": 4,
-}
+
 
 COMMANDS = {
     "dribble": 'dribble',
@@ -59,9 +54,16 @@ class Agent():
 
         # 获取可用球员
 
-        # 根据可用球员初始化球员指令发布器 TODO: 确定指令格式
+        # 创建角色与ID的映射
+        self.roles_to_id = {
+            "forward_1": 1,
+            "forward_2": 2,
+            "defender_1": 3,
+            "goalkeeper": 4,
+        }
 
-        # 初始化ROS球位置订阅器 TODO: 确定消息格式
+        # 根据可用球员更改角色对应ID
+        self.update_players_id()
 
         self._ball_pos = None
 
@@ -131,78 +133,35 @@ class Agent():
     def ball_pos_callback(self, msg):
         pass
 
-    def get_available_players(self):
+    def get_players_distance_to_ball(self):
         """
-        扫描ROS参数，获取可用球员。
-        根据参数，有两种方式获取可用球员：
-        1. 在配置文件中指定可用球员角色、数量及UUID
-        2. 在运行时通过扫描心跳消息自动添加可用球员
+        获取球员与球的距离。
 
         Returns:
-            list: 可用球员列表
+            dict: 球员与球的距离
         """
-        self.players = []
+        players_distance = {}
+
+        for robot_id, data in self.robot_data.items():
+            player_pos = [data.get('x'), data.get('y')]
+            ball_pos = [data.get('ballx'), data.get('bally')]
+            distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
+            players_distance[robot_id] = distance
+
+        return players_distance
     
-        if self.auto_detect_players:
-            # 从心跳消息中获取可用球员
-            pass
-        else:
-            # 从配置文件中获取可用球员
-            pass
+    def get_players_distance_to_ball_without_goalkeeper(self):
 
-        self.players = [
-            {"role": ROLES["forward_1"], "uuid": 1},
-            {"role": ROLES["forward_2"], "uuid": 2},
-            {"role": ROLES["defender_1"], "uuid": 3},
-            {"role": ROLES["goalkeeper"], "uuid": 4},
-        ]
+        players_distance = {}
 
-        return self.players
+        for robot_id, data in self.robot_data.items():
+            if data["role"] != "goalkeeper":
+                player_pos = [data.get('x'), data.get('y')]
+                ball_pos = [data.get('ballx'), data.get('bally')]
+                distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
+                players_distance[robot_id] = distance
 
-    def get_player(self, player_role=None, player_uuid=None):
-        """
-        获取单个球员role和uuid。
-
-        Args:
-            player_role (int): 球员角色
-            player_uuid (int): 球员UUID
-
-        Returns:
-            dict: 球员基本信息
-        """
-        player = {}
-
-        for p in self.players:
-            if p["role"] == player_role or p["uuid"] == player_uuid:
-                player = p
-
-        return player
-    
-    def get_player_info(self, player_role=None, player_uuid=None):
-        """
-        获取单个球员的详细信息。
-
-        Args:
-            player_role (int): 球员角色
-            player_uuid (int): 球员UUID
-
-        Returns:
-            dict: 球员详细信息
-        """
-        player_info = {}
-
-        return player_info
-
-    def get_players_info(self):
-        """
-        获取球员信息。
-
-        Returns:
-            list: 球员信息列表
-        """
-
-        players_info = []
-        pass
+        return players_distance
 
     def switch_players_role(self, player_role_1, player_role_2):
         """
@@ -212,22 +171,10 @@ class Agent():
             player_role_1 (int): 球员1角色
             player_role_2 (int): 球员2角色
 
-        Returns:
-            bool: 交换成功返回True 否则返回False
         """
-
-        player_1 = self.get_player(player_role=player_role_1)
-        player_2 = self.get_player(player_role=player_role_2)
-        players = self.players
-
-        if player_1 and player_2 and player_1 != player_2:
-            players.remove(player_1)
-            players.remove(player_2)
-            player_1["role"], player_2["role"] = player_2["role"], player_1["role"]
-            self.players = players
-            return True
-
-        return False
+        temp_roles_to_id = self.roles_to_id.copy()
+        temp_roles_to_id[player_role_1], temp_roles_to_id[player_role_2] = self.roles_to_id[player_role_2], self.roles_to_id[player_role_1]
+        self.roles_to_id = temp_roles_to_id
 
     def publish_command(self, player_role, cmd):
         """
@@ -244,20 +191,20 @@ class Agent():
             "send_time": time.time(),
         }
 
-        self.robot_server.send(ROLES[player_role], cmd_data)
+        self.robot_server.send(self.roles_to_id[player_role], cmd_data)
 
     def initialize(self):
         """
         所有机器人入场
         """
-        for role, id in ROLES.items():
+        for role, id in self.roles_to_id.items():
             self.publish_command(role, COMMANDS.get("go_back_to_field"))
 
     def stop(self):
         """
         所有机器人停止运行
         """
-        for role, id in ROLES.items():
+        for role, id in self.roles_to_id.items():
             self.publish_command(role, COMMANDS.get("stop"))
 
     @property
@@ -451,17 +398,19 @@ class DefendBallStateMachine:
         return self.agent.is_ball_in_control()
     
     def ball_out_of_control(self):
-        forward_1_distance_to_ball = self.agent.get_player_info(player_role=ROLES["forward_1"])["distance_ball"]
-        forward_2_distance_to_ball = self.agent.get_player_info(player_role=ROLES["forward_2"])["distance_ball"]
-        defender_1_distance_to_ball = self.agent.get_player_info(player_role=ROLES["defender_1"])["distance_ball"]
+        players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
+        forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
+        forward_2_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
+
         if forward_1_distance_to_ball > 0.5 and forward_2_distance_to_ball > 0.5:
             return True
         return False
     
     def close_to_ball(self):
-        forward_1_distance_to_ball = self.agent.get_player_info(player_role=ROLES["forward_1"])["distance_ball"]
-        forward_2_distance_to_ball = self.agent.get_player_info(player_role=ROLES["forward_2"])["distance_ball"]
-        defender_1_distance_to_ball = self.agent.get_player_info(player_role=ROLES["defender_1"])["distance_ball"]
+        players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
+        forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
+        forward_2_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
+
         if forward_1_distance_to_ball < 0.5 or forward_2_distance_to_ball < 0.5:
             return True
         return False
@@ -471,44 +420,42 @@ class DefendBallStateMachine:
         判断非守门员机器人中谁拿到球，然后进行带球
         其它两个机器人距离球门最近的进行防守补位，另一个跟随进攻
         """
-        players =  self.agent.players
-        players_info = self.get_players_info()
-        for player_info in players_info:
-            if player_info["state"] == "controlling_ball":
-                if player_info["role"] == ROLES["defender_1"]:
+        players_status = self.agent.get_players_status()
+        players_distance = self.agent.get_players_distance_to_ball_without_goalkeeper()
+        for role, id in self.agent.roles_to_id.items():
+            if players_status[id] == "controlling_ball":
+                if role == "defender_1":
                     # 将players中的defender_1的角色与前锋中距离球门最近的角色交换
                     # 比较两名前锋与球门的距离
-                    forward_1 = self.agent.get_player(player_role=ROLES["forward_1"])
-                    forward_1_distance = self.agent.get_player_info(player_role=ROLES["forward_1"])["distance1"]
-                    forward_2 = self.agent.get_player(player_role=ROLES["forward_2"])
-                    forward_2_distance = self.agent.get_player_info(player_role=ROLES["forward_2"])["distance1"]
+                    forward_1_distance = players_distance[self.agent.roles_to_id["forward_1"]]
+                    forward_2_distance = players_distance[self.agent.roles_to_id["forward_2"]]
                     # 将前锋中距离球门最近的角色与defender_1的角色交换
                     if forward_1_distance < forward_2_distance:
-                        self.agent.switch_players_role(ROLES["defender_1"], ROLES["forward_1"])
-                        self.agent.publish_command(ROLES["forward_1"], COMMANDS["dribble"])
-                        self.agent.publish_command(ROLES["forward_2"], COMMANDS["forward"])
+                        self.agent.switch_players_role("defender_1", "forward_1")
+                        self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["dribble"])
+                        self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["forward"])
                     else:
-                        self.agent.switch_players_role(ROLES["defender_1"], ROLES["forward_2"])
-                        self.agent.publish_command(ROLES["forward_2"], COMMANDS["dribble"])
-                        self.agent.publish_command(ROLES["forward_1"], COMMANDS["forward"])
+                        self.agent.switch_players_role("defender_1", "forward_2")
+                        self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["dribble"])
+                        self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["forward"])
                 else:
-                    if player_info["role"] == ROLES["forward_1"]:
-                        self.agent.publish_command(ROLES["forward_1"], COMMANDS["dribble"])
-                        self.agent.publish_command(ROLES["forward_2"], COMMANDS["forward"])
+                    if role == "forward_1":
+                        self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["dribble"])
+                        self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["forward"])
                     else:
-                        self.agent.publish_command(ROLES["forward_2"], COMMANDS["dribble"])
-                        self.agent.publish_command(ROLES["forward_1"], COMMANDS["forward"])
+                        self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["dribble"])
+                        self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["forward"])
         # 防守补位
-        self.agent.publish_command(ROLES["defender_1"], COMMANDS["go_to_defend_position"])
+        self.agent.publish_command(self.agent.roles_to_id["defender_1"], COMMANDS["go_to_defend_position"])
 
     def go_for_possession(self):
         """
         争夺控球
         """
         # self.agent.t_no_ball = 0
-        self.agent.publish_command(ROLES["forward_1"], COMMANDS["go_for_possession"])
-        self.agent.publish_command(ROLES["forward_2"], COMMANDS["go_for_possession"])
-        self.agent.publish_command(ROLES["defender_1"], COMMANDS["go_for_possession"])
+        self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["chase_ball"])
+        self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["chase_ball"])
+        self.agent.publish_command(self.agent.roles_to_id["defender_1"], COMMANDS["chase_ball"])
             
 
     def go_for_possession_avoid_collsion(self):
@@ -516,15 +463,11 @@ class DefendBallStateMachine:
         防止距离球太近时机器人发生碰撞
         """
         # 获取各球员与球的距离
-        forward_1_distance_to_ball = self.agent.get_player_info(player_role=ROLES["forward_1"])["distance_ball"]
-        forward_2_distance_to_ball = self.agent.get_player_info(player_role=ROLES["forward_2"])["distance_ball"]
-        defender_1_distance_to_ball = self.agent.get_player_info(player_role=ROLES["defender_1"])["distance_ball"]
+        players_distances = self.agent.get_players_distance_to_ball_without_goalkeeper()
 
         # 将球员与他们的距离组合成列表
         players_distances = [
-            (ROLES["forward_1"], forward_1_distance_to_ball),
-            (ROLES["forward_2"], forward_2_distance_to_ball),
-            (ROLES["defender_1"], defender_1_distance_to_ball)
+            (id, distance) for id, distance in players_distances.items()
         ]
 
         # 根据距离从大到小排序
@@ -576,15 +519,17 @@ class DribbleBallStateMachine:
         return self.agent.is_ball_in_control()
     
     def ball_out_of_control(self):
-        forward_1_distance_to_ball = self.agent.get_player_info(player_role=ROLES["forward_1"])["distance_ball"]
-        forward_2_distance_to_ball = self.agent.get_player_info(player_role=ROLES["forward_2"])["distance_ball"]
+        players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
+        forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
+        forward_2_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
         if forward_1_distance_to_ball > 0.5 and forward_2_distance_to_ball > 0.5:
             return True
         return False
     
     def close_to_ball(self):
-        forward_1_distance_to_ball = self.agent.get_player_info(player_role=ROLES["forward_1"])["distance_ball"]
-        forward_2_distance_to_ball = self.agent.get_player_info(player_role=ROLES["forward_2"])["distance_ball"]
+        players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
+        forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
+        forward_2_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
         if forward_1_distance_to_ball < 0.5 or forward_2_distance_to_ball < 0.5:
             return True
         return False
@@ -594,16 +539,18 @@ class DribbleBallStateMachine:
         判断非守门员机器人中谁拿到球，然后进行带球
         其它两个机器人距离球门最近的进行防守补位，另一个跟随进攻
         """
-        players =  self.agent.players
-        players_info = self.get_players_info()
-        for player_info in players_info:
-            if player_info["state"] == "controlling_ball":
-                if player_info["role"] == ROLES["forward_1"]:
-                    self.agent.publish_command(ROLES["forward_1"], COMMANDS["dribble"])
-                    self.agent.publish_command(ROLES["forward_2"], COMMANDS["forward"])
+        players_status = self.agent.get_players_status()
+        players_distance = self.agent.get_players_distance_to_ball_without_goalkeeper()
+        for role, id in self.agent.roles_to_id.items():
+            if players_status[id] == "controlling_ball":
+                if role == "forward_1":
+                    self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["dribble"])
+                    self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["forward"])
                 else:
-                    self.agent.publish_command(ROLES["forward_2"], COMMANDS["dribble"])
-                    self.agent.publish_command(ROLES["forward_1"], COMMANDS["forward"])
+                    self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["dribble"])
+                    self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["forward"])
+        # 防守补位
+        self.agent.publish_command(self.agent.roles_to_id["defender_1"], COMMANDS["go_to_defend_position"])
     
         
 
@@ -612,20 +559,21 @@ class DribbleBallStateMachine:
         争夺控球
         """
         self.agent.t_no_ball = 0
-        self.agent.publish_command(ROLES["forward_1"], COMMANDS["go_for_possession"])
-        self.agent.publish_command(ROLES["forward_2"], COMMANDS["go_for_possession"])
+        self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["chase_ball"])
+        self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["chase_ball"])
             
 
     def go_for_possession_avoid_collsion(self):
         """
         防止距离球太近时两机器人发生碰撞
         """
-        forward_1_distance_to_ball = self.agent.get_player_info(player_role=ROLES["forward_1"])["distance_ball"]
-        forward_2_distance_to_ball = self.agent.get_player_info(player_role=ROLES["forward_2"])["distance_ball"]
+        players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
+        forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
+        forward_2_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
         if forward_1_distance_to_ball < forward_2_distance_to_ball:
-            self.agent.publish_command(ROLES["forward_2"], COMMANDS["stop_moving"])
+            self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["stop"])
         else:
-            self.agent.publish_command(ROLES["forward_1"], COMMANDS["stop_moving"])
+            self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["stop"])
 
 class ShootBallStateMachine:
     def __init__(self, agent: Agent):
@@ -669,51 +617,53 @@ class ShootBallStateMachine:
         return self.agent.is_ball_in_control()
     
     def ball_out_of_control(self):
-        forward_1_distance_to_ball = self.agent.get_player_info(player_role=ROLES["forward_1"])["distance_ball"]
-        forward_2_distance_to_ball = self.agent.get_player_info(player_role=ROLES["forward_2"])["distance_ball"]
+        players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
+        forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
+        forward_2_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
         if forward_1_distance_to_ball > 0.5 and forward_2_distance_to_ball > 0.5:
             return True
         return False
     
     def close_to_ball(self):
-        forward_1_distance_to_ball = self.agent.get_player_info(player_role=ROLES["forward_1"])["distance_ball"]
-        forward_2_distance_to_ball = self.agent.get_player_info(player_role=ROLES["forward_2"])["distance_ball"]
+        players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
+        forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
+        forward_2_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
         if forward_1_distance_to_ball < 0.5 or forward_2_distance_to_ball < 0.5:
             return True
         return False
     
     def shoot(self):
         """
-        判断非守门员机器人中谁拿到球，然后进行带球
-        其它两个机器人距离球门最近的进行防守补位，另一个跟随进攻
+        判断非守门员机器人中谁拿到球，然后进行射门
         """
-        players =  self.agent.players
-        players_info = self.get_players_info()
-        for player_info in players_info:
-            if player_info["state"] == "controlling_ball":
-                self.agent.publish_command(player_info["role"], COMMANDS["shoot"])
+        players_status = self.agent.get_players_status()
+        players_distance = self.agent.get_players_distance_to_ball_without_goalkeeper()
+        for role, id in self.agent.roles_to_id.items:
+            if players_status[id] == "controlling_ball":
+                self.agent.publish_command(id, COMMANDS["shoot"])
+
 
     def go_for_possession(self):
         """
         争夺控球
         """
-        self.agent.t_no_ball = 0
-        self.agent.publish_command(ROLES["forward_1"], COMMANDS["go_for_possession"])
-        self.agent.publish_command(ROLES["forward_2"], COMMANDS["go_for_possession"])
+        self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["chase_ball"])
+        self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["chase_ball"])
             
 
     def go_for_possession_avoid_collsion(self):
         """
         防止距离球太近时两机器人发生碰撞
         """
-        forward_1_distance_to_ball = self.agent.get_player_info(player_role=ROLES["forward_1"])["distance_ball"]
-        forward_2_distance_to_ball = self.agent.get_player_info(player_role=ROLES["forward_2"])["distance_ball"]
+        players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
+        forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
+        forward_2_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
         if forward_1_distance_to_ball < forward_2_distance_to_ball:
-            self.agent.publish_command(ROLES["forward_2"], COMMANDS["stop_moving"])
-            self.agent.publish_command(ROLES["forward_1"], COMMANDS["go_for_possession"])
+            self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["stop"])
+            self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["chase_ball"])
         else:
-            self.agent.publish_command(ROLES["forward_1"], COMMANDS["stop_moving"])
-            self.agent.publish_command(ROLES["forward_2"], COMMANDS["go_for_possession"])
+            self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["stop_moving"])
+            self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["chase_ball"])
 
 def main():
     agent = Agent()
