@@ -5,6 +5,7 @@ from collections import defaultdict
 from datetime import datetime
 import time
 import socket
+import traceback
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -57,6 +58,7 @@ class RobotServer:
                 receive_time = time.time()
                 try:
                     robot_data = json.loads(data_received.decode("utf-8"))
+                    print(robot_data)
                     send_time_str = robot_data.get('send_time')
                     if send_time_str:
                         send_time = float(send_time_str)
@@ -85,6 +87,7 @@ class RobotServer:
                     logging.error(f"JSON decode error: {e}")
                 except Exception as e:
                     logging.error(f"Error processing message from robot {robot_id}: {e}")
+                    traceback.print_exc()
         except Exception as e:
             logging.error(f"Connection error with {addr}: {e}")
         finally:

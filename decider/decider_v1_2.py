@@ -85,7 +85,7 @@ class Agent():
 
             if self.robots_data[1].get('status') == "connected":
                 print("Robot 1 connected")
-                break
+                # break
 
             time.sleep(1)
             count += 1
