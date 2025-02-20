@@ -144,7 +144,7 @@ class RobotServer:
             logging.error(f"No IP address found for robot {robot_id}")
 
     def broadcast(self, data):
-        broadcast_addr = ('<broadcast>', self.udp_port)
+        broadcast_addr = ('192.168.99.255', self.udp_port)
         self.udp_socket.sendto(json.dumps(data).encode("utf-8"), broadcast_addr)
         logging.info(f"Broadcast data: {data}")
 

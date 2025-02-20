@@ -81,7 +81,12 @@ class Agent():
         logging.info("Waiting for all robots to start...")
         count = 0
         while not all(data['status'] == 'connected' for data in self.robots_data.values()):
-            self.robot_server.broadcast({"message": "thmos_hello", "ip": self.ip})
+            # self.robot_server.broadcast({"message": "thmos_hello", "ip": self.robot_server.ip})
+
+            if self.robots_data[1].get('status') == "connected":
+                print("Robot 1 connected")
+                break
+
             time.sleep(1)
             count += 1
             if count > 30:
