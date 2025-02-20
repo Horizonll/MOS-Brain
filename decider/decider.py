@@ -902,13 +902,14 @@ class DribbleStateMachine:
 
 def main():
     agent = Agent()
-    while True:
-        try:
-            agent.run()
-        except KeyboardInterrupt:
-            print("\nProgram interrupted by user")
-        finally:
-            pass
+    try:
+        while True:
+                agent.run()
+    except KeyboardInterrupt:
+        print("\nProgram interrupted by user")
+        break
+    finally:
+        pass
 
 
 
