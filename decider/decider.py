@@ -86,42 +86,42 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
         finally:
             client_socket.close()
 
-    async def websocket_client(self):
-        uri = f"ws://{self.HOST_IP}:8001"
-        while True:
-            try:
-                async with websockets.connect(uri) as websocket:
-                    while True:
-                        data = await websocket.recv()
-                        try:
-                            received_data = json.loads(data)
-                            robot = next(
-                                (
-                                    r
-                                    for r in received_data["robots"]
-                                    if r["id"] == self.id
-                                ),
-                                None,
-                            )
-                            if robot:
-                                self.command = robot["info"]
-                            if not self.ifBall:
-                                self.ball_x_in_map, self.ball_y_in_map = (
-                                    received_data["ball"]["x"],
-                                    received_data["ball"]["y"],
-                                )
-                        except json.JSONDecodeError as e:
-                            print(f"JSON decode error: {e}")
-            except websockets.ConnectionClosed as e:
-                print(f"Connection closed: {e}")
-            except ConnectionRefusedError as e:
-                print(f"Connection refused: {e}. Retrying")
-            except Exception as e:
-                print(f"Error: {e}")
+    # async def websocket_client(self):
+    #     uri = f"ws://{self.HOST_IP}:8001"
+    #     while True:
+    #         try:
+    #             async with websockets.connect(uri) as websocket:
+    #                 while True:
+    #                     data = await websocket.recv()
+    #                     try:
+    #                         received_data = json.loads(data)
+    #                         robot = next(
+    #                             (
+    #                                 r
+    #                                 for r in received_data["robots"]
+    #                                 if r["id"] == self.id
+    #                             ),
+    #                             None,
+    #                         )
+    #                         if robot:
+    #                             self.command = robot["info"]
+    #                         if not self.ifBall:
+    #                             self.ball_x_in_map, self.ball_y_in_map = (
+    #                                 received_data["ball"]["x"],
+    #                                 received_data["ball"]["y"],
+    #                             )
+    #                     except json.JSONDecodeError as e:
+    #                         print(f"JSON decode error: {e}")
+    #         except websockets.ConnectionClosed as e:
+    #             print(f"Connection closed: {e}")
+    #         except ConnectionRefusedError as e:
+    #             print(f"Connection refused: {e}. Retrying")
+    #         except Exception as e:
+    #             print(f"Error: {e}")
 
     async def tcp_client(self):
         """异步TCP客户端逻辑，持续监听来自服务器的数据"""
-        server_address = (self.HOST_IP, 8002)  # 假设服务器在8001端口监听
+        server_address = (self.HOST_IP, 8002)  # 假设服务器在8002端口监听
         while True:
             try:
                 reader, writer = await asyncio.open_connection(*server_address)
@@ -129,18 +129,22 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
                     data = await reader.read(4096)
                     if not data:
                         break
-                    received_data = json.loads(data.decode('utf-8'))
-                    robot = next(
-                        ( if r["id"] == self.id),
-                        None,
-                    )
-                    if robot:
-                        self.command = robot["info"]
-                    if not self.ifBall:
-                        self.ball_x_in_map, self.ball_y_in_map = (
-                            received_data["ball"]["x"],
-                            received_data["ball"]["y"],
-                        )
+                    try:
+                        received_data = json.loads(data.decode('utf-8'))
+                        if 'command' in received_data and 'data' in received_data:
+                            cmd = received_data['command']
+                            cmd_data = received_data['data']
+                            send_time = received_data.get('send_time', None)
+                            
+                            # 更新类中的命令和命令数据
+                            self.command = received_data
+                            
+                            print(f"Received command: {cmd} at {send_time}")
+                            print(f"Command data: {cmd_data}")
+                        else:
+                            print("Received message does not contain 'command' or 'data' field.")
+                    except json.JSONDecodeError as e:
+                        print(f"JSON decode error: {e}")
             except Exception as e:
                 print(f"Error: {e}")
                 await asyncio.sleep(5)  # 等待一段时间后重试
@@ -245,22 +249,21 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
 
     def run(self):
         self.info = self.command['command']
-        match self.command['command']:
-            case "find_ball":
-                self.find_ball()
-            case "chase_ball":
-                self.chase_ball()
-            case "dribble":
-                self.dribble()
-            case "stop":
-                self.stop(1)
-            case "kick":
-                self.kick()
-            case "go_back_to_field":
-                self.go_back_to_field(self.field_aim_x, self.field_aim_y)
-            case _:
-                print("Unknown command: ", self.command)
-                self.stop(1)
+        if self.command['command'] == "find_ball":
+            self.find_ball()
+        elif self.command['command'] == "chase_ball":
+            self.chase_ball()
+        elif self.command['command'] == "dribble":
+            self.dribble()
+        elif self.command['command'] == "stop":
+            self.stop(1)
+        elif self.command['command'] == "kick":
+            self.kick()
+        elif self.command['command'] == "go_back_to_field":
+            self.go_back_to_field(self.field_aim_x, self.field_aim_y)
+        else:
+            print("Unknown command: ", self.command)
+            self.stop(1)
 
 
 class GoBackToFieldStateMachine:
