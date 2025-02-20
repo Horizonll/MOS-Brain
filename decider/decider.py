@@ -21,6 +21,9 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
         Decision_Motion.__init__(self)
         Decision_Vision.__init__(self)
         rospy.init_node("decider")
+
+        self.id = 1
+
         self.speed_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
         self.joint_goal_publisher = rospy.Publisher(
             "motor_goals", JointState, queue_size=1
@@ -28,21 +31,31 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
         self.receiver = Receiver(
             team=team, player=player, goal_keeper=goal_keeper, debug=rec_debug
         )
-        self.info = self.command = "stop"
+        self.info = "stop"
+        self.command = {
+            "command": 'stop',
+            "data": {},
+            "send_time": time.time(),
+        }
         self.ready_to_kick = False
         self.t_no_ball = 0
         self.is_going_back_to_field = False
         self.go_back_to_field_dist = None
         self.go_back_to_field_dir = None
         self.go_back_to_field_yaw_bias = None
+
+        self.listen_host_ip()
         send_thread = threading.Thread(target=self.send_loop)
         send_thread.daemon = True
         send_thread.start()
-        websocket_thread = threading.Thread(
-            target=lambda: asyncio.run(self.websocket_client())
-        )
-        websocket_thread.daemon = True
-        websocket_thread.start()
+        # websocket_thread = threading.Thread(
+        #     target=lambda: asyncio.run(self.websocket_client())
+        # )
+        # websocket_thread.daemon = True
+        # websocket_thread.start()
+        tcp_thread = threading.Thread(target=self.tcp_client)
+        tcp_thread.daemon = True
+        tcp_thread.start()
 
     def send_loop(self):
         while True:
@@ -66,7 +79,7 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
     def send_robot_data(self, robot_data):
         try:
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client_socket.connect((self.IP, 8002))
+            client_socket.connect((self.HOST_IP, 8001))
             client_socket.sendall(json.dumps(robot_data).encode("utf-8"))
         except Exception as e:
             print(f"Error in send_robot_data: {e}")
@@ -74,7 +87,7 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
             client_socket.close()
 
     async def websocket_client(self):
-        uri = f"ws://{self.IP}:8001"
+        uri = f"ws://{self.HOST_IP}:8001"
         while True:
             try:
                 async with websockets.connect(uri) as websocket:
@@ -105,6 +118,55 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
                 print(f"Connection refused: {e}. Retrying")
             except Exception as e:
                 print(f"Error: {e}")
+
+    async def tcp_client(self):
+        """异步TCP客户端逻辑，持续监听来自服务器的数据"""
+        server_address = (self.HOST_IP, 8002)  # 假设服务器在8001端口监听
+        while True:
+            try:
+                reader, writer = await asyncio.open_connection(*server_address)
+                while True:
+                    data = await reader.read(4096)
+                    if not data:
+                        break
+                    received_data = json.loads(data.decode('utf-8'))
+                    robot = next(
+                        ( if r["id"] == self.id),
+                        None,
+                    )
+                    if robot:
+                        self.command = robot["info"]
+                    if not self.ifBall:
+                        self.ball_x_in_map, self.ball_y_in_map = (
+                            received_data["ball"]["x"],
+                            received_data["ball"]["y"],
+                        )
+            except Exception as e:
+                print(f"Error: {e}")
+                await asyncio.sleep(5)  # 等待一段时间后重试
+
+    def listen_host_ip(self):
+        """同步监听UDP广播消息并获取主机IP"""
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind(('0.0.0.0', self.udp_port))  # 监听指定端口上的UDP广播
+
+        while True:
+            data, addr = sock.recvfrom(1024)
+            try:
+                received_data = json.loads(data.decode('utf-8'))
+                if 'message' in received_data and received_data['message'] == 'thmos_hello':
+                    # 假设广播消息中包含主机IP信息
+                    if 'ip' in received_data:
+                        host_ip = received_data['ip']
+                        self.HOST_IP = host_ip  # 更新Agent实例中的IP地址
+                        print(f"Updated IP to: {self.HOST_IP}")
+                    else:
+                        print("Received 'thmos_hello' message but no 'host_ip' field found.")
+                else:
+                    print("Received message does not match expected format.")
+            except json.JSONDecodeError as e:
+                print(f"JSON decode error: {e}")
 
     def loop(self):
         return (
@@ -181,8 +243,8 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
         return self.ready_to_kick
 
     def run(self):
-        self.info = self.command
-        match self.command:
+        self.info = self.command['command']
+        match self.command['command']:
             case "find_ball":
                 self.find_ball()
             case "chase_ball":
@@ -196,6 +258,7 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
             case "go_back_to_field":
                 self.go_back_to_field(self.field_aim_x, self.field_aim_y)
             case _:
+                print("Unknown command: ", self.command)
                 self.stop(1)
 
 

@@ -9,10 +9,9 @@ import time
 import numpy as np
 import math
 import logging
+import asyncio
 
-from state_machine.robot_server import RobotServer
-
-
+from robot_server import RobotServer
 
 COMMANDS = {
     "dribble": 'dribble',
@@ -38,22 +37,6 @@ class Agent():
 
         # 获取参数 TODO: 确定参数
 
-        # 机器人状态
-        self.robot_data = defaultdict( lambda: {
-            "last_seen": None, 
-            "status": "disconnected", 
-            "data": {}} 
-        )
-
-        # 开启TCP监听
-        self.robot_server = RobotServer(agent=self)
-
-        # 开启UDP监听
-
-        # 订阅裁判盒消息
-
-        # 获取可用球员
-
         # 创建角色与ID的映射
         self.roles_to_id = {
             "forward_1": 1,
@@ -62,16 +45,71 @@ class Agent():
             "goalkeeper": 4,
         }
 
-        # 根据可用球员更改角色对应ID
-        self.update_players_id()
+        # 初始化机器人状态
+        self.robots_data = defaultdict( lambda: {
+            "last_seen": None, 
+            "status": "disconnected", 
+            "data": {}} 
+        )
+        
+        for role, robot_id in self.roles_to_id.items():
+            self.robots_data[robot_id] = {
+                "last_seen": None,
+                "status": "disconnected",
+                "data": {}
+            }
 
-        self._ball_pos = None
+        # # 开启TCP监听
+        # self.robot_server = RobotServer(agent=self)
+
+        # self.server_thread = threading.Thread(target=asyncio.run(self.robot_server.run()), daemon=True)
+        # self.server_thread.start()
+
+        # 开启TCP监听
+        self.robot_server = RobotServer(agent=self)
+
+        def start_robot_server():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(self.robot_server.run())
+
+        self.server_thread = threading.Thread(target=start_robot_server, daemon=True)
+        self.server_thread.start()
+
+
+        # 等待所有机器人开机
+        logging.info("Waiting for all robots to start...")
+        count = 0
+        while not all(data['status'] == 'connected' for data in self.robots_data.values()):
+            self.robot_server.broadcast({"message": "thmos_hello", "ip": self.ip})
+            time.sleep(1)
+            count += 1
+            if count > 30:
+                logging.warning("Some robots are not connected")
+                exit(1)
+        print(self.robots_data)
+        logging.info("All robots are connected")
+
+        # 开启UDP监听
+
+        # 订阅裁判盒消息
+
+        # 获取可用球员
+
+        # 根据可用球员更改角色对应ID
+        # self.update_players_id()
+
+        self._ball_pos = 1
 
         self._state = None
         
         self.ifBall = False
         self.ready_to_kick = False
         self.t_no_ball = 0
+
+        self._init_state_machine()
+
+
 
 
     def _init_command_publishers(self):
@@ -123,11 +161,11 @@ class Agent():
         # 是否使用静态IP
         self.use_static_ip = config.get("use_static_ip", False)
 
-    def update(self, robot_id, robot_data):
+    def update(self, robot_id, robots_data):
         """
         更新机器人数据。
         """
-        self.robot_states[robot_id] = robot_data[data]
+        self.robot_states[robot_id] = robots_data.get("data")
 
     # TODO: Implement this method
     def ball_pos_callback(self, msg):
@@ -142,7 +180,7 @@ class Agent():
         """
         players_distance = {}
 
-        for robot_id, data in self.robot_data.items():
+        for robot_id, data in self.robots_data.items():
             player_pos = [data.get('x'), data.get('y')]
             ball_pos = [data.get('ballx'), data.get('bally')]
             distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
@@ -154,8 +192,9 @@ class Agent():
 
         players_distance = {}
 
-        for robot_id, data in self.robot_data.items():
-            if data["role"] != "goalkeeper":
+        for robot_id, robot_data in self.robots_data.items():
+            if robot_id != self.roles_to_id["goalkeeper"]:
+                data = robot_data.get('data')
                 player_pos = [data.get('x'), data.get('y')]
                 ball_pos = [data.get('ballx'), data.get('bally')]
                 distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
@@ -176,12 +215,12 @@ class Agent():
         temp_roles_to_id[player_role_1], temp_roles_to_id[player_role_2] = self.roles_to_id[player_role_2], self.roles_to_id[player_role_1]
         self.roles_to_id = temp_roles_to_id
 
-    def publish_command(self, player_role, cmd):
+    def publish_command(self, player_id, cmd):
         """
         发布指令。
 
         Args:
-            player_role (int): 球员角色
+            player_id (int): 球员id
             cmd (): 指令
         """
         # 将command, data, player_role, 时间戳等信息打包成字典
@@ -191,7 +230,7 @@ class Agent():
             "send_time": time.time(),
         }
 
-        self.robot_server.send(self.roles_to_id[player_role], cmd_data)
+        asyncio.run(self.robot_server.send(player_id, cmd_data))
 
     def initialize(self):
         """
@@ -206,6 +245,60 @@ class Agent():
         """
         for role, id in self.roles_to_id.items():
             self.publish_command(role, COMMANDS.get("stop"))
+
+    def ball_in_backcourt(self):
+        """
+        判断球是否在后场。
+
+        Returns:
+            bool: 如果球在后场返回True 否则返回False
+
+        TODO: 确定球在后场的判断条件
+        """
+        if self.ball_x > 10:
+            return True
+        return False
+        
+    def ball_in_midcourt(self):
+        """
+        判断球是否在中场。
+
+        Returns:
+            bool: 如果球在中场返回True 否则返回False
+
+        TODO: 确定球在中场的判断条件
+        """
+        if 5 < self.ball_x <= 10:
+            return True
+        return False
+    
+    def ball_in_frontcourt(self):
+        """
+        判断球是否在前场。
+
+        Returns:
+            bool: 如果球在前场返回True 否则返回False
+
+        TODO: 确定球在前场的判断条件
+        """
+        if self.ball_x <= 5:
+            return True
+        return False
+
+    def stop_condition(self):
+        """
+        停止条件。
+
+        Returns:
+            bool: 如果满足停止条件返回True 否则返回False
+        """
+        # 如果有两个以上机器人disconnect，停止
+        count = 0
+        for robot_id, data in self.robots_data.items():
+            if data['status'] == 'disconnected':
+                count += 1
+        if count >= 2:
+            return True
 
     @property
     def state(self):
@@ -237,36 +330,51 @@ class Agent():
     def run_shoot_ball(self):
         self.shoot_ball_state_machine.run()
 
+    def run(self):
+        while self.robots_data[1].get('status') == "disconnected":
+            print("Waiting for connection")
+            time.sleep(1)
+            pass
+        # self.state_machine.thread.start()
+        self.state_machine.run_in_state1()
+
 
 class StateMachine:
     def __init__(self, model: Agent):
+        self.model = model  # Store the model as an attribute
         self.states = [
+            "initial",
             "stop",
             "defend",
             "dribble",
             "shoot",
         ]
         self.transitions = [
+            # defend, dribble, shoot 只能由非 stop 状态转移而来
             {
                 "trigger": "play",
-                "source": "*",
+                "source": ["dribble", "shoot", "initial"],
                 "dest": "defend",
                 "conditions": "ball_in_backcourt",
-                # "after": "defend_ball",
             },
             {
                 "trigger": "play",
-                "source": "*",
+                "source": ["defend", "shoot", "initial"],
                 "dest": "dribble",
                 "conditions": "ball_in_midcourt",
-                # "after": "dribble_ball",
             },
             {
                 "trigger": "play",
-                "source": "*",
+                "source": ["defend", "dribble", "initial"],
                 "dest": "shoot",
                 "conditions": "ball_in_frontcourt",
-                # "after": "shoot_ball",
+            },
+            # initial 只能由 stop 转移而来
+            {
+                "trigger": "initialize",
+                "source": "",
+                "dest": "initial",
+                "after": "initialize",
             },
             {
                 "trigger": "stop_playing",
@@ -274,84 +382,49 @@ class StateMachine:
                 "dest": "stop",
                 "after": "stop",
             },
-            {
-                "trigger": "initialize",
-                "source": "*",
-                "dest": "initial",
-                "after": "initialize",
-            },
         ]
         self.machine = Machine(
-            model=model,
+            model=self.model,  # Use self.model here
             states=self.states,
-            initial="find_ball",
+            initial="initial",  # Change to an existing state
             transitions=self.transitions,
         )
-        self.thread = threading.Thread(target=self.run_in_state1)
-
-    def ball_in_backcourt(self):
-        """
-        判断球是否在后场。
-
-        Returns:
-            bool: 如果球在后场返回True 否则返回False
-
-        TODO: 确定球在后场的判断条件
-        """
-        if self.model.ball_pos > 10:
-            return True
-        return False
-        
-    def ball_in_midcourt(self):
-        """
-        判断球是否在中场。
-
-        Returns:
-            bool: 如果球在中场返回True 否则返回False
-
-        TODO: 确定球在中场的判断条件
-        """
-        if 5 < self.model.ball_pos <= 10:
-            return True
-        return False
+        # self.thread = threading.Thread(target=self.run_in_state1)
     
-    def ball_in_frontcourt(self):
-        """
-        判断球是否在前场。
-
-        Returns:
-            bool: 如果球在前场返回True 否则返回False
-
-        TODO: 确定球在前场的判断条件
-        """
-        if self.model.ball_pos <= 5:
-            return True
-        return False
-    
-    def stop(self):
-        self.model.stop()
-
-    def initialize(self):
-        self.model.initialize()
-
     def run_in_state1(self):
-        while True:
-            self.machine.play()
-            time.sleep(0.1)
+        try:
+            while True:
 
-            if self.model.state == "stop":
-                pass
-            elif self.model.state == "defend":
-                self.model.run_defend_ball()
-            elif self.model.state == "dribble":
-                self.model.run_dribble_ball()
-            elif self.model.state == "shoot":
-                self.model.run_shoot_ball()
-            elif self.model.state == "initial":
-                pass
-            else:
-                logging.error("Invalid state")
-                pass
+
+                if self.model.stop_condition():
+                    self.model.stop_playing()
+                    break
+
+                self.model.play()
+                time.sleep(0.1)
+
+                if self.model.state == "stop":
+                    pass
+                elif self.model.state == "defend":
+                    print("defend")
+                    self.model.run_defend_ball()
+                elif self.model.state == "dribble":
+                    print("dribble")
+                    self.model.run_dribble_ball()
+                elif self.model.state == "shoot":
+                    print("shoot") 
+                    self.model.run_shoot_ball()
+                elif self.model.state == "initial":
+                    print("initial")
+                    pass
+                else:
+                    logging.error("Invalid state")
+                    pass
+        except KeyboardInterrupt:
+            print("\nProgram interrupted by user")
+        finally:
+
+            pass
 
         
 
@@ -374,14 +447,14 @@ class DefendBallStateMachine:
             },
             {
                 "trigger": "run",
-                "source": "*",
+                "source": ["have_no_ball", "have_ball"],
                 "dest": "close_to_ball",
                 "conditions": "close_to_ball",
                 "after": "go_for_possession_avoid_collsion", # 争夺控球, 把find和chase封装进去
             },
             {
                 "trigger": "run",
-                "source": "*",
+                "source": ["close_to_ball", "have_ball"],
                 "dest": "have_no_ball",
                 "conditions": "ball_out_of_control",
                 "after": "go_for_possession", # 争夺控球, 把find和chase封装进去
@@ -395,7 +468,7 @@ class DefendBallStateMachine:
         )
 
     def ball_in_control(self):
-        return self.agent.is_ball_in_control()
+        return not (self.ball_out_of_control() or self.close_to_ball())
     
     def ball_out_of_control(self):
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
@@ -495,14 +568,14 @@ class DribbleBallStateMachine:
             },
             {
                 "trigger": "run",
-                "source": "*",
+                "source": ["have_no_ball", "have_ball"],
                 "dest": "close_to_ball",
                 "conditions": "close_to_ball",
                 "after": "go_for_possession_avoid_collsion", # 争夺控球, 把find和chase封装进去
             },
             {
                 "trigger": "run",
-                "source": "*",
+                "source": ["close_to_ball", "have_ball"],
                 "dest": "have_no_ball",
                 "conditions": "ball_out_of_control",
                 "after": "go_for_possession", # 争夺控球, 把find和chase封装进去
@@ -593,14 +666,14 @@ class ShootBallStateMachine:
             },
             {
                 "trigger": "run",
-                "source": "*",
+                "source": ["have_no_ball", "have_ball"],
                 "dest": "close_to_ball",
                 "conditions": "close_to_ball",
                 "after": "go_for_possession_avoid_collsion", # 争夺控球, 把find和chase封装进去
             },
             {
                 "trigger": "run",
-                "source": "*",
+                "source": ["close_to_ball", "have_ball"],
                 "dest": "have_no_ball",
                 "conditions": "ball_out_of_control",
                 "after": "go_for_possession", # 争夺控球, 把find和chase封装进去
@@ -667,9 +740,8 @@ class ShootBallStateMachine:
 
 def main():
     agent = Agent()
-    while True:
-        agent.ifBall = int(input())
-        agent.run()
+    agent.ifBall = 1
+    agent.run()
 
 
 if __name__ == "__main__":
