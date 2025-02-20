@@ -85,7 +85,7 @@ class Agent():
 
             if self.robots_data[1].get('status') == "connected":
                 print("Robot 1 connected")
-                # break
+                break
 
             time.sleep(1)
             count += 1
@@ -242,14 +242,14 @@ class Agent():
         所有机器人入场
         """
         for role, id in self.roles_to_id.items():
-            self.publish_command(role, COMMANDS.get("go_back_to_field"))
+            self.publish_command(id, COMMANDS.get("go_back_to_field"))
 
     def stop(self):
         """
         所有机器人停止运行
         """
         for role, id in self.roles_to_id.items():
-            self.publish_command(role, COMMANDS.get("stop"))
+            self.publish_command(id, COMMANDS.get("stop"))
 
     def ball_in_backcourt(self):
         """
@@ -341,6 +341,7 @@ class Agent():
             time.sleep(1)
             pass
         # self.state_machine.thread.start()
+        print("Start running")
         self.state_machine.run_in_state1()
 
 
@@ -402,8 +403,10 @@ class StateMachine:
 
 
                 if self.model.stop_condition():
-                    self.model.stop_playing()
-                    break
+                    # self.model.stop_playing()
+                    # break
+                    print("stop_condition satisfied")
+                    pass
 
                 self.model.play()
                 time.sleep(0.1)
@@ -430,9 +433,6 @@ class StateMachine:
         finally:
 
             pass
-
-        
-
 
 class DefendBallStateMachine:
     def __init__(self, agent: Agent):

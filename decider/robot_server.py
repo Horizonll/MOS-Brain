@@ -15,7 +15,7 @@ class RobotServer:
     def __init__(self, agent, port=8001):
         self.port = port
         self.agent = agent
-        self.robot_ips = defaultdict(str)
+        self.robot_ips = {}
         # 存储机器人数据
         self.robots_data = self.agent.robots_data
         # 创建 UDP 套接字用于广播
@@ -65,15 +65,18 @@ class RobotServer:
                     robot_id = robot_data["id"]
                     # logging.info(f"Received data from robot {robot_id}: {robot_data}")
                     # 更新机器人 IP 地址
-                    if robot_id not in self.robot_ips:
-                        self.robot_ips[robot_id] = addr[0]
-                    elif self.robot_ips[robot_id]!= addr[0]:
-                        logging.warning(f"Robot {robot_id} IP address changed from {self.robot_ips[robot_id]} to {addr[0]}")
-                        self.robot_ips[robot_id] = addr[0]
+                    # if robot_id not in self.robot_ips:
+                    #     self.robot_ips[robot_id] = addr[0]
+                    # elif self.robot_ips[robot_id]!= addr[0]:
+                    #     logging.warning(f"Robot {robot_id} IP address changed from {self.robot_ips[robot_id]} to {addr[0]}")
+                    #     self.robot_ips[robot_id] = addr[0]
                     # 更新或添加机器人数据
                     self.agent.robots_data[robot_id]['last_seen'] = datetime.now().isoformat()
                     self.agent.robots_data[robot_id]['status'] = 'connected'
                     self.agent.robots_data[robot_id]['data'].update(robot_data.get('data'))
+                    # 更新机器人的 IP 地址
+                    self.robot_ips[robot_id] = robot_data.get('ip')
+
                     self.agent.ball_x = robot_data.get('data').get('ballx')
                     # # 构建响应消息
                     # response = {
@@ -145,6 +148,7 @@ class RobotServer:
                 logging.error(f"Failed to send data to robot {robot_id}: {e}")
         else:
             logging.error(f"No IP address found for robot {robot_id}")
+            print(self.robot_ips)
 
     def broadcast(self, data):
         broadcast_addr = ('192.168.99.255', self.udp_port)

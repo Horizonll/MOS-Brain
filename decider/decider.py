@@ -13,6 +13,7 @@ import socket
 import json
 import asyncio
 import websockets
+import logging
 
 
 class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
@@ -68,6 +69,9 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
         self.go_back_to_field_yaw_bias = None
         print("Set go_back_to_field_yaw_bias to None.")
 
+        # detect local ip
+        self.ip = self.detect_ip()
+
         # 监听主机IP
         print("Starting to listen for host IP...")
         # self.listen_host_ip()
@@ -101,12 +105,16 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
             try:
                 robot_data = {
                     "id": self.id,
-                    "x": self.pos_x,
-                    "y": self.pos_y,
-                    "ballx": self.ball_x_in_map,
-                    "bally": self.ball_y_in_map,
-                    "yaw": self.pos_yaw,
+                    "data": {
+                        "x": self.pos_x,
+                        "y": self.pos_y,
+                        "ballx": self.ball_x_in_map,
+                        "bally": self.ball_y_in_map,
+                        "yaw": self.pos_yaw,
+                    },
                     "info": self.info,
+                    "timestamp": time.time(),
+                    "ip": self.ip
                 }
                 if not self.ifBall:
                     robot_data["ballx"] = robot_data["bally"] = None
@@ -124,6 +132,18 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
             print(f"Error in send_robot_data: {e}")
         finally:
             client_socket.close()
+
+    def detect_ip(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+        except Exception as e:
+            logging.error(f"Failed to detect IP address: {e}")
+            ip = '127.0.0.1'
+        finally:
+            s.close()
+        return ip
 
     # async def websocket_client(self):
     #     uri = f"ws://{self.HOST_IP}:8001"
@@ -883,7 +903,13 @@ class DribbleStateMachine:
 def main():
     agent = Agent()
     while True:
-        agent.run()
+        try:
+            agent.run()
+        except KeyboardInterrupt:
+            print("\nProgram interrupted by user")
+        finally:
+            pass
+
 
 
 if __name__ == "__main__":
