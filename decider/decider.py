@@ -161,6 +161,7 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
                         host_ip = received_data['ip']
                         self.HOST_IP = host_ip  # 更新Agent实例中的IP地址
                         print(f"Updated IP to: {self.HOST_IP}")
+                        break
                     else:
                         print("Received 'thmos_hello' message but no 'host_ip' field found.")
                 else:
