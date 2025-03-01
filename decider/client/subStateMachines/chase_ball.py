@@ -1,6 +1,12 @@
 # chase ball
 #
 
+import time
+from transitions import Machine
+import numpy as np
+import config
+
+
 class ChaseBallStateMachine:
     def __init__(self, agent):
         self.agent = agent
@@ -32,10 +38,5 @@ class ChaseBallStateMachine:
         if abs(self.cam_neck) > ang:
             self.speed_controller(0, 0, np.sign(self.cam_neck) * config.walk_theta_vel)
         elif abs(self.cam_neck) <= ang:
-            self.speed_controller(
-                config.walk_x_vel, 0, 2.5 * self.cam_neck * config.walk_theta_vel
-            )
+            self.speed_controller(config.walk_x_vel, 0, 2.5 * self.cam_neck * config.walk_theta_vel)
             time.sleep(0.1)
-
-
-

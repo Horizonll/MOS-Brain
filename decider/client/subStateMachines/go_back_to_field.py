@@ -1,5 +1,11 @@
 # Go back to field
-# 
+#
+
+import threading
+import time
+from transitions import Machine
+import numpy as np
+
 
 class GoBackToFieldStateMachine:
     def __init__(self, agent, aim_x, aim_y, min_dist=300):
@@ -59,21 +65,10 @@ class GoBackToFieldStateMachine:
         self.lock = threading.Lock()
 
     def need_coarse_yaw_adjustment(self):
-        return self.agent.go_back_to_field_dist > self.min_dist and (
-            abs(self.agent.go_back_to_field_yaw_bias) > 15
-            or (
-                self.agent.go_back_to_field_dist > 3 * self.min_dist
-                and abs(self.agent.go_back_to_field_yaw_bias) > 10
-            )
-        )
+        return self.agent.go_back_to_field_dist > self.min_dist and (abs(self.agent.go_back_to_field_yaw_bias) > 15 or (self.agent.go_back_to_field_dist > 3 * self.min_dist and abs(self.agent.go_back_to_field_yaw_bias) > 10))
 
     def need_fine_yaw_adjustment(self):
-        return (
-            self.agent.go_back_to_field_dist < 5 * self.min_dist
-            and -20 < self.agent.go_back_to_field_yaw_bias < 10
-            and not -10 < self.agent.go_back_to_field_yaw_bias < 5
-            and self.agent.go_back_to_field_dist >= self.min_dist
-        )
+        return self.agent.go_back_to_field_dist < 5 * self.min_dist and -20 < self.agent.go_back_to_field_yaw_bias < 10 and not -10 < self.agent.go_back_to_field_yaw_bias < 5 and self.agent.go_back_to_field_dist >= self.min_dist
 
     def arrived_at_target(self):
         return self.agent.go_back_to_field_dist < self.min_dist
@@ -116,13 +111,8 @@ class GoBackToFieldStateMachine:
     def coarse_yaw_adjust(self):
         with self.lock:
             sgn_bias = 1 if self.agent.go_back_to_field_yaw_bias > 0 else -1
-            while (
-                not self.agent.loop()
-                and not -20 < self.agent.go_back_to_field_yaw_bias / sgn_bias < 10
-            ):
-                print(
-                    f"dist: {self.agent.go_back_to_field_dist}, yaw_bias: {self.agent.go_back_to_field_yaw_bias}, dir: {self.agent.go_back_to_field_dir}, pos_yaw: {self.agent.pos_yaw}"
-                )
+            while not self.agent.loop() and not -20 < self.agent.go_back_to_field_yaw_bias / sgn_bias < 10:
+                print(f"dist: {self.agent.go_back_to_field_dist}, yaw_bias: {self.agent.go_back_to_field_yaw_bias}, dir: {self.agent.go_back_to_field_dir}, pos_yaw: {self.agent.pos_yaw}")
                 self.agent.update_go_back_to_field_status(self.aim_x, self.aim_y)
                 if self.agent.go_back_to_field_dist < self.min_dist:
                     break
@@ -134,31 +124,18 @@ class GoBackToFieldStateMachine:
                     self.agent.speed_controller(0, 0, self.agent.walk_theta_vel)
                     self.agent.debug_info("[Go Back to Field] Turning left")
                     time.sleep(0.3)
-                self.agent.go_back_to_field_dir = np.arctan2(
-                    -self.aim_x + self.agent.pos_x, self.aim_y - self.agent.pos_y
-                )
+                self.agent.go_back_to_field_dir = np.arctan2(-self.aim_x + self.agent.pos_x, self.aim_y - self.agent.pos_y)
                 self.agent.go_back_to_field_yaw_bias = np.degrees(
                     np.arctan2(
-                        np.sin(
-                            self.agent.go_back_to_field_dir
-                            - self.agent.pos_yaw * np.pi / 180
-                        ),
-                        np.cos(
-                            self.agent.go_back_to_field_dir
-                            - self.agent.pos_yaw * np.pi / 180
-                        ),
+                        np.sin(self.agent.go_back_to_field_dir - self.agent.pos_yaw * np.pi / 180),
+                        np.cos(self.agent.go_back_to_field_dir - self.agent.pos_yaw * np.pi / 180),
                     )
                 )
 
     def fine_yaw_adjust(self):
         with self.lock:
             sgn_bias = 1 if self.agent.go_back_to_field_yaw_bias > 0 else -1
-            while (
-                not self.agent.loop()
-                and -20 < self.agent.go_back_to_field_yaw_bias / sgn_bias < 10
-                and (not -10 < self.agent.go_back_to_field_yaw_bias / sgn_bias < 5)
-                and self.agent.go_back_to_field_dist < 5 * self.min_dist
-            ):
+            while not self.agent.loop() and -20 < self.agent.go_back_to_field_yaw_bias / sgn_bias < 10 and (not -10 < self.agent.go_back_to_field_yaw_bias / sgn_bias < 5) and self.agent.go_back_to_field_dist < 5 * self.min_dist:
                 self.agent.update_go_back_to_field_status(self.aim_x, self.aim_y)
                 if self.agent.go_back_to_field_dist < self.min_dist:
                     break
@@ -169,35 +146,21 @@ class GoBackToFieldStateMachine:
                 else:
                     self.agent.speed_controller(0, 0, 0.1)
                     time.sleep(0.5)
-                self.agent.go_back_to_field_dir = np.arctan2(
-                    -self.aim_x + self.agent.pos_x, self.aim_y - self.agent.pos_y
-                )
+                self.agent.go_back_to_field_dir = np.arctan2(-self.aim_x + self.agent.pos_x, self.aim_y - self.agent.pos_y)
                 self.agent.go_back_to_field_yaw_bias = np.degrees(
                     np.arctan2(
-                        np.sin(
-                            self.agent.go_back_to_field_dir
-                            - self.agent.pos_yaw * np.pi / 180
-                        ),
-                        np.cos(
-                            self.agent.go_back_to_field_dir
-                            - self.agent.pos_yaw * np.pi / 180
-                        ),
+                        np.sin(self.agent.go_back_to_field_dir - self.agent.pos_yaw * np.pi / 180),
+                        np.cos(self.agent.go_back_to_field_dir - self.agent.pos_yaw * np.pi / 180),
                     )
                 )
 
     def arrived_at_target_operations(self):
         with self.lock:
-            self.agent.debug_info(
-                "[Go Back to Field] "
-                + str(self.agent.role)
-                + " has arrived. Turn ahead"
-            )
+            self.agent.debug_info("[Go Back to Field] " + str(self.agent.role) + " has arrived. Turn ahead")
             self.agent.speed_controller(0, 0, 0)
             time.sleep(1)
             if abs(self.agent.pos_yaw) > 160:
-                self.agent.speed_controller(
-                    0, 0, -np.sign(self.agent.pos_yaw) * self.agent.walk_theta_vel
-                )
+                self.agent.speed_controller(0, 0, -np.sign(self.agent.pos_yaw) * self.agent.walk_theta_vel)
                 time.sleep(2)
             while not self.agent.loop() and self.agent.pos_yaw > 5:
                 self.agent.speed_controller(0, 0, -self.agent.walk_theta_vel)
@@ -209,9 +172,6 @@ class GoBackToFieldStateMachine:
                 time.sleep(0.5)
             # ready
             self.agent.speed_controller(0, 0, 0)
-            self.agent.debug_info(
-                "[Go Back to Field] Finished going back to field. Ready to play."
-            )
+            self.agent.debug_info("[Go Back to Field] Finished going back to field. Ready to play.")
             time.sleep(1)
             self.agent.is_going_back_to_field = False
-

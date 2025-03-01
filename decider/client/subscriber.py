@@ -47,12 +47,8 @@ class Decision_Vision(object):
     def __init__(self):
         self.reset()
         # ROS接收视觉组信息
-        self.vision_sub = rospy.Subscriber(
-            "/vision/obj_pos", Float32MultiArray, self.vision_callback
-        )
-        self.soccer_real_sub = rospy.Subscriber(
-            "soccer_real_pos_in_map", Point, self.soccer_real_callback
-        )
+        self.vision_sub = rospy.Subscriber("/vision/obj_pos", Float32MultiArray, self.vision_callback)
+        self.soccer_real_sub = rospy.Subscriber("soccer_real_pos_in_map", Point, self.soccer_real_callback)
 
     # Using ball_x ball_y distance if_Ball ball_x_in_map ball_y_in_map
     def reset(self):
@@ -75,9 +71,7 @@ class Decision_Vision(object):
         # confidence置信度，表示物体识别准确度，越高越好
         # distance是通过相机内参矩阵算出来的结果，只有球有效
         # x, y, z 表示目标相对于机器人身体坐标系的坐标，机器人身体坐标系z朝上，y朝前，右手坐标系，单位mm
-        self.target_metrix = np.array(target_matrix.data, dtype=np.float32).reshape(
-            h, w
-        )
+        self.target_metrix = np.array(target_matrix.data, dtype=np.float32).reshape(h, w)
 
         # self.ifBall = (self.target_metrix[:, 0] == 0).any()  # 第 0 列有为 0 的值
 
@@ -85,16 +79,9 @@ class Decision_Vision(object):
         try:
             if self.ifBall:
                 # 如果有球，则只有一个球场上置信度最高的球。获取这一行的第6个值为x, 第7个值为y
-                target_ball_msg = self.target_metrix[
-                    self.target_metrix[:, 0] == 0
-                ].squeeze()  # 直接切片是2维
-                self.ball_distance = (
-                    math.sqrt(target_ball_msg[-3] ** 2 + target_ball_msg[-2] ** 2)
-                    / 1000
-                )  # 球距离：m
-                self.angle = math.degrees(
-                    math.atan2(target_ball_msg[-2], target_ball_msg[-3])
-                )  # 球角度：degree
+                target_ball_msg = self.target_metrix[self.target_metrix[:, 0] == 0].squeeze()  # 直接切片是2维
+                self.ball_distance = math.sqrt(target_ball_msg[-3] ** 2 + target_ball_msg[-2] ** 2) / 1000  # 球距离：m
+                self.angle = math.degrees(math.atan2(target_ball_msg[-2], target_ball_msg[-3]))  # 球角度：degree
 
                 self.ball_x = target_ball_msg[1]  # 像素中心坐标
                 self.ball_y = target_ball_msg[2]
@@ -136,11 +123,7 @@ class Decision_Motion(object):
         kick_goal = KickGoal()
         kick_goal.header.seq = 1
         kick_goal.header.stamp = rospy.Time.now()
-        frame_prefix = (
-            ""
-            if os.environ.get("ROS_NAMESPACE") is None
-            else os.environ.get("ROS_NAMESPACE") + "/"
-        )
+        frame_prefix = "" if os.environ.get("ROS_NAMESPACE") is None else os.environ.get("ROS_NAMESPACE") + "/"
         kick_goal.header.frame_id = frame_prefix + "base_footprint"
         kick_goal.ball_position.x = 0
         kick_goal.ball_position.y = 0
@@ -186,11 +169,7 @@ class Decision_Motion(object):
         # kick_goal消息戳
         kick_goal.header.seq = 1
         kick_goal.header.stamp = rospy.Time.now()
-        frame_prefix = (
-            ""
-            if os.environ.get("ROS_NAMESPACE") is None
-            else os.environ.get("ROS_NAMESPACE") + "/"
-        )
+        frame_prefix = "" if os.environ.get("ROS_NAMESPACE") is None else os.environ.get("ROS_NAMESPACE") + "/"
         kick_goal.header.frame_id = frame_prefix + "base_footprint"
 
         # 踢球速度
@@ -214,11 +193,7 @@ class Decision_Motion(object):
         # kick_goal消息戳
         kick_goal.header.seq = 1
         kick_goal.header.stamp = rospy.Time.now()
-        frame_prefix = (
-            ""
-            if os.environ.get("ROS_NAMESPACE") is None
-            else os.environ.get("ROS_NAMESPACE") + "/"
-        )
+        frame_prefix = "" if os.environ.get("ROS_NAMESPACE") is None else os.environ.get("ROS_NAMESPACE") + "/"
         kick_goal.header.frame_id = frame_prefix + "base_footprint"
 
         # 踢球速度

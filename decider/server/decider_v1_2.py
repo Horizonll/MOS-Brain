@@ -14,13 +14,13 @@ import asyncio
 from robot_server import RobotServer
 
 COMMANDS = {
-    "dribble": 'dribble',
-    "forward": 'forward',
-    "stop": 'stop',
-    "find_ball": 'find_ball',
-    "chase_ball": 'chase_ball',
-    "shoot": 'kick',
-    "go_back_to_field": 'go_back_to_field',
+    "dribble": "dribble",
+    "forward": "forward",
+    "stop": "stop",
+    "find_ball": "find_ball",
+    "chase_ball": "chase_ball",
+    "shoot": "kick",
+    "go_back_to_field": "go_back_to_field",
 }
 
 PLAYER_STATES = {
@@ -28,8 +28,7 @@ PLAYER_STATES = {
 }
 
 
-
-class Agent():
+class Agent:
     def __init__(self):
 
         # 初始化ROS节点
@@ -46,18 +45,10 @@ class Agent():
         }
 
         # 初始化机器人状态
-        self.robots_data = defaultdict( lambda: {
-            "last_seen": None, 
-            "status": "disconnected", 
-            "data": {}} 
-        )
-        
+        self.robots_data = defaultdict(lambda: {"last_seen": None, "status": "disconnected", "data": {}})
+
         for role, robot_id in self.roles_to_id.items():
-            self.robots_data[robot_id] = {
-                "last_seen": None,
-                "status": "disconnected",
-                "data": {}
-            }
+            self.robots_data[robot_id] = {"last_seen": None, "status": "disconnected", "data": {}}
 
         # # 开启TCP监听
         # self.robot_server = RobotServer(agent=self)
@@ -76,14 +67,13 @@ class Agent():
         self.server_thread = threading.Thread(target=start_robot_server, daemon=True)
         self.server_thread.start()
 
-
         # 等待所有机器人开机
         logging.info("Waiting for all robots to start...")
         count = 0
-        while not all(data['status'] == 'connected' for data in self.robots_data.values()):
+        while not all(data["status"] == "connected" for data in self.robots_data.values()):
             # self.robot_server.broadcast({"message": "thmos_hello", "ip": self.robot_server.ip})
 
-            if self.robots_data[1].get('status') == "connected":
+            if self.robots_data[1].get("status") == "connected":
                 print("Robot 1 connected")
                 break
 
@@ -107,15 +97,12 @@ class Agent():
         self._ball_pos = 1
 
         self._state = None
-        
+
         self.ifBall = False
         self.ready_to_kick = False
         self.t_no_ball = 0
 
         self._init_state_machine()
-
-
-
 
     def _init_command_publishers(self):
         """
@@ -125,24 +112,16 @@ class Agent():
         self.command_publishers = {}
         for player in self.available_players:
             if player.role == FORWARD_1:
-                self.command_publishers[player.uuid] = rospy.Publisher(
-                    f"/player_{player.uuid}/cmd", Twist, queue_size=10
-                )
+                self.command_publishers[player.uuid] = rospy.Publisher(f"/player_{player.uuid}/cmd", Twist, queue_size=10)
             elif player.role == FORWARD_2:
-                self.command_publishers[player.uuid] = rospy.Publisher(
-                    f"/player_{player.uuid}/cmd", Twist, queue_size=10
-                )
+                self.command_publishers[player.uuid] = rospy.Publisher(f"/player_{player.uuid}/cmd", Twist, queue_size=10)
             elif player.role == DEFENDER_1:
-                self.command_publishers[player.uuid] = rospy.Publisher(
-                    f"/player_{player.uuid}/cmd", Twist, queue_size=10
-                )
+                self.command_publishers[player.uuid] = rospy.Publisher(f"/player_{player.uuid}/cmd", Twist, queue_size=10)
             elif player.role == GOALKEEPER:
-                self.command_publishers[player.uuid] = rospy.Publisher(
-                    f"/player_{player.uuid}/cmd", Twist, queue_size=10
-                )
+                self.command_publishers[player.uuid] = rospy.Publisher(f"/player_{player.uuid}/cmd", Twist, queue_size=10)
             else:
                 raise ValueError("Invalid player role")
-            
+
     def _init_state_machine(self):
         """
         初始化状态机。
@@ -186,22 +165,22 @@ class Agent():
         players_distance = {}
 
         for robot_id, data in self.robots_data.items():
-            player_pos = [data.get('x'), data.get('y')]
-            ball_pos = [data.get('ballx'), data.get('bally')]
+            player_pos = [data.get("x"), data.get("y")]
+            ball_pos = [data.get("ballx"), data.get("bally")]
             distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
             players_distance[robot_id] = distance
 
         return players_distance
-    
+
     def get_players_distance_to_ball_without_goalkeeper(self):
 
         players_distance = {}
 
         for robot_id, robot_data in self.robots_data.items():
             if robot_id != self.roles_to_id["goalkeeper"]:
-                data = robot_data.get('data')
-                player_pos = [data.get('x'), data.get('y')]
-                ball_pos = [data.get('ballx'), data.get('bally')]
+                data = robot_data.get("data")
+                player_pos = [data.get("x"), data.get("y")]
+                ball_pos = [data.get("ballx"), data.get("bally")]
                 distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
                 players_distance[robot_id] = distance
 
@@ -263,7 +242,7 @@ class Agent():
         if self.ball_x > 10:
             return True
         return False
-        
+
     def ball_in_midcourt(self):
         """
         判断球是否在中场。
@@ -276,7 +255,7 @@ class Agent():
         if 5 < self.ball_x <= 10:
             return True
         return False
-    
+
     def ball_in_frontcourt(self):
         """
         判断球是否在前场。
@@ -300,7 +279,7 @@ class Agent():
         # 如果有两个以上机器人disconnect，停止
         count = 0
         for robot_id, data in self.robots_data.items():
-            if data['status'] == 'disconnected':
+            if data["status"] == "disconnected":
                 count += 1
         if count >= 2:
             return True
@@ -324,8 +303,8 @@ class Agent():
         Returns:
             bool: 如果球在控制中返回True 否则返回False
         """
-        return self.ifBall 
-    
+        return self.ifBall
+
     def run_defend_ball(self):
         self.defend_ball_state_machine.run()
 
@@ -336,7 +315,7 @@ class Agent():
         self.shoot_ball_state_machine.run()
 
     def run(self):
-        while self.robots_data[1].get('status') == "disconnected":
+        while self.robots_data[1].get("status") == "disconnected":
             print("Waiting for connection")
             time.sleep(1)
             pass
@@ -396,11 +375,10 @@ class StateMachine:
             transitions=self.transitions,
         )
         # self.thread = threading.Thread(target=self.run_in_state1)
-    
+
     def run_in_state1(self):
         try:
             while True:
-
 
                 if self.model.stop_condition():
                     # self.model.stop_playing()
@@ -420,7 +398,7 @@ class StateMachine:
                     print("dribble")
                     self.model.run_dribble_ball()
                 elif self.model.state == "shoot":
-                    print("shoot") 
+                    print("shoot")
                     self.model.run_shoot_ball()
                 elif self.model.state == "initial":
                     print("initial")
@@ -434,14 +412,11 @@ class StateMachine:
 
             pass
 
+
 class DefendBallStateMachine:
     def __init__(self, agent: Agent):
         self.agent = agent
-        self.states = [
-            "have_no_ball", 
-            "close_to_ball",
-            "have_ball"
-            ]
+        self.states = ["have_no_ball", "close_to_ball", "have_ball"]
         self.transitions = [
             {
                 "trigger": "run",
@@ -455,14 +430,14 @@ class DefendBallStateMachine:
                 "source": ["have_no_ball", "have_ball"],
                 "dest": "close_to_ball",
                 "conditions": "close_to_ball",
-                "after": "go_for_possession_avoid_collsion", # 争夺控球, 把find和chase封装进去
+                "after": "go_for_possession_avoid_collsion",  # 争夺控球, 把find和chase封装进去
             },
             {
                 "trigger": "run",
                 "source": ["close_to_ball", "have_ball"],
                 "dest": "have_no_ball",
                 "conditions": "ball_out_of_control",
-                "after": "go_for_possession", # 争夺控球, 把find和chase封装进去
+                "after": "go_for_possession",  # 争夺控球, 把find和chase封装进去
             },
         ]
         self.machine = Machine(
@@ -474,7 +449,7 @@ class DefendBallStateMachine:
 
     def ball_in_control(self):
         return not (self.ball_out_of_control() or self.close_to_ball())
-    
+
     def ball_out_of_control(self):
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
         forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
@@ -483,7 +458,7 @@ class DefendBallStateMachine:
         if forward_1_distance_to_ball > 0.5 and forward_2_distance_to_ball > 0.5:
             return True
         return False
-    
+
     def close_to_ball(self):
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
         forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
@@ -492,7 +467,7 @@ class DefendBallStateMachine:
         if forward_1_distance_to_ball < 0.5 or forward_2_distance_to_ball < 0.5:
             return True
         return False
-    
+
     def dribble_forward(self):
         """
         判断非守门员机器人中谁拿到球，然后进行带球
@@ -534,7 +509,6 @@ class DefendBallStateMachine:
         self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["chase_ball"])
         self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["chase_ball"])
         self.agent.publish_command(self.agent.roles_to_id["defender_1"], COMMANDS["chase_ball"])
-            
 
     def go_for_possession_avoid_collsion(self):
         """
@@ -544,9 +518,7 @@ class DefendBallStateMachine:
         players_distances = self.agent.get_players_distance_to_ball_without_goalkeeper()
 
         # 将球员与他们的距离组合成列表
-        players_distances = [
-            (id, distance) for id, distance in players_distances.items()
-        ]
+        players_distances = [(id, distance) for id, distance in players_distances.items()]
 
         # 根据距离从大到小排序
         players_distances_sorted = sorted(players_distances, key=lambda x: x[1], reverse=True)
@@ -555,14 +527,11 @@ class DefendBallStateMachine:
         for role, _ in players_distances_sorted[:2]:
             self.agent.publish_command(role, COMMANDS["stop_moving"])
 
+
 class DribbleBallStateMachine:
     def __init__(self, agent: Agent):
         self.agent = agent
-        self.states = [
-            "have_no_ball", 
-            "close_to_ball",
-            "have_ball"
-            ]
+        self.states = ["have_no_ball", "close_to_ball", "have_ball"]
         self.transitions = [
             {
                 "trigger": "run",
@@ -576,14 +545,14 @@ class DribbleBallStateMachine:
                 "source": ["have_no_ball", "have_ball"],
                 "dest": "close_to_ball",
                 "conditions": "close_to_ball",
-                "after": "go_for_possession_avoid_collsion", # 争夺控球, 把find和chase封装进去
+                "after": "go_for_possession_avoid_collsion",  # 争夺控球, 把find和chase封装进去
             },
             {
                 "trigger": "run",
                 "source": ["close_to_ball", "have_ball"],
                 "dest": "have_no_ball",
                 "conditions": "ball_out_of_control",
-                "after": "go_for_possession", # 争夺控球, 把find和chase封装进去
+                "after": "go_for_possession",  # 争夺控球, 把find和chase封装进去
             },
         ]
         self.machine = Machine(
@@ -595,7 +564,7 @@ class DribbleBallStateMachine:
 
     def ball_in_control(self):
         return self.agent.is_ball_in_control()
-    
+
     def ball_out_of_control(self):
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
         forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
@@ -603,7 +572,7 @@ class DribbleBallStateMachine:
         if forward_1_distance_to_ball > 0.5 and forward_2_distance_to_ball > 0.5:
             return True
         return False
-    
+
     def close_to_ball(self):
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
         forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
@@ -611,7 +580,7 @@ class DribbleBallStateMachine:
         if forward_1_distance_to_ball < 0.5 or forward_2_distance_to_ball < 0.5:
             return True
         return False
-    
+
     def dribble_forward(self):
         """
         判断非守门员机器人中谁拿到球，然后进行带球
@@ -629,8 +598,6 @@ class DribbleBallStateMachine:
                     self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["forward"])
         # 防守补位
         self.agent.publish_command(self.agent.roles_to_id["defender_1"], COMMANDS["go_to_defend_position"])
-    
-        
 
     def go_for_possession(self):
         """
@@ -639,7 +606,6 @@ class DribbleBallStateMachine:
         self.agent.t_no_ball = 0
         self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["chase_ball"])
         self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["chase_ball"])
-            
 
     def go_for_possession_avoid_collsion(self):
         """
@@ -653,14 +619,11 @@ class DribbleBallStateMachine:
         else:
             self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["stop"])
 
+
 class ShootBallStateMachine:
     def __init__(self, agent: Agent):
         self.agent = agent
-        self.states = [
-            "have_no_ball", 
-            "close_to_ball",
-            "have_ball"
-        ]
+        self.states = ["have_no_ball", "close_to_ball", "have_ball"]
         self.transitions = [
             {
                 "trigger": "run",
@@ -674,14 +637,14 @@ class ShootBallStateMachine:
                 "source": ["have_no_ball", "have_ball"],
                 "dest": "close_to_ball",
                 "conditions": "close_to_ball",
-                "after": "go_for_possession_avoid_collsion", # 争夺控球, 把find和chase封装进去
+                "after": "go_for_possession_avoid_collsion",  # 争夺控球, 把find和chase封装进去
             },
             {
                 "trigger": "run",
                 "source": ["close_to_ball", "have_ball"],
                 "dest": "have_no_ball",
                 "conditions": "ball_out_of_control",
-                "after": "go_for_possession", # 争夺控球, 把find和chase封装进去
+                "after": "go_for_possession",  # 争夺控球, 把find和chase封装进去
             },
         ]
         self.machine = Machine(
@@ -693,7 +656,7 @@ class ShootBallStateMachine:
 
     def ball_in_control(self):
         return self.agent.is_ball_in_control()
-    
+
     def ball_out_of_control(self):
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
         forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
@@ -701,7 +664,7 @@ class ShootBallStateMachine:
         if forward_1_distance_to_ball > 0.5 and forward_2_distance_to_ball > 0.5:
             return True
         return False
-    
+
     def close_to_ball(self):
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
         forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
@@ -709,7 +672,7 @@ class ShootBallStateMachine:
         if forward_1_distance_to_ball < 0.5 or forward_2_distance_to_ball < 0.5:
             return True
         return False
-    
+
     def shoot(self):
         """
         判断非守门员机器人中谁拿到球，然后进行射门
@@ -720,14 +683,12 @@ class ShootBallStateMachine:
             if players_status[id] == "controlling_ball":
                 self.agent.publish_command(id, COMMANDS["shoot"])
 
-
     def go_for_possession(self):
         """
         争夺控球
         """
         self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["chase_ball"])
         self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["chase_ball"])
-            
 
     def go_for_possession_avoid_collsion(self):
         """
@@ -742,6 +703,7 @@ class ShootBallStateMachine:
         else:
             self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["stop_moving"])
             self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["chase_ball"])
+
 
 def main():
     agent = Agent()

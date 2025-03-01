@@ -1,6 +1,10 @@
 # Dribble
 #
 
+import time
+import math
+from transitions import Machine
+
 
 class DribbleStateMachine:
     """
@@ -68,23 +72,15 @@ class DribbleStateMachine:
             time.sleep(0.5)
 
     def good_position(self):
-        return (
-            self.good_angel()
-            and self.agent.ball_y < 600
-            and abs(self.agent.ball_x - 640) < 10
-        )
+        return self.good_angel() and self.agent.ball_y < 600 and abs(self.agent.ball_x - 640) < 10
 
     def bad_position(self):
         return not self.good_position()
 
     def good_angel(self):
-        rad1 = math.atan(
-            (self.agent.pos_x - 1300) / (4500 - self.agent.pos_y)
-        )  # FIXME:球门左侧
+        rad1 = math.atan((self.agent.pos_x - 1300) / (4500 - self.agent.pos_y))  # FIXME:球门左侧
         ang_tar1 = rad1 * 180 / math.pi
-        rad2 = math.atan(
-            (self.agent.pos_x + 1300) / (4500 - self.agent.pos_y)
-        )  # FIXME:球门右侧
+        rad2 = math.atan((self.agent.pos_x + 1300) / (4500 - self.agent.pos_y))  # FIXME:球门右侧
         ang_tar2 = rad2 * 180 / math.pi
         if ang_tar1 < self.agent.pos_yaw < ang_tar2:
             return True
@@ -94,5 +90,3 @@ class DribbleStateMachine:
 
     def finished(self):
         return not self.agent.ifBall
-
-

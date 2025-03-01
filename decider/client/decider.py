@@ -3,6 +3,7 @@ import asyncio
 import json
 import logging
 import math
+import signal
 import time
 import threading
 import socket
@@ -94,7 +95,7 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
         # 监听主机IP
         print("Starting to listen for host IP...")
         # self.listen_host_ip()
-        self.HOST_IP = "192.168.98.114"
+        self.HOST_IP = "192.168.0.40"
         print("Finished listening for host IP.")
 
         # 启动发送线程
@@ -169,6 +170,8 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
         asyncio.set_event_loop(loop)
         try:
             loop.run_until_complete(self.tcp_listener())
+        except Exception as e:
+            print(f"Error in start_tcp_listener_loop: {e}")
         finally:
             loop.close()
 
@@ -330,8 +333,16 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
 def main():
     agent = Agent()
     try:
+        # 注册信号处理器
+        def sigint_handler(sig, frame):
+            print("\nExiting gracefully...")
+            # 这里可以添加清理代码（如关闭网络连接）
+            exit(0)
+
+        signal.signal(signal.SIGINT, sigint_handler)
         while True:
             agent.run()
+            time.sleep(0.2)
     except KeyboardInterrupt:
         print("\nProgram interrupted by user")
         exit()
