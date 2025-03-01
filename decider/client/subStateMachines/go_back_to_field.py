@@ -1,7 +1,6 @@
 # Go back to field
 # 
 
-
 class GoBackToFieldStateMachine:
     def __init__(self, agent, aim_x, aim_y, min_dist=300):
         self.agent = agent

@@ -1,6 +1,12 @@
 # find ball
 #
 
+from transitions import Machine
+from sensor_msgs.msg import JointState
+import time
+import config
+
+
 class FindBallStateMachine:
     def __init__(self, agent):
         self.agent = agent
@@ -49,9 +55,7 @@ class FindBallStateMachine:
                 while time.time() - t < 1:
                     if self.agent.ifBall:
                         return
-                    self.agent.head_set(
-                        head=config.find_head_pos[pos], neck=config.find_neck_pos[pos]
-                    )
+                    self.agent.head_set(head=config.find_head_pos[pos], neck=config.find_neck_pos[pos])
 
             self.agent.speed_controller(0, 0, config.walk_theta_vel)
             t = time.time()
@@ -66,6 +70,3 @@ class FindBallStateMachine:
                             head=config.find_head_pos[pos],
                             neck=config.find_neck_pos[pos],
                         )
-
-
-

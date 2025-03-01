@@ -1,5 +1,11 @@
 # kick
 #
+import config
+import math
+import time
+
+from transitions import Machine
+
 
 class KickStateMachine:
     def __init__(self, agent):
@@ -36,11 +42,7 @@ class KickStateMachine:
         )
 
     def run(self):
-        while (
-            self.state != "finished"
-            and self.agent.ifBall
-            and self.agent.command == self.agent.info
-        ):
+        while self.state != "finished" and self.agent.ifBall and self.agent.command == self.agent.info:
             print("Adjusting position...")
             self.machine.model.trigger("adjust_position")
         if self.state == "finished" and self.agent.info == self.agent.command:
@@ -75,9 +77,7 @@ class KickStateMachine:
         self.agent.stop(1)
         no_ball_count = 0
         t0 = time.time()
-        while (
-            self.agent.loop() and (self.agent.ball_x < 600) or (self.agent.ball_x == 0)
-        ):
+        while self.agent.loop() and (self.agent.ball_x < 600) or (self.agent.ball_x == 0):
             if time.time() - t0 > 10 or no_ball_count > 5:
                 return
             if not self.agent.ifBall:
@@ -85,9 +85,7 @@ class KickStateMachine:
                 time.sleep(0.7)
                 continue
             self.agent.speed_controller(0, 0.6 * config.walk_y_vel, 0)
-        while (
-            self.agent.loop() and (self.agent.ball_x > 660) or (self.agent.ball_x == 0)
-        ):
+        while self.agent.loop() and (self.agent.ball_x > 660) or (self.agent.ball_x == 0):
             if time.time() - t0 > 10 or no_ball_count > 5:
                 return
             if not self.agent.ifBall:
@@ -104,9 +102,7 @@ class KickStateMachine:
         self.agent.stop(0.5)
         t0 = time.time()
         no_ball_count = 0
-        while (
-            self.agent.loop() and (self.agent.ball_y < 420) or (self.agent.ball_y == 0)
-        ):
+        while self.agent.loop() and (self.agent.ball_y < 420) or (self.agent.ball_y == 0):
             if time.time() - t0 > 10 or no_ball_count > 5:
                 return
             if not self.agent.ifBall:
@@ -119,6 +115,3 @@ class KickStateMachine:
     def good_fb(self):
         self.agent.ready_to_kick = 420 <= self.agent.ball_y
         return 420 <= self.agent.ball_y
-
-
-
