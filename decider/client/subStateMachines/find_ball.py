@@ -4,7 +4,7 @@
 from transitions import Machine
 from sensor_msgs.msg import JointState
 import time
-import config
+from configuration import configuration
 
 
 class FindBallStateMachine:
@@ -55,9 +55,9 @@ class FindBallStateMachine:
                 while time.time() - t < 1:
                     if self.agent.ifBall:
                         return
-                    self.agent.head_set(head=config.find_head_pos[pos], neck=config.find_neck_pos[pos])
+                    self.agent.head_set(head=configuration.find_head_pos[pos], neck=configuration.find_neck_pos[pos])
 
-            self.agent.speed_controller(0, 0, config.walk_theta_vel)
+            self.agent.speed_controller(0, 0, configuration.walk_theta_vel)
             t = time.time()
             while self.agent.loop() and time.time() - t < 10:
                 for pos in [0, 3]:
@@ -67,6 +67,6 @@ class FindBallStateMachine:
                             self.agent.stop(0.5)
                             return
                         self.agent.head_set(
-                            head=config.find_head_pos[pos],
-                            neck=config.find_neck_pos[pos],
+                            head=configuration.find_head_pos[pos],
+                            neck=configuration.find_neck_pos[pos],
                         )

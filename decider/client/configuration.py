@@ -1,4 +1,4 @@
-class config:
+class configuration:
     walk_x_vel = 0.1  # 行走前向速度
     walk_y_vel = 0.05  # 行走横向速度
     walk_theta_vel = 0.3  # 转向速度

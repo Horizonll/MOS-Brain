@@ -19,7 +19,7 @@ from sensor_msgs.msg import JointState
 # Submodules
 from subscriber import *
 from receiver import Receiver
-from config import *
+from configuration import *
 
 # Sub StateMachines
 from subStateMachines.can_not_find_ball import CanNotFindBallStateMachine
@@ -30,7 +30,7 @@ from subStateMachines.find_ball import FindBallStateMachine
 from subStateMachines.dribble import DribbleStateMachine
 
 
-class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
+class Agent(Decision_Pos, Decision_Motion, Decision_Vision, configuration):
     def __init__(self, role="RF", team=1, player=0, goal_keeper=False, rec_debug=False):
         print("Initializing Agent instance...")
 
@@ -253,7 +253,8 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, config):
                 print("\nInterrupted by user. Exiting...")
 
     def loop(self):
-        return self.receiver.game_state != "STATE_SET" and self.receiver.game_state != "STATE_READY"
+        # return self.receiver.game_state != "STATE_SET" and self.receiver.game_state != "STATE_READY"
+        return True
 
     def speed_controller(self, x, y, theta):
         move_cmd = Twist()

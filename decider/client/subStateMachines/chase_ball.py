@@ -4,7 +4,7 @@
 import time
 from transitions import Machine
 import numpy as np
-import config
+from configuration import configuration
 
 
 class ChaseBallStateMachine:
@@ -36,7 +36,7 @@ class ChaseBallStateMachine:
 
     def move_to_ball(self, ang=0.25):
         if abs(self.cam_neck) > ang:
-            self.speed_controller(0, 0, np.sign(self.cam_neck) * config.walk_theta_vel)
+            self.speed_controller(0, 0, np.sign(self.cam_neck) * configuration.walk_theta_vel)
         elif abs(self.cam_neck) <= ang:
-            self.speed_controller(config.walk_x_vel, 0, 2.5 * self.cam_neck * config.walk_theta_vel)
+            self.speed_controller(configuration.walk_x_vel, 0, 2.5 * self.cam_neck * configuration.walk_theta_vel)
             time.sleep(0.1)

@@ -1,7 +1,7 @@
 # kick.py
 # State machine for robot kicking behavior
 
-import config
+from configuration import configuration
 import math
 import time
 from transitions import Machine
@@ -55,7 +55,7 @@ class KickStateMachine:
             print(f"\n[KICK FSM] Current state: {self.state}")
             print(f"[KICK FSM] Triggering 'adjust_position' transition")
             self.adjust_position()  # Changed from trigger to direct call
-            time.sleep(2)
+            time.sleep(0.3)
 
         if self.state == "finished" and self.agent.info == self.agent.command["command"]:
             print("\n[KICK FSM] Positioning complete! Executing kick...")
@@ -120,7 +120,7 @@ class KickStateMachine:
                 continue
 
             print(f"[LR ADJUST] Moving right (Current X: {self.agent.ball_x})")
-            self.agent.speed_controller(0, 0.6 * config.walk_y_vel, 0)
+            self.agent.speed_controller(0, 0.6 * configuration.walk_y_vel, 0)
 
         while self.agent.loop() and (self.agent.ball_x > 660 or self.agent.ball_x == 0):
             if time.time() - t0 > 10 or no_ball_count > 5:
@@ -134,7 +134,7 @@ class KickStateMachine:
                 continue
 
             print(f"[LR ADJUST] Moving left (Current X: {self.agent.ball_x})")
-            self.agent.speed_controller(0, -0.6 * config.walk_y_vel, 0)
+            self.agent.speed_controller(0, -0.6 * configuration.walk_y_vel, 0)
 
         self.agent.stop(0.5)
         print("[LR ADJUST] Lateral adjustment completed")
@@ -164,7 +164,7 @@ class KickStateMachine:
                 continue
 
             print(f"[FB ADJUST] Moving forward (Current Y: {self.agent.ball_y})")
-            self.agent.speed_controller(0.5 * config.walk_x_vel, 0, 0)
+            self.agent.speed_controller(0.5 * configuration.walk_x_vel, 0, 0)
 
         self.agent.stop(0.5)
         print("[FB ADJUST] Forward adjustment completed")
