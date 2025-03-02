@@ -307,7 +307,7 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, configuration):
     def close_to_ball(self):
         if self.ifBall:
             return 0.1 <= self.ball_distance <= 0.35
-        return math.sqrt(self.pos_x - self.ball_x_in_map) ** 2 + (self.pos_y - self.ball_y_in_map) ** 2 <= 100
+        return math.sqrt((self.pos_x - self.ball_x_in_map) ** 2 + (self.pos_y - self.ball_y_in_map) ** 2) <= 100
 
     def ready_to_kick(self):
         return self.ready_to_kick
