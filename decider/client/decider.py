@@ -342,7 +342,7 @@ def main():
         signal.signal(signal.SIGINT, sigint_handler)
         while True:
             agent.run()
-            time.sleep(0.2)
+            time.sleep(1)
     except KeyboardInterrupt:
         print("\nProgram interrupted by user")
         exit()

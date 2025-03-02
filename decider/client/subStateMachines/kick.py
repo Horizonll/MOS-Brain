@@ -50,12 +50,14 @@ class KickStateMachine:
     def run(self):
         """Main execution loop for the state machine"""
         print("[KICK FSM] Starting kick sequence...")
-        while self.state != "finished" and self.agent.ifBall and self.agent.command == self.agent.info:
+        print(f"[KICK FSM] ifBall: {self.agent.ifBall} state: {self.state}")
+        while self.state != "finished" and self.agent.ifBall and self.agent.command["command"] == self.agent.info:
             print(f"\n[KICK FSM] Current state: {self.state}")
             print(f"[KICK FSM] Triggering 'adjust_position' transition")
             self.adjust_position()  # Changed from trigger to direct call
+            time.sleep(2)
 
-        if self.state == "finished" and self.agent.info == self.agent.command:
+        if self.state == "finished" and self.agent.info == self.agent.command["command"]:
             print("\n[KICK FSM] Positioning complete! Executing kick...")
             self.agent.speed_controller(0, 0, 0)
             self.agent.head_set(head=0.1, neck=0)
@@ -70,6 +72,8 @@ class KickStateMachine:
         self.agent.head_set(0.05, 0)
 
         # Calculate target angle using ball position
+
+        # 
         target_angle_rad = math.atan((self.agent.pos_x - 0) / (4500 - self.agent.pos_y))
         ang_tar = target_angle_rad * 180 / math.pi
         ang_delta = ang_tar - self.agent.pos_yaw
@@ -103,7 +107,8 @@ class KickStateMachine:
         t0 = time.time()
         print("[LR ADJUST] Scanning for ball...")
 
-        while self.agent.loop() and (self.agent.ball_x < 600 or self.agent.ball_x == 0):
+        # while self.agent.loop() and (self.agent.ball_x < 600 or self.agent.ball_x == 0):
+        while (self.agent.ball_x < 600 or self.agent.ball_x == 0):
             if time.time() - t0 > 10 or no_ball_count > 5:
                 print("[LR ADJUST] Timeout or lost ball during adjustment!")
                 return
