@@ -76,7 +76,7 @@ class KickStateMachine:
     def adjust_angel(self):
         """Adjust robot's angle relative to goal"""
         print("[ANGLE ADJUST] Starting angle adjustment...")
-        self.agent.head_set(0.05, 0)
+        self.agent.head_set(0.7, 0)
 
         # Calculate target angle using ball position
 
