@@ -178,33 +178,48 @@ class Agent():
 
     def get_players_distance_to_ball(self):
         """
-        获取球员与球的距离。
+        获取球员与球的距离。如果无法获取位置信息，则将距离视为一个大数。
 
         Returns:
             dict: 球员与球的距离
         """
         players_distance = {}
-
+        BIG_NUMBER = 1e6  # 当位置不可用时使用的较大数值
+        
         for robot_id, data in self.robots_data.items():
             player_pos = [data.get('x'), data.get('y')]
             ball_pos = [data.get('ballx'), data.get('bally')]
-            distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
-            players_distance[robot_id] = distance
 
+            # 检查是否为 NoneType
+            if any(v is None for v in player_pos) or any(v is None for v in ball_pos):
+                distance = BIG_NUMBER
+            else:
+                distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
+            
+            players_distance[robot_id] = distance
+            
         return players_distance
     
     def get_players_distance_to_ball_without_goalkeeper(self):
-
         players_distance = {}
-
+        BIG_NUMBER = 1e6  # 当位置不可用时使用的较大数值
+        
         for robot_id, robot_data in self.robots_data.items():
             if robot_id != self.roles_to_id["goalkeeper"]:
                 data = robot_data.get('data')
                 player_pos = [data.get('x'), data.get('y')]
                 ball_pos = [data.get('ballx'), data.get('bally')]
-                distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
+                
+                # 检查是否为 NoneType
+                if any(v is None for v in player_pos) or any(v is None for v in ball_pos):
+                    distance = BIG_NUMBER
+                else:
+                    distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
+                    
                 players_distance[robot_id] = distance
-
+            else:
+                players_distance[robot_id] = BIG_NUMBER
+                
         return players_distance
 
     def switch_players_role(self, player_role_1, player_role_2):
@@ -378,7 +393,7 @@ class StateMachine:
             # initial 只能由 stop 转移而来
             {
                 "trigger": "initialize",
-                "source": "",
+                "source": "stop",
                 "dest": "initial",
                 "after": "initialize",
             },
@@ -405,7 +420,7 @@ class StateMachine:
                 if self.model.stop_condition():
                     # self.model.stop_playing()
                     # break
-                    print("stop_condition satisfied")
+                    # print("stop_condition satisfied")
                     pass
 
                 self.model.play()
@@ -712,13 +727,28 @@ class ShootBallStateMachine:
     
     def shoot(self):
         """
-        判断非守门员机器人中谁拿到球，然后进行射门
+        判断离球最近的非守门员机器人，然后让其进行射门
         """
-        players_status = self.agent.get_players_status()
+        # 获取所有非守门员机器人到球的距离
         players_distance = self.agent.get_players_distance_to_ball_without_goalkeeper()
-        for role, id in self.agent.roles_to_id.items:
-            if players_status[id] == "controlling_ball":
-                self.agent.publish_command(id, COMMANDS["shoot"])
+        # 初始化最小距离为一个较大的值
+        min_distance = float('inf')
+        # 初始化离球最近的机器人的 ID
+        closest_player_id = None
+        # 遍历所有非守门员机器人的距离
+        for role, id in self.agent.roles_to_id.items():
+            # 获取当前机器人到球的距离
+            distance = players_distance[id]
+            # 如果当前距离小于最小距离
+            if distance < min_distance:
+                # 更新最小距离
+                min_distance = distance
+                # 更新离球最近的机器人的 ID
+                closest_player_id = id
+        # 如果找到了离球最近的机器人
+        if closest_player_id is not None:
+            # 让离球最近的机器人执行射门命令
+            self.agent.publish_command(closest_player_id, COMMANDS["shoot"])
 
 
     def go_for_possession(self):
