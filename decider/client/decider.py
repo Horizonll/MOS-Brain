@@ -78,10 +78,12 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, configuration):
         print("Set is_going_back_to_field to False.")
         self.go_back_to_field_dist = None
         print("Set go_back_to_field_dist to None.")
-        self.go_back_to_field_dir = None
+        self.go_back_to_field_dir = 0
         print("Set go_back_to_field_dir to None.")
-        self.go_back_to_field_yaw_bias = None
-        print("Set go_back_to_field_yaw_bias to None.")
+        self.go_back_to_field_yaw_diff = None
+        print("Set go_back_to_field_yaw_diff to None.")
+
+        self.walk_theta_vel = 0.1
 
         self.kick_state_machine = KickStateMachine(self)
         self.go_back_to_field_machine = GoBackToFieldStateMachine(self, 0, 4500, 300)
@@ -95,7 +97,7 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, configuration):
         # 监听主机IP
         print("Starting to listen for host IP...")
         # self.listen_host_ip()
-        self.HOST_IP = "192.168.0.40"
+        self.HOST_IP = "192.168.9.100"
         print("Finished listening for host IP.")
 
         # 启动发送线程
@@ -263,10 +265,10 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, configuration):
         move_cmd.angular.z = theta
         self.speed_pub.publish(move_cmd)
 
-    def update_go_back_to_field_status(self, aim_x, aim_y):
-        self.go_back_to_field_dist = np.sqrt((self.pos_x - aim_x) ** 2 + (self.pos_y - aim_y) ** 2)
-        self.go_back_to_field_dir = np.arctan2(-aim_x + self.pos_x, aim_y - self.pos_y)
-        self.go_back_to_field_yaw_bias = np.degrees(
+    def update_go_back_to_field_status(self):
+        self.go_back_to_field_dist = np.sqrt((self.pos_x - self.aim_x) ** 2 + (self.pos_y - self.aim_y) ** 2)
+        self.go_back_to_field_dir = np.arctan2(-self.aim_x + self.pos_x, self.aim_y - self.pos_y)
+        self.go_back_to_field_yaw_diff = np.degrees(
             np.arctan2(
                 np.sin(self.go_back_to_field_dir - self.pos_yaw * np.pi / 180),
                 np.cos(self.go_back_to_field_dir - self.pos_yaw * np.pi / 180),
@@ -281,7 +283,7 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, configuration):
         print("kick")
         self.kick_state_machine.run()
 
-    def go_back_to_field(self, aim_x, aim_y, min_dist=300):
+    def go_back_to_field(self):
         print("go back to field")
         self.head_set(0.05, 0)
         # go_back_to_field_machine = GoBackToFieldStateMachine(self, aim_x, aim_y, min_dist)
@@ -325,7 +327,7 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, configuration):
         elif self.command["command"] == "kick":
             self.kick()
         elif self.command["command"] == "go_back_to_field":
-            self.go_back_to_field(self.field_aim_x, self.field_aim_y)
+            self.go_back_to_field()
         else:
             print("Unknown command: ", self.command)
             self.stop(1)
