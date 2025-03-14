@@ -66,7 +66,7 @@ def send_command(cmd, server_ip, server_port):
     return True
 
 def main():
-    server_ip = "192.168.9.103"  # 默认服务器IP地址
+    server_ip = "192.168.9.51"  # 默认服务器IP地址
     server_port = 8002       # 默认服务器端口号
     
     print("Available commands:")
