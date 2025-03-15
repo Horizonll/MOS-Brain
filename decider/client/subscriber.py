@@ -148,11 +148,6 @@ class Decision_Motion(object):
         pass
 
     def head_set(self, head=0, neck=0):
-        """
-        @brief 设置头的角度，并记录角度信息并发布
-        @param head: 上下角度，[0,1.5]，1.5下，0上
-        @param neck: 左右角度，[-1.1,1.1]，-1.1右，1.1左
-        """
         self.cam_head = head
         self.cam_neck = neck
         head = np.clip(head, 0, 1.5)

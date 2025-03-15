@@ -1,4 +1,27 @@
 {
+    // velocities
+    "walk_x_vel": 0.1,
+    "walk_y_vel": 0.05,
+    "walk_theta_vel": 0.3,
+
+    // networking
+    "use_static_ip": true,
+    "server_ip": "192.168.9.100",
+
     "auto_detect_players": true,
-    "use_static_ip": false,
+    "use_static_ip": false, 
+
+    // vision
+    "pos_accuracy_add": {
+        // the score 'add' to the self_pos_accuracy
+        // when these items appears in vision
+        0: 0,       // ball
+        1: 10,      // goalpost
+        2: 0,       // robot
+        3: 5,       // L-Intersection
+        4: 7,       // T-Intersection
+        5: 5        // X-Intersection
+    },
+    "pos_accuracy_critical": 0.0005   // when accuracy is consider too low
+
 }

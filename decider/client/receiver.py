@@ -1,3 +1,5 @@
+# gamebox.py
+#   @description:   Utilities to connect with the game box
 import socket
 import logging
 import threading
@@ -124,7 +126,7 @@ ReturnData = Struct(
 """
 
 
-class Receiver:
+class Gamebox:
     def __init__(self, team, player, goal_keeper, debug):
         self.ip = "0.0.0.0"  # 本地ip
         self.listen_port = 3838  # 本地端口
