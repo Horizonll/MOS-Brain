@@ -1,3 +1,4 @@
+.git/
 __pycache__
-.env
+.env/
 decider/config_override.json
