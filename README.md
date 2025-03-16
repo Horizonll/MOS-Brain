@@ -2,23 +2,38 @@
 
 The decision-rev of MOS-8.5.
 
-### Players / Clients
+### Directory
 
-```client/decider.py``` is run on the robot. It sent its locations and the ball position to the server, and execute the commands from server. 
+**decider/** is for major codes of decision;
 
-##### Arch
+**documents/** contains documents;
 
-* subscriber.py / publisher.py
-    The interface of ROS. ```subscriber.py``` reads ```/pos_in_map``` and ```/obj_pos```, ```publisher.py``` publish topic ```/kick```, ```/head_goal``` and ```/cmd_vel```.
+### Progress
 
-* decider.py
-    The main file, where the project entry. 
-    Object Agent has attribute ```(pos_x, pos_y), (ball_x_in_map, ball_y_in_map), self_yaw, self_info, self.ip```
+##### Clients
 
-* subStateMachines/
-    The directory containing sub-statemachines such as, chase_ball, go_back_to_field.
+**Sub-statemachines**  
+- [x] kick
+- [x] chase_ball
+- [x] go_back_to_field
+- [ ] dribble
+- [ ] find_ball
+- [ ] can_not_find_ball
+
+**Networking**  
+- [ ] looking for server aggressively
+- [x] listeing to server's broadcase passively
+- [x] sending status to server
+- [x] execute command from server
+
+##### Server
+
+_to do_  
 
 
-### Controller / Server
+> [!WARNING]
+> This branch, refactor01, is working on refactoring the client code. The 
+> codes may not work properly and may changes frequently. All documents 
+> in this branch should not be trusted until it merge to the main branch.
 
-The code in dir server/ is run on server.  
+
