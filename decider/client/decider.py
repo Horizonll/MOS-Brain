@@ -1,4 +1,8 @@
-# system packages
+# decider.py
+#
+#   @description : The entry py file for decision on clients
+#
+
 import json
 import math
 import time
@@ -23,7 +27,7 @@ from angle import angle
 # interfaces with other components
 import interfaces.action
 import interfaces.vision
-import interfaces.position
+import interfaces.network
 
 # Sub-StateMachines
 from subStateMachines.can_not_find_ball import CanNotFindBallStateMachine
@@ -59,11 +63,11 @@ class Agent:
     # @private variants:
     #   _action         The interface to kick and walk
     #   _vision         The interface to head, neck and camera
+    #   _state_machine  A dictionary of state machines
     # 
     # @private methods:
     #   None
 
-    @classmethod
     def __init__(self):
         print("[+] Initializing Agent")
         rospy.init_node("decider")
@@ -77,16 +81,17 @@ class Agent:
         }
 
         print("[*] Registering interfaces")
-        self.action     = Action.Action(self)
-        self.vision     = Vision.Vision(self)
+        self._action     = action.Action(self)
+        self._vision     = vision.Vision(self)
         print("[*] Initializing sub-statemahcines")
-        self.kick_state_machine         = KickStateMachine(self)
-        self.go_back_to_field_machine   = GoBackToFieldStateMachine(self, \
+        self._state_machine["kick"]     = KickStateMachine(self)
+        self._state_machine["go_back_to_field"]  = GoBackToFieldStateMachine(self, \
                                             0, 4500, 300)
-        self.find_ball_state_machine    = FindBallStateMachine(self)
-        self.chase_ball_state_machine   = ChaseBallStateMachine(self)
-        self.dribble_state_machine      = DribbleStateMachine(self)
+        self._find_ball_state_machine   = FindBallStateMachine(self)
+        self._chase_ball_state_machine  = ChaseBallStateMachine(self)
+        self._dribble_state_machine     = DribbleStateMachine(self)
         
+
         print("Agent instance initialization complete.")
 
 def main():

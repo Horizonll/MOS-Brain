@@ -1,5 +1,10 @@
 # interfaces/action.py
-#   @description:   The py files to call actions
+#
+#   @description :   The py files to call actions
+#
+#   @interfaces :
+#       1. class Action
+#
 
 import os
 import rospy
@@ -12,17 +17,20 @@ class Action:
     #   None
     #
     # @public methods;
-    #   cmd_vel(vel_x, vel_y, vel_theta)
-    #   do_kick()
+    #   cmd_vel(vel_x, vel_y, vel_theta) : publish a velocity command
+    #   do_kick()                        : publish a kick command 
     #   
     # @private variants:
-    #   _cmd_vel_pub       The publisher for /cmd_vel
+    #   _config             dictionary of configurations 
+    #   _cmd_vel_pub        The publisher for /cmd_vel
     # 
     # @private methods
-    #   _action_cb()          Do nothing
+    #   _done_cb()
+    #   _feedback_cb()
+    #   _action_cb()        Do nothing
     
-    @classmethod
-    def __init__(self): 
+    def __init__(self, config): 
+        self._config = config
         self._cmd_vel_pub = rospy.Publisher("/cmd_vel", \
                                         Twist,  \
                                         queue_size = 1)
@@ -31,7 +39,6 @@ class Action:
 
     # cmd_vel(vel_x, vel_y, vel_theta)
     #   publish a velocity command
-    @classmethod
     def cmd_vel(self, vel_x, vel_y, vel_theta):
         cmd = Twist()
         cmd.linear.x = vel_x
@@ -41,7 +48,6 @@ class Action:
 
     # do_kick()
     #   kick the ball
-    @classmethod
     def do_kick(self):
         kick_goal = KickGoal()
         kick_goal.header.seq = 1
@@ -57,13 +63,16 @@ class Action:
         self._kick_client.send_goal(kick_goal)
         rospy.loginfo("send kick")
         rospy.loginfo("kick goal init")
-        self._kick_client.done_cb = self._action_cb
-        self._kick_client.feedback_cb = self._action_cb
+        self._kick_client.done_cb = self._done_cb
+        self._kick_client.feedback_cb = self._feedback_cb
         self._kick_client.active_cb = self._action_cb
         rospy.loginfo("kick done")
 
-    # _action_cb(): private
+    # _action_cb(), etc. : private
     #   Do nothing
-    @classmethod
+    def _done_cb():
+        pass
+    def _feedback_cb():
+        pass
     def _action_cb():
         pass

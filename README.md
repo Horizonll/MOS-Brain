@@ -6,6 +6,9 @@ The decision-rev of MOS-8.5.
 
 **decider/** is for major codes of decision;
 
+- [client document](documents/client/README.md)
+- server document: to be done
+
 **documents/** contains documents;
 
 ### Progress
@@ -31,7 +34,7 @@ The decision-rev of MOS-8.5.
 _to do_  
 
 
-> [!WARNING]
+> [!warning] INCOMPLETE CODE & MISLEADING DOCUMENTS`
 > This branch, refactor01, is working on refactoring the client code. The 
 > codes may not work properly and may changes frequently. All documents 
 > in this branch should not be trusted until it merge to the main branch.
