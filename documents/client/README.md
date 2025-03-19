@@ -36,33 +36,35 @@ Notice that config_override.json will override configurations in config.json.
 
 
 
-##### interfaces/
+##### directory: interfaces/
 
 Sub-dir interfaces/ contains interfaces with other component. ```Action.py``` provide 
 interfaces with walk-engine ( cmd_vel and do_kick ), and ```Vision.py``` receive data
 from vision node. Some network related functions are in ```Network.py```.
 
-> [!note]
+>[!INFO]  
 > Servo neck and head control are not exposed and are controlled by ```Vision.py``` but
 > not ```Action.py```. The reason is that the camera have to look at both the ball and 
 > the field to avoid mistracking, so external controlling of the neck and head will 
 > disturb the algorithm in ```Vision.py```.
 
 
+##### directory: sub_statemachines/
 
-##### sub_statemachines
-
-sub-statemachines are placed under this directory. These files are dinamicly load by 
+sub-statemachines are placed under this directory. These files are **dinamicly load** by 
 Agent. The implementation of the sub-state machine is arbitrary, but you have to provide
 these functions: 
 
-|       method          |        arguments      | return |              description                |
-| --------------------- | --------------------- | ------ | --------------------------------------- |
-|    __init__(agent)    | the instance of Agent |  None  | Initialize your code here               |
-|     start(args)       | a dictionary of args  |  None  | Called when started your statemachine   |
-|     run()             |       None            |  None  | Executing your statemachine             |
-|     stop()            |       None            |  None  | Called when your statemachine is stoped |
+|       method            |                     arguments                |              description                |
+| ----------------------- | -------------------------------------------- | --------------------------------------- |
+| ```__init__(agent)```   |              the instance of Agent           | Initialize your code here               |
+| ```start(args, prev)``` | a dictionary of args; previous statemachine  | Called when started your statemachine   |
+|    ```run()```          |                         None                 | Executing your statemachine             |
+|    ```stop(next)```     |          the name of next statemachine       | Called when your statemachine is stoped |
 
 
 You can call public method and read public variants of the instance ```agent``` given to you in 
 ```__init__```. Check decider.py for further infomation. 
+
+Please do not use methods started with a underline, cause their behaviour may change in
+the further updates. You should not access private variants directly either. 
