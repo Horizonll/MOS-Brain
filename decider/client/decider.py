@@ -58,7 +58,7 @@ class Agent:
     #   None
 
     def __init__(self):
-        print("[+] Initializing Agent")
+        print("[+] decider.py: Agent.__init__(): Initializing Agent")
         rospy.init_node("decider")
         
         # initializing public variants
@@ -69,31 +69,30 @@ class Agent:
             "timestamp": time.time(),
         }
 
-        print("[*] Registering interfaces")
+        print("[*] decider.py: Agent.__init__(): Registering interfaces")
         self._action     = interfaces.action.Action(self._config)
         self._vision     = interfaces.vision.Vision(self._config)
         self._network    = interfaces.network.Network(self._config)
 
-        print("[*] Initializing sub-statemahcines")
+        print("[*] decider.py: Agent.__init__(): Initializing sub-statemahcines")
         py_files = Agent._get_python_files("sub_statemachines/")
         for py_file in py_files:
-            print("[+] found : " + py_file)
+            print("[+] decider.py: Agent.__init__(): found : " + py_file)
             eval_str = "import " + py_file
             eval(eval_str)
             module_name = py_file.split('.')[-1] # also class name
-            eval_str = "self._state_machine[" + module_name + "]=" + py_file + "." + module_name
+            eval_str = "self._state_machine[" + module_name + "]=" \
+                        + py_file + "." + module_name
             eval(eval_str)
 
-        print("Agent instance initialization complete.")
+        print("[+] decider.py: Agent.__init__(): " \
+            + "Agent instance initialization complete.")
 
 
     def run():
         data_str = self._network.receive()
-        if(data_str == "DISCONNECTED"):
-            print("[!] SERVER DISCONNECTED!")
-            exit()
-        else if(data_str == "NO_MESSAGE"):
-            self._execute("run")
+        if(data_str == None):
+            self._execute(self._command["command"], "run")
             return
 
         # change state machine
@@ -162,7 +161,7 @@ class Agent:
 
 
 def main():
-    print("[+] Decider started")
+    print("[+] decider.py: main(): Decider started")
     agent = Agent()
 
     try:

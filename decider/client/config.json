@@ -5,10 +5,11 @@
     "max_vel_theta": 0.3,
 
     // networking
-    "use_static_ip": true,
-    "server_ip": "192.168.9.100",
-    "auto_detect_players": true,
-    "use_static_ip": false, 
+    "server_ip": "192.168.9.100", 
+    "server_port": 50100,
+    "auto_find_server_ip": false, 
+    "auto_find_server_ip_listen_port": 50000,
+    "auto_find_server_ip_token": "NjM5NWVkMSAgLQo=",
     "max_buffer_size": 1024,
     "fake_async_time_out": 0.001, // python does not suuport aysnc, 
     				  //so a timeout is used to emulate a C-style async tcp 
@@ -27,5 +28,4 @@
     "pos_accuracy_critical": 0.0005,   // when accuracy is consider too low
     "predict_ball_pos": true,
     "predict_ball_pos_in_map": true
-
 }
