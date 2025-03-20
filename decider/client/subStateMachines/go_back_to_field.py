@@ -4,7 +4,7 @@ import numpy as np
 
 
 class GoBackToFieldStateMachine:
-    def __init__(self, agent, aim_x, aim_y, min_dist=300):
+    def __init__(self, agent, aim_x, aim_y, min_dist=1000):
         """
         初始化返回场地状态机
 
@@ -23,22 +23,36 @@ class GoBackToFieldStateMachine:
             "moving_to_target",  # 向目标位置移动
             "coarse_yaw_adjusting",  # 粗略偏航角调整
             "fine_yaw_adjusting",  # 精细偏航角调整
+            "yaw_adjusting",  # 到达目标位置后的最终操作
             "arrived_at_target",  # 到达目标位置
         ]
         # 定义状态机的状态转移规则
         self.transitions = [
             {
                 "trigger": "update_status",
-                "source": ["moving_to_target"],
+                "source": ["coarse_yaw_adjusting", "fine_yaw_adjusting", "moving_to_target", "arrived_at_target", "yaw_adjusting"],
+                "dest": "yaw_adjusting",
+                "conditions": "good_position",
+                "after": "adjust_yaw",
+            },
+            {
+                "trigger": "update_status",
+                "source": "yaw_adjusting",
+                "dest": "arrived_at_target",
+                "conditions": "good_yaw",
+            },
+            {
+                "trigger": "update_status",
+                "source": ["moving_to_target", "coarse_yaw_adjusting", "arrived_at_target"],
                 "dest": "coarse_yaw_adjusting",
                 "conditions": "need_coarse_yaw_adjustment",
                 "before": "coarse_yaw_adjust",
             },
             {
                 "trigger": "update_status",
-                "source": ["coarse_yaw_adjusting", "fine_yaw_adjusting", "moving_to_target"],
+                "source": ["coarse_yaw_adjusting", "fine_yaw_adjusting", "moving_to_target", "arrived_at_target"],
                 "dest": "moving_to_target",
-                "conditions": "dont_need_fine_yaw_adjustment",
+                "conditions": "dont_need_coarse_yaw_adjustment",
                 "before": "move_forward",
             },
             {
@@ -47,14 +61,6 @@ class GoBackToFieldStateMachine:
                 "dest": "fine_yaw_adjusting",
                 "conditions": "need_fine_yaw_adjustment",
                 "before": "fine_yaw_adjust",
-            },
-            {
-                "trigger": "update_status",
-                "source": ["coarse_yaw_adjusting", "fine_yaw_adjusting", "moving_to_target", "arrived_at_target"],
-                "dest": "arrived_at_target",
-                "conditions": "arrived_at_target",
-                "before": "update_status",
-                "after": "arrived_at_target_operations",
             },
         ]
         # 初始化状态机
@@ -97,13 +103,24 @@ class GoBackToFieldStateMachine:
         result = not self.need_fine_yaw_adjustment()
         print(f"[Go Back to Field] Don't need fine yaw adjustment? {'Yes' if result else 'No'}")
         return result
+    
+    def dont_need_coarse_yaw_adjustment(self):
+        """
+        检查是否不需要进行粗略偏航角调整
 
-    def arrived_at_target(self):
+        :return: 如果不需要调整返回 True，否则返回 False
+        """
+        result = not self.need_coarse_yaw_adjustment()
+        print(f"[Go Back to Field] Don't need coarse yaw adjustment? {'Yes' if result else 'No'}")
+        return result
+
+    def good_position(self):
         """
         检查是否到达目标位置
 
         :return: 如果到达返回 True，否则返回 False
         """
+        print(f"[Go Back to Field] go_back_to_field_dist: {self.agent.go_back_to_field_dist}, min_dist: {self.min_dist}")
         result = self.agent.go_back_to_field_dist < self.min_dist
         print(f"[Go Back to Field] Arrived at target? {'Yes' if result else 'No'}")
         return result
@@ -151,9 +168,10 @@ class GoBackToFieldStateMachine:
         控制机器人向前移动
         """
         print("[Go Back to Field] Moving forward...")
-        self.agent.debug_info("[Go Back to Field] Going forward")
+        print(f"[Go Back to Field] dist: {self.agent.go_back_to_field_dist}, yaw_diff: {self.agent.go_back_to_field_yaw_diff}, dir: {self.agent.go_back_to_field_dir}, pos_yaw: {self.agent.pos_yaw}")
+        self.agent.update_go_back_to_field_status()
         self.agent.speed_controller(self.agent.walk_x_vel, 0, 0)
-        time.sleep(1)
+        time.sleep(0.2)
 
     def coarse_yaw_adjust(self):
         """
@@ -169,17 +187,17 @@ class GoBackToFieldStateMachine:
         elif -20 < self.agent.go_back_to_field_yaw_diff and self.agent.go_back_to_field_yaw_diff < 20:
             print("[Go Back to Field] edge case, turning")
             self.agent.speed_controller(0, 0, self.last_rotate * self.agent.walk_theta_vel)
-            time.sleep(0.3)
+            time.sleep(0.2)
         elif -self.agent.go_back_to_field_yaw_diff > 20:
             print("[Go Back to Field] Turning right")
             self.agent.speed_controller(0, 0, -self.agent.walk_theta_vel)
             self.last_rotate = -1
-            time.sleep(0.3)
+            time.sleep(0.2)
         else:
             print("[Go Back to Field] Turning left")
             self.agent.speed_controller(0, 0, self.agent.walk_theta_vel)
             self.last_rotate = 1
-            time.sleep(0.3)
+            time.sleep(0.2)
         self.agent.go_back_to_field_dir = np.arctan2(-self.aim_x + self.agent.pos_x, self.aim_y - self.agent.pos_y)
         self.agent.go_back_to_field_yaw_diff = np.degrees(
             np.arctan2(
@@ -188,6 +206,16 @@ class GoBackToFieldStateMachine:
             )
         )
         # print("[Go Back to Field] Coarse yaw adjustment completed.")
+
+    def good_yaw(self):
+        """
+        检查是否朝向正确
+
+        :return: 如果朝向正确返回 True，否则返回 False
+        """
+        result = -10 < self.agent.go_back_to_field_yaw_diff < 10
+        print(f"[Go Back to Field] Good yaw? {'Yes' if result else 'No'}")
+        return result
 
     def fine_yaw_adjust(self):
         """
@@ -202,47 +230,42 @@ class GoBackToFieldStateMachine:
         elif -20 < self.agent.go_back_to_field_yaw_diff and self.agent.go_back_to_field_yaw_diff < 20:
             print("[Go Back to Field] edge case, turning")
             self.agent.speed_controller(0, 0, self.last_rotate * self.agent.walk_theta_vel)
-            time.sleep(0.3)
+            time.sleep(0.2)
         elif -self.agent.go_back_to_field_yaw_diff > 20:
             print("[Go Back to Field] Turning right slowly")
             self.agent.speed_controller(0, 0, 0.05)
             self.last_rotate = -1
-            time.sleep(0.5)
-            self.agent.debug_info("[Go Back to Field] Turning right slowly")
+            time.sleep(0.2)
         else:
             print("[Go Back to Field] Turning left slowly")
             self.agent.speed_controller(0, 0, -0.05)
             self.last_rotate = 1
-            time.sleep(0.5)
+            time.sleep(0.2)
 
         # print("[Go Back to Field] Fine yaw adjustment completed.")
 
-    def arrived_at_target_operations(self):
+    def adjust_yaw(self):
         """
         到达目标位置后执行的操作，包括调整朝向和准备开始游戏
         """
-        print("[Go Back to Field] Arrived at target. Performing final operations...")
-        self.agent.debug_info("[Go Back to Field] " + str(self.agent.role) + " has arrived. Turn ahead")
+        print("[Go Back to Field] Arrived at target. Performing yaw adjust...")
         self.agent.speed_controller(0, 0, 0)
         time.sleep(1)
         if abs(self.agent.pos_yaw) > 160:
             print("[Go Back to Field] Correcting large yaw angle...")
             self.agent.speed_controller(0, 0, -np.sign(self.agent.pos_yaw) * self.agent.walk_theta_vel)
-        elif self.agent.pos_yaw > 5:
+        elif self.agent.pos_yaw > 30:
             print("[Go Back to Field] Arrived. Turning right")
             self.agent.speed_controller(0, 0, -self.agent.walk_theta_vel)
-            self.agent.debug_info("[Go Back to Field] Arrived. Turning right")
             time.sleep(0.2)
-        elif self.agent.pos_yaw < -5:
+        elif self.agent.pos_yaw < -30:
             print("[Go Back to Field] Arrived. Turning left")
             self.agent.speed_controller(0, 0, self.agent.walk_theta_vel)
-            self.agent.debug_info("[Go Back to Field] Arrived. Turning left")
             time.sleep(0.2)
         else:
             # ready
             self.agent.speed_controller(0, 0, 0)
             print("[Go Back to Field] Finished going back to field. Ready to play.")
-            self.agent.debug_info("[Go Back to Field] Finished going back to field. Ready to play.")
             time.sleep(1)
             self.agent.is_going_back_to_field = False
             print("[Go Back to Field FSM] Arrived at target!")

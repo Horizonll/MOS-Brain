@@ -83,10 +83,10 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, configuration):
         self.go_back_to_field_yaw_diff = None
         print("Set go_back_to_field_yaw_diff to None.")
 
-        self.walk_theta_vel = 0.1
+        self.walk_theta_vel = 0.2
 
         self.kick_state_machine = KickStateMachine(self)
-        self.go_back_to_field_machine = GoBackToFieldStateMachine(self, 0, 4500, 300)
+        self.go_back_to_field_machine = GoBackToFieldStateMachine(self, 0, 4500, 500)
         self.find_ball_state_machine = FindBallStateMachine(self)
         self.chase_ball_state_machine = ChaseBallStateMachine(self)
         self.dribble_state_machine = DribbleStateMachine(self)
@@ -97,7 +97,7 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, configuration):
         # 监听主机IP
         print("Starting to listen for host IP...")
         # self.listen_host_ip()
-        self.HOST_IP = "192.168.9.100"
+        self.HOST_IP = "192.168.9.102"
         print("Finished listening for host IP.")
 
         # 启动发送线程
