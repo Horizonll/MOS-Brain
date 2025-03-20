@@ -29,14 +29,6 @@ import interfaces.action
 import interfaces.vision
 import interfaces.network
 
-# Sub-StateMachines
-from subStateMachines.can_not_find_ball import CanNotFindBallStateMachine
-from subStateMachines.chase_ball        import ChaseBallStateMachine
-from subStateMachines.go_back_to_field  import GoBackToFieldStateMachine
-from subStateMachines.kick              import KickStateMachine
-from subStateMachines.find_ball         import FindBallStateMachine
-from subStateMachines.dribble           import DribbleStateMachine
-
 
 class Agent:
     # @public variants:
@@ -47,6 +39,7 @@ class Agent:
     # @public methods:
     #   cmd_vel(vel_x : float, vel_y : float, vel_theta : float)
     #   kick()
+    #   run()
     #
     # @public methods to get varants:
     #       METHODS             TYPE                DESCRIPTION
@@ -93,6 +86,32 @@ class Agent:
         
 
         print("Agent instance initialization complete.")
+
+
+    # following are some simple encapsulation of interfaces
+    def cmd_vel(vel_x: float, vel_y: float, vel_theta: float):
+        self._action.cmd_vel(x, y, theta)
+    def kick():
+        self._action.do_kick()
+    def get_self_pos():
+        return self._vision.self_pos
+    def get_self_yaw():
+        return self._vision.self_yaw
+    def get_ball_pos():
+        return self._vision.get_ball_pos()
+    def get_ball_pos_in_vis():
+        return self._vision.get_ball_pos_in_vis()
+    def get_ball_pos_in_map():
+        return self._vision.get_ball_pos_in_map()
+    def get_if_ball():
+        return self._vision.get_if_ball()
+    def get_ball_distance():
+        return self._vision.ball_distance
+    def get_neck():
+        return self._vision.neck
+    def get_head():
+        return self._vision.head
+
 
 def main():
     print("[+] Decider started")

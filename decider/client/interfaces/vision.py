@@ -14,9 +14,12 @@ from geometry_msgs.msg import Quaternion, Twist, Pose2D, Point
 
 class Vision:
     # @public variants:
-    #   VARIANTS    TYPE        DESCTIPTION
-    #   self_pos    np.array    self position in map
-    #   pos_yaw     angle       self orientation in degree, [-180, 180)
+    #   VARIANTS        TYPE        DESCTIPTION
+    #   self_pos        np.array    self position in map; already filtered
+    #   pos_yaw         angle       self orientation in degree, [-180, 180)
+    #   head            float       the angle of head
+    #   neck            float       the angle of neck
+    #   ball_distance   float   the distance from robot to tht ball
     #
     # @public methods:
     #   None   
@@ -31,8 +34,6 @@ class Vision:
     #                           improve. 
     #   @@@@ TODO IMPROVE THE ALGORITHM TO MEASURE INACCURACY @@@@
     #   _vision_last_frame_time     the timestamp of last frame of vision
-    #   _head                   the angle of head
-    #   _neck                   the angle of neck
     #   _config                 a dictionary, the config
     #   _pos_sub                the handler of /pos_in_map
     #   _vision_sub             the handler of /vision/obj_pos
@@ -48,9 +49,9 @@ class Vision:
     def __init__(self, config): 
         self._ball_x = 0
         self._ball_y = 0
-        self._ball_last_seen_time = 0
-        self._neck = 0
-        self._head = 0
+        self._vision_last_frame_time= 0
+        self.neck = 0
+        self.head = 0
 
         self._config = config
         self._pos_sub = rospy.Subscriber("/pos_in_map",  \
@@ -71,27 +72,23 @@ class Vision:
     #   设置头的角度，并记录角度信息并发布
     #    @param head: 上下角度，[0,1.5]，1.5下，0上
     #    @param neck: 左右角度，[-1.1,1.1]，-1.1右，1.1左
-    @classmethod
     def _head_set(self, head = 0, neck = 0):
         head = np.clip(head, 0, 1.5)
         neck = np.clip(neck, -1.1, 1.1)
-        self._head, self._neck = head, neck
+        self.head, self.neck = head, neck
         head_goal = JointState()
         head_goal.name = ["head", "neck"]
         head_goal.header = Header()
         head_goal.position = [head, neck]
         self._head_pub.publish(head_goal) 
 
-    @classmethod
     def _position_callback(self, msg):
         self.self_pos = np.array([msg.x, msg.y])
         self.pos_yaw  = msg.theta
     
-    @classmethod
     def _soccer_real_callback(self, msg):
         self._ball_in_map = np.array([real_msg.x, real_msg.y])
     
-    @classmethod
     def _vision_callback(self, msg):
         layout = msg.layout
         h = layout.dim[0].size
@@ -125,10 +122,10 @@ class Vision:
                 self._self_pos_accuracy += \
                         self._config["pos_accuracy_add"][row[0]]
 
-        self._ball_last_seen_time = time.time()
-        self._ball_pos_in_vis   = row[1:3]
-        self._ball_pos          = row[5:8]
-        self._ball_pos_accuracy += ball_confidence
+        self._vision_last_frame_time    = time.time()
+        self._ball_pos_in_vis           = ball_row[1:3]
+        self.ball_distance              = ball_row[4]
+        self._ball_pos                  = ball_row[5:8]
+        self._ball_pos_accuracy        += ball_confidence
 
-        TODO: FIND BALL OR RELOCATE
-    
+         
