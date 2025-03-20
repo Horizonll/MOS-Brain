@@ -17,15 +17,44 @@ class FindBallStateMachine:
         self.states = ["init", "protecting", "rotating", "found"]
         self.transitions = [
             # 统一使用step触发器
-            {"trigger": "step", "source": "init", "dest": "protecting", "after": "set_protect_pose"},
-            {"trigger": "step", "source": "protecting", "dest": "rotating", 
-             "conditions": "protection_done", "after": "start_rotation"},
-            {"trigger": "step", "source": "rotating", "dest": "protecting",
-             "conditions": ["rotation_timeout", "no_ball"], "after": "stop_rotation"},
-            {"trigger": "step", "source": "*", "dest": "found", 
-             "conditions": "ball_in_sight"},
-            {"trigger": "step", "source": "found", "dest": "rotating",
-             "unless": "ball_in_sight", "after": "start_rotation"}
+            {
+                "trigger": "step", 
+                "source": "init", 
+                "dest": "protecting", 
+                "after": "set_protect_pose"
+            },
+            {
+                "trigger": "step", 
+                "source": "protecting", 
+                "dest": "rotating", 
+                "conditions": "protection_done", 
+                "after": "start_rotation"
+            },
+            {
+                "trigger": "step", 
+                "source": "rotating", 
+                "dest": "protecting",
+                "conditions": 
+                [
+                    "rotation_timeout", 
+                    "no_ball"
+                ], 
+                "after": "stop_rotation"
+            },
+            {
+                "trigger": "step", 
+                "source": "*", 
+                "dest": "found", 
+                "conditions": "ball_in_sight",
+                "after": "stop_rotation"
+            },
+            {
+                "trigger": "step", 
+                "source": "found", 
+                "dest": "protecting",
+                "conditions": "no_ball", 
+                "after": "start_rotation"
+            }
         ]
 
         # 初始化状态机
@@ -38,43 +67,36 @@ class FindBallStateMachine:
         )
         print(f"[FIND BALL FSM] Initialized. Starting state: {self.state}")
 
-        # 设置10Hz定时器驱动状态机
-        rospy.Timer(rospy.Duration(0.1), self.step_callback)
-
-    def step_callback(self, event):
-        """定时器回调函数，触发状态机步进"""
-        print(f"\n[FIND BALL FSM] Current state: {self.state}")
-        self.step()
 
     # 状态检查条件 --------------------------------------------------
-    def ball_in_sight(self):
+    def ball_in_sight(self, event=None):  
         """检查是否看到球"""
         result = self.agent.ball_in_sight()
         print(f"[FIND BALL FSM] Ball in sight: {'Yes' if result else 'No'}")
         return result
 
-    def protection_done(self):
+    def protection_done(self, event=None):  
         """检查保护姿势是否完成（0.5秒超时）"""
         elapsed = time.time() - self.enter_time
         result = self.state == "protecting" and elapsed > 0.5
         print(f"[FIND BALL FSM] Protection done: {'Yes' if result else f'No ({elapsed:.1f}s)'}")
         return result
 
-    def rotation_timeout(self):
+    def rotation_timeout(self, event=None): 
         """检查旋转是否超时（10秒）"""
         elapsed = time.time() - self.rotate_start_time
         result = elapsed >= 10
         print(f"[FIND BALL FSM] Rotation timeout: {'Yes' if result else f'No ({elapsed:.1f}s)'}")
-        return result
+        return result and self.state == "rotating"
 
-    def no_ball(self):
+    def no_ball(self, event=None):  
         """检查是否丢失球"""
         result = not self.ball_in_sight()
         print(f"[FIND BALL FSM] Ball lost: {'Yes' if result else 'No'}")
         return result
 
     # 状态动作 ------------------------------------------------------
-    def set_protect_pose(self):
+    def set_protect_pose(self, event=None): 
         """设置保护姿势（手臂位置）"""
         print("[FIND BALL FSM] Setting protect pose...")
         protect_pose = JointState()
@@ -84,18 +106,24 @@ class FindBallStateMachine:
         self.enter_time = time.time()  # 记录进入保护姿势的时间
         print("[FIND BALL FSM] Protect pose set")
 
-    def start_rotation(self):
+    def start_rotation(self, event=None):
         """开始旋转身体寻找球"""
         print("[FIND BALL FSM] Starting rotation...")
         self.agent.speed_controller(0, 0, configuration.walk_theta_vel)
         self.rotate_start_time = time.time()  # 记录旋转开始时间
         print(f"[FIND BALL FSM] Rotating at {configuration.walk_theta_vel} rad/s")
 
-    def stop_rotation(self):
+    def stop_rotation(self, event=None):
         """停止旋转"""
         print("[FIND BALL FSM] Stopping rotation...")
         self.agent.stop(0.5)
+        self.rotate_start_time = time.time()  # 重置旋转开始时间
         print("[FIND BALL FSM] Rotation stopped")
+
+    def run(self):
+        """运行状态机"""
+        self.step()
+        print("[FIND BALL FSM] Running...")
 
 
 
