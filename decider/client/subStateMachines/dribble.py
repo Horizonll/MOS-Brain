@@ -37,6 +37,19 @@ class DribbleStateMachine:
                 "dest": "finished",
                 "conditions": "finished",
             },
+            {
+                "trigger": "dribble",
+                "source": "finished",
+                "dest": "adjust",
+                "conditions": "(not finished) and bad_position",
+            },
+            {
+                "trigger": "dribble",
+                "source": "finished",
+                "dest": "forward",
+                "conditions": "(not finished) and good_position",
+                "after": "forward",
+            }
         ]
         self.machine = Machine(
             model=self,
@@ -47,9 +60,13 @@ class DribbleStateMachine:
         self.direction = True  # FIXME: True: right, False: left
 
     def run(self):
-        while self.state != "finished":
-            print("Dribbling...")
-            self.machine.model.trigger("dribble")
+        # 如果没有球，直接return
+        if not self.agent.ball_in_sight():
+            print("No ball in sight.")
+            return
+
+        self.machine.model.trigger("dribble")
+            
 
     def forward(self):
         self.agent.speed_controller(0.5, 0, 0)
@@ -90,4 +107,4 @@ class DribbleStateMachine:
             return False
 
     def finished(self):
-        return not self.agent.ifBall
+        return self.agent.ball_y > 2000
