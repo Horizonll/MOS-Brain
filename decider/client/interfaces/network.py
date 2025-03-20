@@ -1,3 +1,5 @@
+import asyncio
+
 # interfaces/network.py
 #   @description:   network utilities
 
@@ -15,20 +17,20 @@ class Network:
     #       _write
 
     def __init__(self, config):
-        return
         self._config = config
-        self._server = (127.0.0.1, 50140)
-        reader, write = await asyncio.open_connection(self._server)
-        self._reader, self._writer = reader, writer
+        self._server = ('127.0.0.1', 50140)
+        self._reader = None
+        self._writer = None
 
-    def receive():
-        return "NO_MESSAGE"
+    async def initialize(self):
+        self._reader, self._writer = await asyncio.open_connection(*self._server)
+
+    async def receive(self):
         try:
-            data = await asyncio.wait_for(reader.read(config["max_buffer_size"]), 
-                                            time_out = config["fake_aync_time_out"])
+            data = await asyncio.wait_for(self._reader.read(self._config["max_buffer_size"]),
+                                          timeout=self._config["fake_aync_time_out"])
             return data
         except asyncio.TimeoutError:
             return "NO_MESSAGE"
         except ConnectionResetError:
             return "DISCONNECTED"
-            
