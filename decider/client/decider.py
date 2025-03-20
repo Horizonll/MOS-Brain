@@ -3,17 +3,13 @@
 #   @description : The entry py file for decision on clients
 #
 
+import os
 import json
 import math
 import time
 import signal
-import socket
 import asyncio
-import logging
-import threading
-import websockets
 import numpy as np
-from transitions import Machine
 
 # ROS
 import rospy
@@ -33,8 +29,6 @@ import interfaces.network
 class Agent:
     # @public variants:
     #       VARIANTS             TYPE                 DESCRIPTION
-    #   config              dictionary      configurations such as vel, etc.
-    #   command             dictionary          current running command
     #
     # @public methods:
     #   cmd_vel(vel_x : float, vel_y : float, vel_theta : float)
@@ -54,6 +48,8 @@ class Agent:
     #   get_head()              angle           the head angle, up and down
     # 
     # @private variants:
+    #   _config         dictionary: configurations such as vel, etc.
+    #   _command        dictionary: current running command
     #   _action         The interface to kick and walk
     #   _vision         The interface to head, neck and camera
     #   _state_machine  A dictionary of state machines
@@ -66,50 +62,102 @@ class Agent:
         rospy.init_node("decider")
         
         # initializing public variants
-        config = configuration.load_config()
-        self.command = {
-            "command": "stop",
-            "data": {},
-            "send_time": time.time(),
+        self._config = configuration.load_config()
+        self._command = {
+            "command": "None",
+            "args": {},
+            "timestamp": time.time(),
         }
 
         print("[*] Registering interfaces")
-        self._action     = action.Action(self)
-        self._vision     = vision.Vision(self)
+        self._action     = interfaces.action.Action(self._config)
+        self._vision     = interfaces.vision.Vision(self._config)
+        self._network    = interfaces.network.Network(self._config)
+
         print("[*] Initializing sub-statemahcines")
-        self._state_machine["kick"]     = KickStateMachine(self)
-        self._state_machine["go_back_to_field"]  = GoBackToFieldStateMachine(self, \
-                                            0, 4500, 300)
-        self._find_ball_state_machine   = FindBallStateMachine(self)
-        self._chase_ball_state_machine  = ChaseBallStateMachine(self)
-        self._dribble_state_machine     = DribbleStateMachine(self)
-        
+        py_files = Agent._get_python_files("sub_statemachines/")
+        for py_file in py_files:
+            print("[+] found : " + py_file)
+            eval_str = "import " + py_file
+            eval(eval_str)
+            module_name = py_file.split('.')[-1] # also class name
+            eval_str = "self._state_machine[" + module_name + "]=" + py_file + "." + module_name
+            eval(eval_str)
 
         print("Agent instance initialization complete.")
 
 
+    def run():
+        data_str = self._network.receive()
+        if(data_str == "DISCONNECTED"):
+            print("[!] SERVER DISCONNECTED!")
+            exit()
+        else if(data_str == "NO_MESSAGE"):
+            self._execute("run")
+            return
+
+        # change state machine
+        data = json.loads(data_str)
+        for robot in data['robots']:
+            if(robot["id"] == self._config["id"]):
+                new_command = robot
+                break
+
+        old_state_machine = self._command["command"]
+        new_state_machine = new_command["command"]
+        self._execute(old_state_machine, "stop", new_state_machine)
+        self._execute(new_state_machine, "start", 
+                      new_command["args"], old_state_machine)
+        self._execute(new_state_machine, "run")
+        self._command = new_command
+    
+
+    # private: _execute: call state machines method
+    def _execute(statemachine, func_name, *args):
+        if(statemachin == "stop"):
+            return
+        eval_str = "self._statemachine[statemachine]." \
+                    + func_name + "("
+        for arg in args:
+            eval_str += str(arg)
+        eval_str += ")"
+        eval(eval_str) 
+
+
+    # private: _get_python_files: find all python file in a directory
+    @classmethod
+    def _get_python_files(start_dir):
+        py_files = []
+        for root, dirs, files in os.walk(start_dir):
+            for filename in files:
+                if filename.endswith('.py'):
+                    full_path = os.path.join(root, filename)
+                py_files.append(full_path[0:-3].replace('\\', '.')
+        return py_files
+
+
     # following are some simple encapsulation of interfaces
-    def cmd_vel(vel_x: float, vel_y: float, vel_theta: float):
+    def cmd_vel(self, vel_x: float, vel_y: float, vel_theta: float):
         self._action.cmd_vel(x, y, theta)
-    def kick():
+    def kick(self):
         self._action.do_kick()
-    def get_self_pos():
+    def get_self_pos(self):
         return self._vision.self_pos
-    def get_self_yaw():
+    def get_self_yaw(self):
         return self._vision.self_yaw
-    def get_ball_pos():
+    def get_ball_pos(self):
         return self._vision.get_ball_pos()
-    def get_ball_pos_in_vis():
+    def get_ball_pos_in_vis(self):
         return self._vision.get_ball_pos_in_vis()
-    def get_ball_pos_in_map():
+    def get_ball_pos_in_map(self):
         return self._vision.get_ball_pos_in_map()
-    def get_if_ball():
+    def get_if_ball(self):
         return self._vision.get_if_ball()
-    def get_ball_distance():
+    def get_ball_distance(self):
         return self._vision.ball_distance
-    def get_neck():
+    def get_neck(self):
         return self._vision.neck
-    def get_head():
+    def get_head(self):
         return self._vision.head
 
 
