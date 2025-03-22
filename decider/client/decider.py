@@ -1,3 +1,8 @@
+# decider.py
+#
+#   @description : The entry py file for decision on clients
+#
+
 import os
 import json
 import math
@@ -39,6 +44,37 @@ from subStateMachines.dribble import DribbleStateMachine
 
 
 class Agent:
+    # @public variants:
+    #       VARIANTS             TYPE                 DESCRIPTION
+    #
+    # @public methods:
+    #   cmd_vel(vel_x : float, vel_y : float, vel_theta : float)
+    #   kick()
+    #   run()
+    #
+    # @public methods to get varants:
+    #       METHODS             TYPE                DESCRIPTION
+    #   get_self_pos()          numpy.array     self position in map
+    #   get_self_yaw()          angle           self angle in deg, [-180, 180)
+    #   get_ball_pos()          numpy.array     ball postiion from robot
+    #   get_ball_pos_in_vis()   numpy.array     ball position in **vision**
+    #   get_ball_pos_in_map()   numpy.array     ball position in global 
+    #   get_if_ball()           bool            whether can find ball
+    #   get_ball_distance()     float           the distance to the ball
+    #   get_neck()              angle           the neck angle, left and right
+    #   get_head()              angle           the head angle, up and down
+    # 
+    # @private variants:
+    #   _config         dictionary: configurations such as vel, etc.
+    #   _command        dictionary: current recieved command
+    #   _info           dictionary: current running command str
+    #   _action         The interface to kick and walk
+    #   _vision         The interface to head, neck and camera
+    #   _state_machine  A dictionary of state machines
+    # 
+    # @private methods:
+    #   None
+
     _command = {
         "command": "None",
         "args": {},
@@ -61,10 +97,8 @@ class Agent:
         # robot_client: provide functions to communicate with the server
         self._robot_client = RobotClient(self)
 
-        #####################
         # Initialize state machines by importing all python files in sub_statemachines
         # and create a dictionary from command to statemachine.run
-        #####################
 
         logging.info("Initializing sub-state machines")
 
@@ -86,7 +120,7 @@ class Agent:
 
     def run(self):
         command = self._command["command"]
-        self.info = command
+        self._info = command
         action = self._commands.get(command)
         if action:
             logging.info(f"Executing command: {command}")
