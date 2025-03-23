@@ -34,6 +34,7 @@ import interfaces.vision
 # Network
 from robot_client import RobotClient
 
+
 class Agent:
     # @public variants:
     #       VARIANTS             TYPE                 DESCRIPTION

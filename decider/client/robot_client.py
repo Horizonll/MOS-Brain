@@ -5,13 +5,16 @@ import threading
 import time
 import logging
 
+
+
 class RobotClient:
     def __init__(self, agent):
+        
         self.agent = agent
         self.config = self.agent._config
         self.HOST_IP = self.get_host_ip()
-        self._logger = logging.getLogger(__name__)
-        self._logger.info("Host ip = " + self.HOST_IP)
+        print("Host ip = " + self.HOST_IP)
+        logging.info("Host ip = " + self.HOST_IP)
 
         # Start network-related threads
         self.start_network_threads()
@@ -29,6 +32,7 @@ class RobotClient:
         send_thread = threading.Thread(target=self.send_loop)
         send_thread.daemon = True
         send_thread.start()
+        print("send_thread started")
         logging.info("Started the sending loop thread")
 
         # Start the TCP client thread
@@ -43,21 +47,22 @@ class RobotClient:
                 robot_data = {
                     "id": self.agent.id if hasattr(self.agent, 'id') else 0,
                     "data": {
-                        "x": self.agent.get_self_pos()[0] if hasattr(self.agent, 'get_self_pos') else 0,
-                        "y": self.agent.get_self_pos()[1] if hasattr(self.agent, 'get_self_pos') else 0,
-                        "ballx": self.agent.get_ball_pos_in_map()[0] if hasattr(self.agent, 'get_ball_pos_in_map') else 0,
-                        "bally": self.agent.get_ball_pos_in_map()[1] if hasattr(self.agent, 'get_ball_pos_in_map') else 0,
-                        "yaw": self.agent.get_self_yaw() if hasattr(self.agent, 'get_self_yaw') else 0,
+                        # "x": self.agent.get_self_pos()[0] if hasattr(self.agent, 'get_self_pos') else 0,
+                        # "y": self.agent.get_self_pos()[1] if hasattr(self.agent, 'get_self_pos') else 0,
+                        # "ballx": self.agent.get_ball_pos_in_map()[0] if hasattr(self.agent, 'get_ball_pos_in_map') else 0,
+                        # "bally": self.agent.get_ball_pos_in_map()[1] if hasattr(self.agent, 'get_ball_pos_in_map') else 0,
+                        # "yaw": self.agent.get_self_yaw() if hasattr(self.agent, 'get_self_yaw') else 0,
                     },
                     "info": self.agent._command["command"],
                     "timestamp": time.time(),
-                    "ip": self.ip,
+                    # "ip": self.ip,
                 }
-                if not self.agent.get_if_ball():
-                    robot_data["ballx"] = robot_data["bally"] = None
+                # if not self.agent.get_if_ball():
+                #     robot_data["ballx"] = robot_data["bally"] = None
                 self.send_robot_data(robot_data)
                 time.sleep(0.5)
             except Exception as e:
+                print(f"Error in send_loop: {e}")
                 logging.error(f"Error sending data: {e}")
 
     def send_robot_data(self, robot_data):

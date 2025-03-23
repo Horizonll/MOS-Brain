@@ -150,7 +150,7 @@ class Gamebox:
         self.is_goalkeeper = goal_keeper  # 守门员
         self.peer = None  # 服务器（ip， 端口）
 
-        self.logger = logging.getLogger("game_controller")  # 创建logger
+        logging = logging.getLogger("game_controller")  # 创建logger
 
         self.socket1 = socket.socket(
             socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP
@@ -189,14 +189,14 @@ class Gamebox:
 
         # 解释报错
         except AssertionError as ae:
-            self.logger.error(ae.message)
+            logging.error(ae.message)
         except socket.timeout:
             pass
-            self.logger.warning("Socket timeout")
+            logging.warning("Socket timeout")
         except ConstError:
-            self.logger.warning("Parse Error: Probably using an old protocol!")
+            logging.warning("Parse Error: Probably using an old protocol!")
         except Exception as e:
-            self.logger.exception(e)
+            logging.exception(e)
             pass
 
     def receive(self):
