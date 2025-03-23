@@ -64,7 +64,7 @@ class DribbleStateMachine:
         if not self.agent.ball_in_sight():
             print("No ball in sight.")
             return
-
+        
         self.machine.model.trigger("dribble")
             
 
