@@ -14,7 +14,7 @@ import threading
 import logging
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(filename)s:%(funcName)s(): %(message)s'
 )
 
@@ -33,14 +33,6 @@ import interfaces.vision
 
 # Network
 from robot_client import RobotClient
-
-from subStateMachines.can_not_find_ball import CanNotFindBallStateMachine
-from subStateMachines.chase_ball import ChaseBallStateMachine
-from subStateMachines.go_back_to_field import GoBackToFieldStateMachine
-from subStateMachines.kick import KickStateMachine
-from subStateMachines.find_ball import FindBallStateMachine
-from subStateMachines.dribble import DribbleStateMachine
-
 
 class Agent:
     # @public variants:
@@ -88,7 +80,7 @@ class Agent:
         # Initializing public variables
         self._config = configuration.load_config()
         self._command = {
-            "command": "None",
+            "command": "stop",
             "args": {},
             "timestamp": time.time(),
         }
@@ -110,19 +102,20 @@ class Agent:
 
         logging.info("Initializing sub-state machines")
         py_files = Agent._get_python_files("sub_statemachines/")
+        self._state_machine = {}
         for py_file in py_files:
-            logging.ifno("found : " + py_file)
+            logging.info("found : " + py_file)
             eval_str = "import " + py_file
-            eval(eval_str)
+            exec(eval_str)
             module_name = py_file.split('.')[-1] # also class name
-            eval_str = "self._state_machine[" + module_name + "]=" \
+            eval_str = "self._state_machine[\"" + module_name + "\"] = " \
                         + py_file + "." + module_name
-            eval(eval_str) 
+            exec(eval_str) 
 
         logging.info("Agent instance initialization completed")
 
     def run(self):
-        if(self._command = self._lst_command):
+        if(self._command == self._lst_command):
             self._execute(self._command["command"], "run")
             return
 
@@ -135,32 +128,32 @@ class Agent:
     
 
     # private: _execute: call state machines method
-    def _execute(statemachine, func_name, *args):
-        if(statemachin == "stop"):
+    def _execute(self, statemachine, func_name, *args):
+        if(statemachine == "stop"):
             return
-        eval_str = "self._statemachine[" + statemachine "]." \
+        eval_str = "self._statemachine[" + statemachine + "]." \
                     + func_name + "("
         for index, arg in enumerate(args):
             if(index != 0):
                 eval_str += ","
             eval_str += str(arg)
         eval_str += ")"
-        log_debug("run " + eval_str)
+        logging.debug("run " + eval_str)
         try:
             eval(eval_str)
-        except Exception e:
+        except Exception as  e:
             pass
 
 
     # private: _get_python_files: find all python file in a directory
-    @classmethod
+    @staticmethod
     def _get_python_files(start_dir):
         py_files = []
         for root, dirs, files in os.walk(start_dir):
             for filename in files:
                 if filename.endswith('.py'):
                     full_path = os.path.join(root, filename)
-                py_files.append(full_path[0:-3].replace('\\', '.')
+                py_files.append(full_path[0:-3].replace('/', '.'))
         return py_files
 
 

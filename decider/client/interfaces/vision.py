@@ -47,11 +47,12 @@ class Vision:
     #   _vision_callback(target_matrix)     callback of /vision/obj_pos
 
     def __init__(self, config): 
-        self._ball_x = 0
-        self._ball_y = 0
-        self._vision_last_frame_time= 0
-        self.neck = 0
-        self.head = 0
+        self._ball_pos_in_vis = np.array({0, 0})
+        self._ball_pos = np.array({0, 0})
+        self._ball_pos_in_map = np.array({0, 0})
+        self._vision_last_frame_time = 0
+        self._self_pos_accuracy = 0
+        self._ball_pos_accuracy = 0
 
         self._config = config
         self._pos_sub = rospy.Subscriber("/pos_in_map",  \
@@ -87,7 +88,7 @@ class Vision:
         self.pos_yaw  = msg.theta
     
     def _soccer_real_callback(self, msg):
-        self._ball_in_map = np.array([real_msg.x, real_msg.y])
+        self._ball_in_map = np.array([msg.x, msg.y])
     
     def _vision_callback(self, msg):
         layout = msg.layout
@@ -120,12 +121,13 @@ class Vision:
                     ball_row = row
             else:
                 self._self_pos_accuracy += \
-                        self._config["pos_accuracy_add"][row[0]]
+                        self._config["pos_accuracy_add"][str(int(row[0]))]
 
         self._vision_last_frame_time    = time.time()
-        self._ball_pos_in_vis           = ball_row[1:3]
-        self.ball_distance              = ball_row[4]
-        self._ball_pos                  = ball_row[5:8]
-        self._ball_pos_accuracy        += ball_confidence
+        if(ball_row != None):
+            self._ball_pos_in_vis           = ball_row[1:3]
+            self.ball_distance              = ball_row[4]
+            self._ball_pos                  = ball_row[5:8]
+            self._ball_pos_accuracy        += ball_confidence
 
          

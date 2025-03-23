@@ -1,7 +1,6 @@
 # kick.py
 # State machine for robot kicking behavior
 
-from configuration import configuration
 import math
 import time
 from transitions import Machine
@@ -190,3 +189,9 @@ class kick:
             f"[FB CHECK] Ball Y: {self.agent.ball_y} (OK? {'Yes' if result else 'No'})"
         )
         return result
+
+    def start(self, args, last_statemachine):
+        pass
+
+    def stop(self, next_statemachine):
+        pass

@@ -36,6 +36,6 @@ class can_not_find_ball:
     def start(self, args, last_statemachine):
         pass
     
-    def stop(self, next_statemachine);
+    def stop(self, next_statemachine):
         pass
 

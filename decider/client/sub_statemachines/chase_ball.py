@@ -5,8 +5,6 @@ import math
 import time
 from transitions import Machine
 import numpy as np
-from configuration import configuration
-
 
 class chase_ball:
     def __init__(self, agent):
@@ -119,7 +117,7 @@ class chase_ball:
     def start(self, args, last_statemachine):
         pass
     
-    def stop(self, next_statemachine);
+    def stop(self, next_statemachine):
         pass
 
 

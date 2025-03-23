@@ -258,7 +258,5 @@ class go_back_to_field:
     def start(self, args, last_statemachine):
         pass
     
-    def stop(self, next_statemachine);
+    def stop(self, next_statemachine):
         pass
-
-`

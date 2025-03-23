@@ -18,12 +18,12 @@
     "pos_accuracy_add": {
         // the score 'add' to the self_pos_accuracy
         // when these items appears in vision
-        0: 0,       // ball
-        1: 10,      // goalpost
-        2: 0,       // robot
-        3: 5,       // L-Intersection
-        4: 5,       // T-Intersection
-        5: 5        // X-Intersection
+        "0": 0,       // ball
+        "1": 10,      // goalpost
+        "2": 0,       // robot
+        "3": 5,       // L-Intersection
+        "4": 5,       // T-Intersection
+        "5": 5        // X-Intersection
     },
     "pos_accuracy_critical": 0.0005,   // when accuracy is consider too low
     "predict_ball_pos": true,

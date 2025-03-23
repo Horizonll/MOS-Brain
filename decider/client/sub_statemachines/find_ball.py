@@ -4,8 +4,6 @@
 from transitions import Machine
 from sensor_msgs.msg import JointState
 import time
-from configuration import configuration
-
 
 class find_ball:
     def __init__(self, agent):
@@ -76,7 +74,7 @@ class find_ball:
     def start(self, args, last_statemachine):
         pass
     
-    def stop(self, next_statemachine);
+    def stop(self, next_statemachine):
         pass
 
 

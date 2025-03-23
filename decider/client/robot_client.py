@@ -9,14 +9,15 @@ class RobotClient:
     def __init__(self, agent):
         self.agent = agent
         self.config = self.agent._config
-        self.ip = self.get_ip()
         self.HOST_IP = self.get_host_ip()
+        self._logger = logging.getLogger(__name__)
+        self._logger.info("Host ip = " + self.HOST_IP)
 
         # Start network-related threads
         self.start_network_threads()
 
     def get_host_ip(self):
-        if self.config.get('auto_find_server_ip', True):
+        if(self.config['auto_find_server_ip'] == True):
             logging.info("Starting to listen for UDP broadcasts to get the host IP address")
             return self.listen_host_ip()
         else:
@@ -82,12 +83,9 @@ class RobotClient:
 
     async def tcp_listener(self):
         """Asynchronously listen for TCP command messages"""
-        self.ip = self.get_ip()
-        logging.info(f"Current local IP address: {self.ip}")
-
         # Create an asynchronous server
         server = await asyncio.start_server(self.handle_connection, 
-                                self.ip, self.agent._config.get("server_port"))
+                                self.HOST_IP, self.agent._config.get("server_port"))
 
         addr = server.sockets[0].getsockname()
         logging.info(f"Started listening for TCP command messages at address: {addr}")
@@ -132,18 +130,14 @@ class RobotClient:
     # Synchronously listen for UDP broadcast messages and get the host IP
     def listen_host_ip(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        # Listen for UDP broadcasts on the specified port
-        sock.bind(("0.0.0.0", 
-                   self.agent._config.get("auto_find_server_ip_listen_port"))
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.setsockopt(socket.SOL_SOCKET, socket.BROADCAST, 1)
+        sock.bind(("", self.agent._config.get("auto_find_server_ip_listen_port")))
 
         while True:
             data, addr = sock.recvfrom(1024)
             try:
-                received_data = data.decode("utf-8")
-                if(data.decode("utf-8") == 
-                   self.agent._config.get("auto_find_server_ip_token")
+                if(data.decode("utf-8") == \
+                        self.config["auto_find_server_ip_token"]):
                     self.HOST_IP = addr[0]
                     logging.info(f"Updated the host IP address to: {host_ip}")
                     return self.HOST_IP

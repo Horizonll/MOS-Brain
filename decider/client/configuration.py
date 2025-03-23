@@ -37,18 +37,20 @@ def load_config():
         config = json.loads(json_str)
     except:
         print("[!] Can not parse config.json !");
+        print(json_str)
         exit()
 
     # Loading override configs; this is not mandatory
     try:
         f_override = open("config_override.json", "r")
-        json_str = f_overrride.read()
-        json_str = _remove_commnet(json_str)
+        json_str = f_override.read()
+        json_str = _remove_comment(json_str)
         override = json.loads(json_str)
-        for key.value in override:
+        for key, value in override.items():
             config[key] = value
-    except:
-        print("[!] Can not parse config_override.json!")
+    except Exception as e:
+        print("[!] Can not parse config_override.json! " + str(e))
+        print(json_str)
         pass
 
     return config

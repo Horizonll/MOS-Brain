@@ -4,8 +4,6 @@
 import time
 import math
 from transitions import Machine
-from configuration import configuration
-
 
 class dribble:
     """
@@ -95,7 +93,7 @@ class dribble:
     def start(self, args, last_statemachine):
         pass
     
-    def stop(self, next_statemachine);
+    def stop(self, next_statemachine):
         pass
 
 
