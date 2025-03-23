@@ -94,7 +94,6 @@ class Agent:
         }
         self._lst_command = self._command
         
-
         logging.info("Registering interfaces")
         # action: provide functions to control the robot, such as cmd_vel 
         # and kick

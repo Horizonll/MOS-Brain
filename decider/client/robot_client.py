@@ -15,21 +15,13 @@ class RobotClient:
         # Start network-related threads
         self.start_network_threads()
 
-    def get_ip(self):
-        if self.config.get('use_detected_ip', True):
-            logging.info("Starting to automatically detect the local IP address")
-            return self.detect_ip()
-        else:
-            logging.info("Using the local IP address from the configuration file")
-            return self.config.get('local_ip', "127.0.0.1")
-
     def get_host_ip(self):
-        if self.config.get('use_detected_host_ip', True):
+        if self.config.get('auto_find_server_ip', True):
             logging.info("Starting to listen for UDP broadcasts to get the host IP address")
             return self.listen_host_ip()
         else:
             logging.info("Using the host IP address from the configuration file")
-            return self.config.get('host_ip', "192.168.9.103")
+            return self.config.get('server_ip')
 
     def start_network_threads(self):
         # Start the sending thread
@@ -78,19 +70,6 @@ class RobotClient:
         finally:
             client_socket.close()
 
-    def detect_ip(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-            logging.info(f"Detected local IP address: {ip}")
-        except Exception as e:
-            logging.error(f"Failed to detect local IP address: {e}")
-            ip = "127.0.0.1"
-        finally:
-            s.close()
-        return ip
-
     def start_tcp_listener_loop(self):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -107,7 +86,8 @@ class RobotClient:
         logging.info(f"Current local IP address: {self.ip}")
 
         # Create an asynchronous server
-        server = await asyncio.start_server(self.handle_connection, self.ip, 8002)
+        server = await asyncio.start_server(self.handle_connection, 
+                                self.ip, self.agent._config.get("server_port"))
 
         addr = server.sockets[0].getsockname()
         logging.info(f"Started listening for TCP command messages at address: {addr}")
@@ -149,28 +129,24 @@ class RobotClient:
             writer.close()
             await writer.wait_closed()
 
+    # Synchronously listen for UDP broadcast messages and get the host IP
     def listen_host_ip(self):
-        """Synchronously listen for UDP broadcast messages and get the host IP"""
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind(("0.0.0.0", 8003))  # Listen for UDP broadcasts on the specified port
-
-        # Join the broadcast reception
+        # Listen for UDP broadcasts on the specified port
+        sock.bind(("0.0.0.0", 
+                   self.agent._config.get("auto_find_server_ip_listen_port"))
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
         while True:
             data, addr = sock.recvfrom(1024)
             try:
-                received_data = json.loads(data.decode("utf-8"))
-                if "message" in received_data and received_data["message"] == "thmos_hello":
-                    # Assume the broadcast message contains the host IP information
-                    if "ip" in received_data:
-                        host_ip = received_data["ip"]
-                        self.HOST_IP = host_ip  # Update the IP address in the Agent instance
-                        logging.info(f"Updated the host IP address to: {host_ip}")
-                        return host_ip
-                    else:
-                        logging.warning("Received 'thmos_hello' message, but the 'ip' field was not found")
+                received_data = data.decode("utf-8")
+                if(data.decode("utf-8") == 
+                   self.agent._config.get("auto_find_server_ip_token")
+                    self.HOST_IP = addr[0]
+                    logging.info(f"Updated the host IP address to: {host_ip}")
+                    return self.HOST_IP
                 else:
                     logging.warning("Received message does not match the expected format")
             except json.JSONDecodeError as e:
