@@ -7,7 +7,7 @@ import time
 from configuration import configuration
 
 
-class FindBallStateMachine:
+class find_ball:
     def __init__(self, agent):
         self.agent = agent
         self.states = ["search", "found"]
@@ -72,3 +72,11 @@ class FindBallStateMachine:
                         head=configuration.find_head_pos[pos],
                         neck=configuration.find_neck_pos[pos],
                     )
+
+    def start(self, args, last_statemachine):
+        pass
+    
+    def stop(self, next_statemachine);
+        pass
+
+

@@ -8,7 +8,7 @@ import numpy as np
 from configuration import configuration
 
 
-class ChaseBallStateMachine:
+class chase_ball:
     def __init__(self, agent):
         """Initialize the chase ball state machine with an agent"""
         self.agent = agent
@@ -115,6 +115,14 @@ class ChaseBallStateMachine:
         self.agent.speed_controller(0, 0, 0)
         self.agent.head_set(head=0.9, neck=0)
         print("[CHASE BALL FSM] Movement stopped and head position set.")
+
+    def start(self, args, last_statemachine):
+        pass
+    
+    def stop(self, next_statemachine);
+        pass
+
+
 
 
 # find_ball.py

@@ -3,7 +3,7 @@ from transitions import Machine
 import numpy as np
 
 
-class GoBackToFieldStateMachine:
+class go_back_to_field:
     def __init__(self, agent, aim_x, aim_y, min_dist=300):
         """
         初始化返回场地状态机
@@ -254,3 +254,11 @@ class GoBackToFieldStateMachine:
         time.sleep(1)
         self.agent.is_going_back_to_field = False
         print("[Go Back to Field FSM] Arrived at target!")
+
+    def start(self, args, last_statemachine):
+        pass
+    
+    def stop(self, next_statemachine);
+        pass
+
+`

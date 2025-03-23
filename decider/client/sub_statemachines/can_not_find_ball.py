@@ -3,7 +3,7 @@
 import threading
 from transitions import Machine
 
-class CanNotFindBallStateMachine:
+class can_not_find_ball:
     def __init__(self, agent):
         self.agent = agent
         self.states = ["cannot_find_ball", "going_back_to_field", "ball_in_sight"]
@@ -32,5 +32,10 @@ class CanNotFindBallStateMachine:
         while self.state != "ball_in_sight":
             print("Cannot find the ball. Going back to the field...")
             self.machine.model.trigger("going_back_to_field")
-
+    
+    def start(self, args, last_statemachine):
+        pass
+    
+    def stop(self, next_statemachine);
+        pass
 

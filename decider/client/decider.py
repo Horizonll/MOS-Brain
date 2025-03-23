@@ -13,7 +13,6 @@ import numpy as np
 import threading
 import logging
 
-
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(filename)s:%(funcName)s(): %(message)s'
@@ -67,6 +66,7 @@ class Agent:
     # @private variants:
     #   _config         dictionary: configurations such as vel, etc.
     #   _command        dictionary: current recieved command
+    #   _lst_command    dictionary: last command
     #   _info           dictionary: current running command str
     #   _action         The interface to kick and walk
     #   _vision         The interface to head, neck and camera
@@ -87,60 +87,89 @@ class Agent:
 
         # Initializing public variables
         self._config = configuration.load_config()
+        self._command = {
+            "command": "None",
+            "args": {},
+            "timestamp": time.time(),
+        }
+        self._lst_command = self._command
+        
 
         logging.info("Registering interfaces")
-
-        # action: provide functions to control the robot, such as cmd_vel and kick
+        # action: provide functions to control the robot, such as cmd_vel 
+        # and kick
         self._action = interfaces.action.Action(self._config)
-        # vision: provide functions to get information from the robot, such as self position and ball position
+        # vision: provide functions to get information from the robot, 
+        # such as self position and ball position
         self._vision = interfaces.vision.Vision(self._config)
         # robot_client: provide functions to communicate with the server
         self._robot_client = RobotClient(self)
 
-        # Initialize state machines by importing all python files in sub_statemachines
-        # and create a dictionary from command to statemachine.run
+        # Initialize state machines by importing all python files in 
+        # sub_statemachines and create a dictionary from command to 
+        # statemachine.run
 
         logging.info("Initializing sub-state machines")
-
-        self._kick_state_machine = KickStateMachine(self)
-        self._go_back_to_field_machine = GoBackToFieldStateMachine(self, 0, 4500, 500)
-        self._find_ball_state_machine = FindBallStateMachine(self)
-        self._chase_ball_state_machine = ChaseBallStateMachine(self)
-        self._dribble_state_machine = DribbleStateMachine(self)
-
-        self._commands = {
-            "kick": self._kick_state_machine.run,
-            "go_back_to_field": self._go_back_to_field_machine.run,
-            "find_ball": self._find_ball_state_machine.run,
-            "chase_ball": self._chase_ball_state_machine.run,
-            "dribble": self._dribble_state_machine.run,
-        }
+        py_files = Agent._get_python_files("sub_statemachines/")
+        for py_file in py_files:
+            logging.ifno("found : " + py_file)
+            eval_str = "import " + py_file
+            eval(eval_str)
+            module_name = py_file.split('.')[-1] # also class name
+            eval_str = "self._state_machine[" + module_name + "]=" \
+                        + py_file + "." + module_name
+            eval(eval_str) 
 
         logging.info("Agent instance initialization completed")
 
     def run(self):
-        command = self._command["command"]
-        self._info = command
-        action = self._commands.get(command)
-        if action:
-            logging.info(f"Executing command: {command}")
-            action()
-        elif command == "stop":
-            logging.info("Executing the stop command")
-            self.stop(1)
-        else:
-            logging.error(f"Unknown command: {self._command}")
-            self.stop(1)
+        if(self._command = self._lst_command):
+            self._execute(self._command["command"], "run")
+            return
 
-    def stop(self, sleep_time):
-        self._action.cmd_vel(0, 0, 0)
-        logging.info(f"Stopping the robot, sleeping for {sleep_time} seconds")
-        time.sleep(sleep_time)
+        old_state_machine = self._lst_command["command"]
+        new_state_machine = self._command["command"]
+        self._execute(old_state_machine, "stop", new_state_machine)
+        self._execute(new_state_machine, "start", 
+                      new_command["args"], old_state_machine)
+        self._execute(new_state_machine, "run")
+    
+
+    # private: _execute: call state machines method
+    def _execute(statemachine, func_name, *args):
+        if(statemachin == "stop"):
+            return
+        eval_str = "self._statemachine[" + statemachine "]." \
+                    + func_name + "("
+        for index, arg in enumerate(args):
+            if(index != 0):
+                eval_str += ","
+            eval_str += str(arg)
+        eval_str += ")"
+        log_debug("run " + eval_str)
+        try:
+            eval(eval_str)
+        except Exception e:
+            pass
+
+
+    # private: _get_python_files: find all python file in a directory
+    @classmethod
+    def _get_python_files(start_dir):
+        py_files = []
+        for root, dirs, files in os.walk(start_dir):
+            for filename in files:
+                if filename.endswith('.py'):
+                    full_path = os.path.join(root, filename)
+                py_files.append(full_path[0:-3].replace('\\', '.')
+        return py_files
+
 
     # The following are some simple encapsulations of interfaces
     def cmd_vel(self, vel_x: float, vel_y: float, vel_theta: float):
         self._action.cmd_vel(vel_x, vel_y, vel_theta)
-        logging.info(f"Setting the robot's speed: linear velocity x={vel_x}, y={vel_y}, angular velocity theta={vel_theta}")
+        logging.info(f"Setting the robot's speed: linear velocity x={vel_x}, "
+                + "y={vel_y}, angular velocity theta={vel_theta}")
 
     def kick(self):
         self._action.do_kick()

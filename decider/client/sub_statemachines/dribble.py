@@ -7,7 +7,7 @@ from transitions import Machine
 from configuration import configuration
 
 
-class DribbleStateMachine:
+class dribble:
     """
     朝球门带球
     TODO: 处理丢球情况，检查方向
@@ -91,3 +91,11 @@ class DribbleStateMachine:
 
     def finished(self):
         return not self.agent.ifBall
+
+    def start(self, args, last_statemachine):
+        pass
+    
+    def stop(self, next_statemachine);
+        pass
+
+

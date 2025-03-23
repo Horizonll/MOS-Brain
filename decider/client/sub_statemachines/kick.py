@@ -7,7 +7,7 @@ import time
 from transitions import Machine
 
 
-class KickStateMachine:
+class kick:
     def __init__(self, agent):
         """Initialize the kick state machine with an agent"""
         self.agent = agent
