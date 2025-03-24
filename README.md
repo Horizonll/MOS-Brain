@@ -2,6 +2,24 @@
 
 The decision-rev of MOS-8.5.
 
+### 快速开始
+
+#### 1. 机器人
+
+运行脚本 `run_everything.sh` 启动机器人，会打开多个screen，分别启动roscore、视觉、步态、决策程序。
+
+可以用`screen -R [name]`进入screen，用`ctrl+A`然后`ctrl+D`退出screen，screen名称分别如下：
+
+vision：无报错，输出debug信息，表示视觉成功启动。
+
+walk：无报错，表示步态启动成功。
+
+decider：输出`serving on [ip]`表示机器人子机决策程序已经启动。
+
+#### 2. 决策主机
+
+运行脚本 `./decider/scripts/run_client_decider_tester_on_windows.ps1` (windows) 或 `run_client_decider_tester_on_windows.ps1` (Linux) 启动决策主机，会打开2个终端窗口，分别启动接收从机实时状态、决策程序。
+
 ### Players / Clients
 
 ```client/decider.py``` is run on the robot. It sent its locations and the ball position to the server, and execute the commands from server. 
