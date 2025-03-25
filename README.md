@@ -6,7 +6,14 @@ The decision-rev of MOS-8.5.
 
 #### 1. 机器人
 
-运行 `./decider/scripts/run_robot_everything.sh` 启动机器人，会打开多个screen，分别启动roscore、视觉、步态、决策程序。
+首先将`./decider/client/decider.py`中的100行`HOST_IP`改为自己电脑或决策主机的ip地址。
+
+启动机器人，会打开多个screen，分别启动roscore、视觉、步态、决策程序。
+
+```bash
+chmod +x ./decider/scripts/run_robot_everything.sh
+./decider/scripts/run_robot_everything.sh
+```
 
 可以用`screen -R [name]`进入screen，用`ctrl+A`然后`ctrl+D`退出screen，screen名称分别如下：
 
@@ -18,7 +25,19 @@ The decision-rev of MOS-8.5.
 
 #### 2. 决策主机
 
-运行 `./decider/scripts/run_decider_tester_on_windows.ps1` (windows) 或 `./decider/scripts/run_decider_tester_on_linux.sh` (Linux) 启动决策主机，会打开2个终端窗口，分别启动接收从机实时状态、决策程序。
+在自己电脑上
+
+windows运行 
+```bash
+./decider/scripts/run_decider_tester_on_windows.ps1
+``` 
+Linux运行 
+```bash
+chmod +x ./decider/scripts/run_decider_tester_on_linux.sh
+
+./decider/scripts/run_decider_tester_on_linux.sh
+``` 
+ 启动决策主机，会打开2个终端窗口，分别启动接收从机实时状态、决策程序。
 
 可以按照提示向机器人发送指令。
 
