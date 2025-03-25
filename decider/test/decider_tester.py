@@ -20,7 +20,7 @@ COMMANDS_DATA = {
     "stop": {},
     "find_ball": {},
     "chase_ball": {},
-    "shoot": {},
+    "kick": {},
     "go_back_to_field": {'aim_x': 1000, 'aim_y': 2000},
     "exit": {},
 }
@@ -64,6 +64,7 @@ def send_command(cmd, server_ip, server_port):
         # 关闭socket连接
         client_socket.close()
     return True
+
 
 def main():
     server_ip = "192.168.9.51"  # 默认服务器IP地址
