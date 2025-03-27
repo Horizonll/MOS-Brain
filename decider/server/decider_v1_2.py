@@ -50,6 +50,9 @@ class Agent:
         for role, robot_id in self.roles_to_id.items():
             self.robots_data[robot_id] = {"last_seen": None, "status": "disconnected", "data": {}}
 
+        self.ball_x = 0
+        self.ball_y = 0
+
         # # 开启TCP监听
         # self.robot_server = RobotServer(agent=self)
 
@@ -73,9 +76,9 @@ class Agent:
         while not all(data["status"] == "connected" for data in self.robots_data.values()):
             # self.robot_server.broadcast({"message": "thmos_hello", "ip": self.robot_server.ip})
 
-            # if self.robots_data[1].get("status") == "connected":
-            #     print("Robot 1 connected")
-            #     break
+            if self.robots_data[1].get("status") == "connected":
+                print("Robot 1 connected")
+                break
             print("Waiting for connection")
             time.sleep(1)
             count += 1
@@ -148,14 +151,19 @@ class Agent:
         BIG_NUMBER = 1e6  # 当位置不可用时使用的较大数值
         
         for robot_id, data in self.robots_data.items():
-            player_pos = [data.get('x'), data.get('y')]
-            ball_pos = [data.get('ballx'), data.get('bally')]
+            # player_pos = [data.get('x'), data.get('y')]
+            # ball_pos = [data.get('ballx'), data.get('bally')]
 
-            # 检查是否为 NoneType
-            if any(v is None for v in player_pos) or any(v is None for v in ball_pos):
-                distance = BIG_NUMBER
+            # # 检查是否为 NoneType
+            # if any(v is None for v in player_pos) or any(v is None for v in ball_pos):
+            #     distance = BIG_NUMBER
+            # else:
+            #     distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
+            ball_distance = data.get('ball_distance')
+            if ball_distance is not None:
+                distance = ball_distance
             else:
-                distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
+                distance = BIG_NUMBER
             
             players_distance[robot_id] = distance
             
@@ -168,14 +176,19 @@ class Agent:
         for robot_id, robot_data in self.robots_data.items():
             if robot_id != self.roles_to_id["goalkeeper"]:
                 data = robot_data.get('data')
-                player_pos = [data.get('x'), data.get('y')]
-                ball_pos = [data.get('ballx'), data.get('bally')]
+                # player_pos = [data.get('x'), data.get('y')]
+                # ball_pos = [data.get('ballx'), data.get('bally')]
                 
-                # 检查是否为 NoneType
-                if any(v is None for v in player_pos) or any(v is None for v in ball_pos):
-                    distance = BIG_NUMBER
+                # # 检查是否为 NoneType
+                # if any(v is None for v in player_pos) or any(v is None for v in ball_pos):
+                #     distance = BIG_NUMBER
+                # else:
+                #     distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
+                ball_distance = data.get('ball_distance')
+                if ball_distance is not None:
+                    distance = ball_distance
                 else:
-                    distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
+                    distance = BIG_NUMBER
                     
                 players_distance[robot_id] = distance
             else:
@@ -196,7 +209,7 @@ class Agent:
         temp_roles_to_id[player_role_1], temp_roles_to_id[player_role_2] = self.roles_to_id[player_role_2], self.roles_to_id[player_role_1]
         self.roles_to_id = temp_roles_to_id
 
-    def publish_command(self, player_id, cmd):
+    def publish_command(self, player_id, cmd, data={}):
         """
         发布指令。
 
@@ -207,7 +220,7 @@ class Agent:
         # 将command, data, player_role, 时间戳等信息打包成字典
         cmd_data = {
             "command": cmd,
-            "data": {},
+            "data": data,
             "send_time": time.time(),
         }
 
@@ -258,7 +271,7 @@ class Agent:
 
         TODO: 确定球在前场的判断条件
         """
-        return self.ball_x > 1000
+        return self.ball_y > 1000
 
     def stop_condition(self):
         """
@@ -329,19 +342,19 @@ class StateMachine:
             # defend, dribble, shoot 只能由非 stop 状态转移而来
             {
                 "trigger": "play",
-                "source": ["dribble", "shoot", "initial"],
+                "source": ["defend", "dribble", "shoot", "initial"],
                 "dest": "defend",
                 "conditions": "ball_in_backcourt",
             },
             {
                 "trigger": "play",
-                "source": ["defend", "shoot", "initial"],
+                "source": ["dribble", "defend", "shoot", "initial"],
                 "dest": "dribble",
                 "conditions": "ball_in_midcourt",
             },
             {
                 "trigger": "play",
-                "source": ["defend", "dribble", "initial"],
+                "source": ["shoot", "defend", "dribble", "initial"],
                 "dest": "shoot",
                 "conditions": "ball_in_frontcourt",
             },
@@ -614,28 +627,28 @@ class DribbleBallStateMachine:
 class ShootBallStateMachine:
     def __init__(self, agent: Agent):
         self.agent = agent
-        self.states = ["have_no_ball", "close_to_ball", "have_ball"]
+        self.states = ["have_no_ball", "close_to_ball", "have_ball", "no_ball_in_sight"]
         self.transitions = [
             {
                 "trigger": "run",
-                "source": "close_to_ball",
-                "dest": "have_ball",
-                "conditions": "ball_in_control",
-                "after": "shoot",
+                "source": ["close_to_ball", "have_ball", "ball_out_of_control", "have_no_ball"],
+                "dest": "no_ball_in_sight",
+                "conditions": "ball_out_of_sight",
+                "after": "find_ball",
             },
             {
                 "trigger": "run",
-                "source": ["have_no_ball", "have_ball"],
+                "source": ["have_no_ball", "have_ball", "close_to_ball", "ball_out_of_control"],
                 "dest": "close_to_ball",
                 "conditions": "close_to_ball",
-                "after": "go_for_possession_avoid_collsion",  # 争夺控球, 把find和chase封装进去
+                "after": "shoot",  # 争夺控球, 把find和chase封装进去
             },
             {
                 "trigger": "run",
-                "source": ["close_to_ball", "have_ball"],
+                "source": ["close_to_ball", "have_ball", "no_ball_in_sight", "have_no_ball"],
                 "dest": "have_no_ball",
                 "conditions": "ball_out_of_control",
-                "after": "go_for_possession",  # 争夺控球, 把find和chase封装进去
+                "after": "chase_ball",  # 争夺控球, 把find和chase封装进去
             },
         ]
         self.machine = Machine(
@@ -648,13 +661,16 @@ class ShootBallStateMachine:
     def ball_in_control(self):
         return self.agent.is_ball_in_control()
 
+    def ball_out_of_sight(self):
+        return not self.agent.ifBall
+
     def ball_out_of_control(self):
         
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
 
         forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
         forward_2_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
-        if forward_1_distance_to_ball > 200 and forward_2_distance_to_ball > 200:
+        if forward_1_distance_to_ball > 200 and forward_2_distance_to_ball > 200 and self.agent.ifBall:
             return True
         return False
 
@@ -665,6 +681,16 @@ class ShootBallStateMachine:
         if forward_1_distance_to_ball < 200 or forward_2_distance_to_ball < 200:
             return True
         return False
+
+    def find_ball(self):
+        self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["find_ball"])
+        self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["find_ball"])
+        self.agent.publish_command(self.agent.roles_to_id["defender_1"], COMMANDS["find_ball"])
+
+    def chase_ball(self):
+        self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["chase_ball"])
+        self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["chase_ball"])
+        self.agent.publish_command(self.agent.roles_to_id["defender_1"], COMMANDS["chase_ball"])
 
     def shoot(self):
         """
@@ -699,7 +725,7 @@ class ShootBallStateMachine:
         if self.agent.state == "shoot":
             self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["chase_ball"])
             self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["chase_ball"])
-            self.agent.publish_command(self.agent.roles_to_id["defender_1"], COMMANDS["go_to_defend_position"])
+            self.agent.publish_command(self.agent.roles_to_id["defender_1"], COMMANDS["go_to_position"], {"x": 0, "y": -2000, "yaw": 90})
         elif self.agent.state == "dribble":
             self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["chase_ball"])
             self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["chase_ball"])

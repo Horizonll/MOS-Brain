@@ -133,6 +133,8 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, configuration):
                         "ballx": self.ball_x_in_map,
                         "bally": self.ball_y_in_map,
                         "yaw": self.pos_yaw,
+                        "ifBall": self.ifBall,
+                        "ball_distance": self.ball_distance,
                     },
                     "info": self.info,
                     "timestamp": time.time(),
@@ -319,13 +321,19 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, configuration):
         if self.command["command"] == "find_ball":
             self.find_ball()
         elif self.command["command"] == "chase_ball":
-            self.chase_ball()
+            if not self.ball_in_sight():
+                self.find_ball()
+            else:
+                self.chase_ball()
         elif self.command["command"] == "dribble":
             self.dribble()
         elif self.command["command"] == "stop":
             self.stop(1)
         elif self.command["command"] == "kick":
-            self.kick()
+            if not self.ball_in_sight():
+                self.find_ball()
+            else:
+                self.kick()
         elif self.command["command"] == "go_back_to_field":
             self.go_back_to_field()
         else:
