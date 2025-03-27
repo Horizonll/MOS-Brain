@@ -73,10 +73,10 @@ class Agent:
         while not all(data["status"] == "connected" for data in self.robots_data.values()):
             # self.robot_server.broadcast({"message": "thmos_hello", "ip": self.robot_server.ip})
 
-            if self.robots_data[1].get("status") == "connected":
-                print("Robot 1 connected")
-                break
-
+            # if self.robots_data[1].get("status") == "connected":
+            #     print("Robot 1 connected")
+            #     break
+            print("Waiting for connection")
             time.sleep(1)
             count += 1
             if count > 30:
@@ -103,24 +103,6 @@ class Agent:
         self.t_no_ball = 0
 
         self._init_state_machine()
-
-    def _init_command_publishers(self):
-        """
-        根据可用球员初始化球员指令发布器。
-
-        """
-        self.command_publishers = {}
-        for player in self.available_players:
-            if player.role == FORWARD_1:
-                self.command_publishers[player.uuid] = rospy.Publisher(f"/player_{player.uuid}/cmd", Twist, queue_size=10)
-            elif player.role == FORWARD_2:
-                self.command_publishers[player.uuid] = rospy.Publisher(f"/player_{player.uuid}/cmd", Twist, queue_size=10)
-            elif player.role == DEFENDER_1:
-                self.command_publishers[player.uuid] = rospy.Publisher(f"/player_{player.uuid}/cmd", Twist, queue_size=10)
-            elif player.role == GOALKEEPER:
-                self.command_publishers[player.uuid] = rospy.Publisher(f"/player_{player.uuid}/cmd", Twist, queue_size=10)
-            else:
-                raise ValueError("Invalid player role")
 
     def _init_state_machine(self):
         """
@@ -254,9 +236,7 @@ class Agent:
 
         TODO: 确定球在后场的判断条件
         """
-        if self.ball_x > 10:
-            return True
-        return False
+        return self.ball_y < -1000
 
     def ball_in_midcourt(self):
         """
@@ -267,9 +247,7 @@ class Agent:
 
         TODO: 确定球在中场的判断条件
         """
-        if 5 < self.ball_x <= 10:
-            return True
-        return False
+        return -1000 < self.ball_y <= 1000
 
     def ball_in_frontcourt(self):
         """
@@ -280,9 +258,7 @@ class Agent:
 
         TODO: 确定球在前场的判断条件
         """
-        if self.ball_x <= 5:
-            return True
-        return False
+        return self.ball_x > 1000
 
     def stop_condition(self):
         """
@@ -408,10 +384,10 @@ class StateMachine:
                     pass
                 elif self.model.state == "defend":
                     print("defend")
-                    self.model.run_defend_ball()
+                    self.model.run_shoot_ball()
                 elif self.model.state == "dribble":
                     print("dribble")
-                    self.model.run_dribble_ball()
+                    self.model.run_shoot_ball()
                 elif self.model.state == "shoot":
                     print("shoot")
                     self.model.run_shoot_ball()
@@ -673,10 +649,12 @@ class ShootBallStateMachine:
         return self.agent.is_ball_in_control()
 
     def ball_out_of_control(self):
+        
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
+
         forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
         forward_2_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
-        if forward_1_distance_to_ball > 0.5 and forward_2_distance_to_ball > 0.5:
+        if forward_1_distance_to_ball > 200 and forward_2_distance_to_ball > 200:
             return True
         return False
 
@@ -684,7 +662,7 @@ class ShootBallStateMachine:
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
         forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
         forward_2_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
-        if forward_1_distance_to_ball < 0.5 or forward_2_distance_to_ball < 0.5:
+        if forward_1_distance_to_ball < 200 or forward_2_distance_to_ball < 200:
             return True
         return False
 
@@ -717,8 +695,15 @@ class ShootBallStateMachine:
         """
         争夺控球
         """
-        self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["chase_ball"])
-        self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["chase_ball"])
+        
+        if self.agent.state == "shoot":
+            self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["chase_ball"])
+            self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["chase_ball"])
+            self.agent.publish_command(self.agent.roles_to_id["defender_1"], COMMANDS["go_to_defend_position"])
+        elif self.agent.state == "dribble":
+            self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["chase_ball"])
+            self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["chase_ball"])
+            self.agent.publish_command(self.agent.roles_to_id["defender_1"], COMMANDS["chase_ball"])
 
     def go_for_possession_avoid_collsion(self):
         """
@@ -731,7 +716,7 @@ class ShootBallStateMachine:
             self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["stop"])
             self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["chase_ball"])
         else:
-            self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["stop_moving"])
+            self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["stop"])
             self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["chase_ball"])
 
 

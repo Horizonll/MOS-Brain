@@ -28,7 +28,7 @@ robot_data = {
     "y": self.pos_y,
     "ballx": self.ball_x_in_map,
     "bally": self.ball_y_in_map,
-    "orientation": self.pos_yaw,
+    "yaw": self.pos_yaw,
     "info": self.info,
 }
 ```

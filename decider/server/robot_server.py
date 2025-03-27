@@ -77,7 +77,10 @@ class RobotServer:
                     # 更新机器人的 IP 地址
                     self.robot_ips[robot_id] = robot_data.get('ip')
 
-                    self.agent.ball_x = robot_data.get('data').get('ballx')
+                    # 更新球的位置
+                    self.agent.ball_x = ( self.agent.ball_x + robot_data.get('data').get('ballx') ) / 2
+                    self.agent.ball_y = ( self.agent.ball_y + robot_data.get('data').get('bally') ) / 2
+
                     # # 构建响应消息
                     # response = {
                     #     "status": "received",
