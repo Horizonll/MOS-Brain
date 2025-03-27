@@ -52,17 +52,22 @@ class Vision:
     #   _move_head_stage_looking_at_ball()  looing at ball algorithm
 
     def __init__(self, config): 
-        self._ball_pos_in_vis = np.array({0, 0})
-        self._ball_pos_in_vis_D = np.array({0, 0})
-        self._ball_pos_in_vis_I = np.array({0, 0})
-        self._ball_pos = np.array({0, 0})
-        self._ball_pos_in_map = np.array({0, 0})
+        self._ball_pos_in_vis = np.array([0, 0])
+        self._ball_pos_in_vis_D = np.array([0, 0])
+        self._ball_pos_in_vis_I = np.array([0, 0])
+        self._ball_pos = np.array([0, 0])
+        self._ball_pos_in_map = np.array([0, 0])
         self._vision_last_frame_time = 0
+        self.self_pos = np.array([0,0])
+        self.pos_yaw = 0
         self._self_pos_accuracy = 0
         self._ball_pos_accuracy = 0
-        self._last_move_head_time = 0
+        self._last_move_head_time = -99999999
         self._last_move_head_stage_time = 0
-        self._last_move_head_stage = 0
+        self._move_head_stage = 0
+
+        self.head = 0.75
+        self.neck = 0
 
         self._config = config
         self._pos_sub = rospy.Subscriber("/pos_in_map",  \
@@ -77,24 +82,31 @@ class Vision:
         self._head_pub = rospy.Publisher("/head_goals",  \
                                         JointState,  \
                                         queue_size = 1)
+        
+        self._head_set(self.head, self.neck)
 
 
-    def _move_head_stage_looking_at_ball():
+    def _move_head_stage_looking_at_ball(self):
         args = self._config["looking_at_ball_arguments"]
-        neck =  (self._ball_pos_in_vis[0] - 320) * args[1][0] +
-                (self._ball_pos_in_vis_I[0] - 320) * args[1][1] + 
-                (self._ball_pos_in_vis_D[0] - 320) * args[1][2];
-        head =  (self._ball_pos_in_vis[1] - 240) * args[0][0] +
-                (self._ball_pos_in_vis_I[1] - 240) * args[0][1] +
-                (self._ball_pos_in_vis_D[1] - 240) * args[0][1];
-        self._head_set(head - 0.75, neck)
+        addn =  (self._ball_pos_in_vis[0] - 640) / 1280 * args[1][0] + \
+                (self._ball_pos_in_vis_I[0] - 640) / 1280 * args[1][1] + \
+                (self._ball_pos_in_vis_D[0] - 640) / 1280 * args[1][2];
+        addh =  (self._ball_pos_in_vis[1] - 368) / 736 * args[0][0] + \
+                (self._ball_pos_in_vis_I[1] - 368) / 736 * args[0][1] + \
+                (self._ball_pos_in_vis_D[1] - 368) / 736 * args[0][2];
+        self.head += addh
+        self.neck -= addn
+        # print("x = " + str(self._ball_pos_in_vis[0]) + " y = " + str(self._ball_pos_in_vis[1]))
+        # print("add head = " + str(addh) + " add neck = " + str(addn))
+        # print("head = " + str(self.head) + " neck = " + str(self.neck))
+        self._head_set(self.head, self.neck)
 
 
-    def _move_head_stage_head_up():
+    def _move_head_stage_head_up(self):
         self._head_set(0.70, self.pos_yaw)
 
 
-    def _move_head():
+    def _move_head(self):
         if(time.time() - self._last_move_head_time < \
                 self._config["move_head_time_gap"]):
             return
@@ -102,14 +114,14 @@ class Vision:
 
         # change move head stage periodicly
         if(time.time() - self._last_move_head_stage_time > 
-           self._confing["move_head_stage_time_gap"]):
+           self._config["move_head_stage_time_gap"]):
             self._move_head_stage = (self._move_head_stage + 1) % 2
             self._last_move_head_stage_time = time.time()
         
-        if(self._move_head_stage % 2 == 0):
-            self._move_head_stage_looking_at_ball()
-        else:
-            self._move_head_stage_head_up()
+        # if(self._move_head_stage % 2 == 0):
+        self._move_head_stage_looking_at_ball()
+        # else:
+        #    self._move_head_stage_head_up()
     
 
     # _head_set(head: float, neck: float):
@@ -124,7 +136,7 @@ class Vision:
         head_goal.name = ["head", "neck"]
         head_goal.header = Header()
         head_goal.position = [head, neck]
-        self._head_pub.publish(head, goal) 
+        self._head_pub.publish(head_goal) 
 
 
     def _position_callback(self, msg):
@@ -165,16 +177,16 @@ class Vision:
                 if(row[3] > ball_confidence):
                     ball_confidence = row[3]
                     ball_row = row
-            else:
+            elif(int(row[0]) <= 5):
                 self._self_pos_accuracy += \
                         self._config["pos_accuracy_add"][str(int(row[0]))]
 
-        if(ball_row != None):
+        if(ball_row is not None):
             self._ball_pos_in_vis_D = \
-                    (time.time() - self._vision_last_frame_time) * 
-                    (self._ball_pos_in_vis - ball_ros[1:3])     # diverity
+                    (self._ball_pos_in_vis - ball_row[1:3]) * \
+                    0.0001 / (time.time() - self._vision_last_frame_time)
             self._ball_pos_in_vis_I = self._ball_pos_in_vis_I * \
-                    self._config["looking_at_ball_integrated"] + 
+                    self._config["looking_at_ball_integrated"] +  \
                     self._ball_pos_in_vis; 
 
             self._ball_pos_in_vis           = ball_row[1:3]
