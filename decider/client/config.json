@@ -6,7 +6,7 @@
 
     // networking
     "server_ip": "192.168.9.100", 
-    "server_port": 50100,
+    "server_port": 8002,
     "auto_find_server_ip": false, 
     "auto_find_server_ip_listen_port": 50000,
     "auto_find_server_ip_token": "NjM5NWVkMSAgLQo=",
@@ -29,8 +29,8 @@
     "predict_ball_pos": true,
     "predict_ball_pos_in_map": true,
     "move_head_time_gap": 0.1,   // second
-    "move_head_stage_time_gap": 1.0,   // second
+    "move_head_stage_time_gap": 10000,   // second
     "looking_at_ball_integrated": [0.1, 0.1],      // integrated arguments
-    "looking_at_ball_arguments": [[0.1, 0.1, 0.1], // P, I, D of head
-                                  [0.1, 0.1, 0.1]] // P, I, D of neck
+    "looking_at_ball_arguments": [[0.2, 0.0, 0.02], // P, I, D of head
+                                  [0.2, 0.0, 0.02]] // P, I, D of neck
 }

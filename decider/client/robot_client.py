@@ -18,6 +18,7 @@ class RobotClient:
 
         # Start network-related threads
         self.start_network_threads()
+        self.start_tcp_listener_loop()
 
     def get_host_ip(self):
         if(self.config['auto_find_server_ip'] == True):
