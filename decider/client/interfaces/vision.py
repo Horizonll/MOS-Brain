@@ -52,6 +52,7 @@ class Vision:
     #   _move_head_stage_looking_at_ball()  looing at ball algorithm
 
     def __init__(self, config): 
+
         self._ball_pos_in_vis = np.array([0, 0])
         self._ball_pos_in_vis_D = np.array([0, 0])
         self._ball_pos_in_vis_I = np.array([0, 0])

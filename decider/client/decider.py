@@ -12,6 +12,7 @@ import asyncio
 import numpy as np
 import threading
 import logging
+from sub_statemachines import chase_ball
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -75,19 +76,19 @@ class Agent:
     }
 
     def __init__(self):
-        logging.info("Initializing the Agent instance")
-        rospy.init_node("decider")
+        rospy.init_node("decider", log_level=rospy.DEBUG)
+        rospy.loginfo("Initializing the Agent instance")
 
         # Initializing public variables
         self._config = configuration.load_config()
         self._command = {
             "command": "stop",
-            "args": {},
+            "data": {},
             "timestamp": time.time(),
         }
         self._lst_command = self._command
         
-        logging.info("Registering interfaces")
+        rospy.loginfo("Registering interfaces")
         # action: provide functions to control the robot, such as cmd_vel 
         # and kick
         self._action = interfaces.action.Action(self._config)
@@ -101,19 +102,18 @@ class Agent:
         # sub_statemachines and create a dictionary from command to 
         # statemachine.run
 
-        logging.info("Initializing sub-state machines")
-        py_files = Agent._get_python_files("sub_statemachines/")
-        self._state_machine = {}
-        for py_file in py_files:
-            logging.info("found : " + py_file)
-            eval_str = "import " + py_file
-            exec(eval_str)
-            module_name = py_file.split('.')[-1] # also class name
-            eval_str = "self._state_machine[\"" + module_name + "\"] = " \
-                        + py_file + "." + module_name
-            exec(eval_str) 
+        rospy.loginfo("Initializing sub-state machines")
+        # py_files = Agent._get_python_files("sub_statemachines/")
+        
+        self._state_machine = {"chase_ball": chase_ball.chase_ball(self)}
+        # for py_file in py_files:
+        #    print("found : " + py_file)
+        #    module_name = py_file.split('.')[-1] # also class name
+        #    eval_str = "self._state_machine[\"" + module_name + "\"] = " \
+        #                + py_file + "." + module_name
+        #    exec(eval_str) 
 
-        logging.info("Agent instance initialization completed")
+        rospy.loginfo("Agent instance initialization completed")
 
     def run(self):
         if(self._command == self._lst_command):
@@ -124,7 +124,7 @@ class Agent:
         new_state_machine = self._command["command"]
         self._execute(old_state_machine, "stop", new_state_machine)
         self._execute(new_state_machine, "start", 
-                      new_command["args"], old_state_machine)
+                      self._command["data"], old_state_machine)
         self._execute(new_state_machine, "run")
     
 
@@ -152,21 +152,23 @@ class Agent:
         py_files = []
         for root, dirs, files in os.walk(start_dir):
             for filename in files:
+                print(filename)
                 if filename.endswith('.py'):
                     full_path = os.path.join(root, filename)
                 py_files.append(full_path[0:-3].replace('/', '.'))
+        print(py_files)
         return py_files
 
 
     # The following are some simple encapsulations of interfaces
     def cmd_vel(self, vel_x: float, vel_y: float, vel_theta: float):
         self._action.cmd_vel(vel_x, vel_y, vel_theta)
-        logging.info(f"Setting the robot's speed: linear velocity x={vel_x}, "
+        rospy.loginfo(f"Setting the robot's speed: linear velocity x={vel_x}, "
                 + "y={vel_y}, angular velocity theta={vel_theta}")
 
     def kick(self):
         self._action.do_kick()
-        logging.info("Executing the kicking action")
+        rospy.loginfo("Executing the kicking action")
 
     def get_self_pos(self):
         return self._vision.self_pos
@@ -197,12 +199,12 @@ class Agent:
 
 
 def main():
-    logging.info("Decider started")
+    rospy.loginfo("Decider started")
     agent = Agent()
 
     try:
         def sigint_handler(sig, frame):
-            logging.info("User interrupted the program, exiting gracefully...")
+            rospy.loginfo("User interrupted the program, exiting gracefully...")
             exit(0)
 
         signal.signal(signal.SIGINT, sigint_handler)
@@ -210,7 +212,7 @@ def main():
             agent.run()
             time.sleep(1)
     except KeyboardInterrupt:
-        logging.info("Program interrupted by the user")
+        rospy.loginfo("Program interrupted by the user")
         exit()
     finally:
         pass
