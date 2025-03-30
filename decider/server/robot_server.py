@@ -74,15 +74,16 @@ class RobotServer:
                     self.agent.robots_data[robot_id]['last_seen'] = datetime.now().isoformat()
                     self.agent.robots_data[robot_id]['status'] = 'connected'
                     self.agent.robots_data[robot_id]['data'].update(robot_data.get('data'))
-
                     # 更新机器人的 IP 地址
                     self.robot_ips[robot_id] = robot_data.get('ip')
 
-                    # 更新球的位置
-                    self.agent.ball_x = 0.2 * self.agent.ball_x + 0.8 * robot_data.get('data').get('ballx')
-                    self.agent.ball_y = 0.2 * self.agent.ball_y + 0.8 * robot_data.get('data').get('bally')
-                    self.agent.ifBall = robot_data.get('data').get('ifBall')
+                    self.agent.ball_x = robot_data.get('data').get('ballx')
 
+                    if robot_data.get('data').get('ballx') is not None:
+                        self.agent.ifBall = True
+                    else:
+                        self.agent.ifBall = False
+                    
                     # # 构建响应消息
                     # response = {
                     #     "status": "received",
