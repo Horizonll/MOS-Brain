@@ -197,3 +197,16 @@ class Vision:
         self._vision_last_frame_time        = time.time()
         
         self._move_head(); 
+
+    def get_ball_pos(self):
+        return self._ball_pos()
+
+    def get_ball_pos_in_vis(self):
+        return self._ball_pos_in_vis()
+
+    def get_ball_pos_in_map(self):
+        return self.get_ball_pos_in_map()
+
+    def get_if_ball(self):
+        return self.get_if_ball()
+
