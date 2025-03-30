@@ -23,6 +23,13 @@ class ChaseBallStateMachine:
                 "conditions": "close_to_ball",
                 "prepare": "move_to_ball",
                 "after": "stop_moving_and_set_head",
+            },
+            {
+                "trigger": "chase_ball",
+                "source": "arrived",
+                "dest": "chase",
+                "conditions": "not_close_to_ball",
+                "after": "set_head_high",
             }
         ]
 
@@ -42,6 +49,14 @@ class ChaseBallStateMachine:
             f"[CHASE BALL FSM] Checking if close to ball. Result: {'Yes' if result else 'No'} distance: {self.agent.ball_distance}"
         )
         return result
+    
+    def not_close_to_ball(self):
+        """Check if the agent is close to the ball"""
+        result = self.agent.close_to_ball()
+        print(
+            f"[CHASE BALL FSM] Checking if close to ball. Result: {'Yes' if result else 'No'} distance: {self.agent.ball_distance}"
+        )
+        return not result
 
     def run(self):
         """Main execution loop for the state machine"""
@@ -49,8 +64,9 @@ class ChaseBallStateMachine:
         print(
             f"[CHASE BALL FSM] agent.command: {self.agent.command}, agent.info: {self.agent.info}, state: {self.state}"
         )
-        while (
-            self.state != "arrived" and self.agent.command["command"] == self.agent.info
+        self.machine.model.trigger("chase_ball")
+        if (
+            self.state != "arrived"
         ):
             # if no ball, then stop
             if not self.agent.ifBall:
@@ -61,7 +77,7 @@ class ChaseBallStateMachine:
 
             print(f"\n[CHASE BALL FSM] Current state: {self.state}")
             print(f"[CHASE BALL FSM] Triggering 'chase_ball' transition")
-            self.machine.model.trigger("chase_ball")
+            
 
         if self.state == "arrived" and self.agent.command == self.agent.info:
             print("\n[CHASE BALL FSM] Arrived at the ball!")
@@ -115,6 +131,11 @@ class ChaseBallStateMachine:
         self.agent.speed_controller(0, 0, 0)
         self.agent.head_set(head=0.9, neck=0)
         print("[CHASE BALL FSM] Movement stopped and head position set.")
+
+    def set_head_high(self):
+        print("[CHASE BALL FSM] setting head position high...")
+        self.agent.head_set(head=0.2, neck=0)
+        print("[CHASE BALL FSM] head position set.")
 
 
 # find_ball.py

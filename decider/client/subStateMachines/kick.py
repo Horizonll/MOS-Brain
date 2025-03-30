@@ -13,14 +13,21 @@ class KickStateMachine:
         self.agent = agent
 
         # Define states and transitions
-        self.states = ["angel", "lr", "fb", "finished"]
+        self.states = ["angle", "lr", "fb", "finished"]
         self.transitions = [
             {
                 "trigger": "adjust_position",
-                "source": "angel",
+                "source": "angle",
+                "dest": "angle",
+                "conditions": "not_good_angle",
+                "after": "adjust_angle",
+            },
+            {
+                "trigger": "adjust_position",
+                "source": "angle",
                 "dest": "lr",
-                "conditions": "good_angel",
-                "prepare": "adjust_angel",
+                "conditions": "good_angle",
+                "after": "stop_moving",
             },
             {
                 "trigger": "adjust_position",
@@ -39,9 +46,8 @@ class KickStateMachine:
             {
                 "trigger": "adjust_position",
                 "source": "finished",
-                "dest": "angel",
+                "dest": "angle",
                 "conditions": "bad_fb",
-                "prepare": "adjust_fb",
             }
         ]
 
@@ -49,7 +55,7 @@ class KickStateMachine:
         self.machine = Machine(
             model=self,
             states=self.states,
-            initial="angel",
+            initial="angle",
             transitions=self.transitions,
         )
         print(f"[KICK FSM] Initialized. Starting state: {self.state}")
@@ -58,19 +64,20 @@ class KickStateMachine:
         """Main execution loop for the state machine"""
         print("[KICK FSM] Starting kick sequence...")
         print(f"[KICK FSM] ifBall: {self.agent.ifBall} state: {self.state}")
+        
         while (
             self.state != "finished"
             and self.agent.ifBall
             and self.agent.command["command"] == self.agent.info
         ):
+            self.adjust_position()
             print(f"\n[KICK FSM] Current state: {self.state}")
             print(f"[KICK FSM] Triggering 'adjust_position' transition")
-            self.adjust_position()  # Changed from trigger to direct call
-            time.sleep(0.3)
-
+              # Changed from trigger to direct call
+            time.sleep(0.1)
+            
         if (
             self.state == "finished"
-            and self.agent.info == self.agent.command["command"]
         ):
             print("\n[KICK FSM] Positioning complete! Executing kick...")
             self.agent.speed_controller(0, 0, 0)
@@ -80,7 +87,7 @@ class KickStateMachine:
             time.sleep(2)
             print("[KICK FSM] Kick executed successfully!")
 
-    def adjust_angel(self):
+    def adjust_angle(self):
         """Adjust robot's angle relative to goal"""
         print("[ANGLE ADJUST] Starting angle adjustment...")
         self.agent.head_set(0.7, 0)
@@ -101,9 +108,9 @@ class KickStateMachine:
             self.agent.speed_controller(0, -0.05, 0.3)
         elif ang_delta < -10:
             print(f"[ANGLE ADJUST] Rotating CW (Δ={ang_delta:.2f})")
-            self.agent.speed_controller(0, 0.05, 0.3)
+            self.agent.speed_controller(0, 0.05, -0.3)
 
-    def good_angel(self):
+    def good_angle(self):
         """Check if angle is within acceptable range"""
         target_angle_rad = math.atan((self.agent.pos_x - 0) / (4500 - self.agent.pos_y))
         ang_tar = target_angle_rad * 180 / math.pi
@@ -114,6 +121,9 @@ class KickStateMachine:
             f"[ANGLE CHECK] Angle delta: {abs(ang_delta):.2f}° (OK? {'Yes' if result else 'No'})"
         )
         return result
+
+    def not_good_angle(self):
+        return not self.good_angle()
 
     def adjust_lr(self):
         """Adjust left-right position relative to ball"""
@@ -188,6 +198,9 @@ class KickStateMachine:
 
         self.agent.stop(0.5)
         print("[FB ADJUST] Forward adjustment completed")
+
+    def stop_moving(self):
+        self.agent.speed_controller(0, 0, 0)
 
     def good_fb(self):
         """Check if forward position is correct"""

@@ -111,6 +111,7 @@ class FindBallStateMachine:
         """开始旋转身体寻找球"""
         print("[FIND BALL FSM] Starting rotation...")
         self.agent.speed_controller(0, 0, configuration.walk_theta_vel)
+        self.agent.head_set(head=0.1, neck=0)
         self.rotate_start_time = time.time()  # 记录旋转开始时间
         print(f"[FIND BALL FSM] Rotating at {configuration.walk_theta_vel} rad/s")
 
