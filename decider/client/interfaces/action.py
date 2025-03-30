@@ -30,6 +30,7 @@ class Action:
     #   _action_cb()        Do nothing
     
     def __init__(self, config): 
+        # rospy.init_node("decider")
         self._config = config
         self._cmd_vel_pub = rospy.Publisher("/cmd_vel", \
                                         Twist,  \

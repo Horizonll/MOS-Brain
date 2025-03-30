@@ -76,7 +76,6 @@ class Agent:
 
     def __init__(self):
         logging.info("Initializing the Agent instance")
-        rospy.init_node("decider")
 
         # Initializing public variables
         self._config = configuration.load_config()
