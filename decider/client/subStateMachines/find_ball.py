@@ -103,6 +103,7 @@ class FindBallStateMachine:
         protect_pose.name = ["L_arm_1", "L_arm_2", "L_arm_3", "R_arm_1", "R_arm_2", "R_arm_3"]
         protect_pose.position = [0, 1.2, -0.5, 0, -1.2, 0.5]
         self.agent.joint_goal_publisher.publish(protect_pose)
+        self.agent.head_set(head=0.1, neck=0)
         self.enter_time = time.time()  # 记录进入保护姿势的时间
         print("[FIND BALL FSM] Protect pose set")
 
