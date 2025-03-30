@@ -97,7 +97,7 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, configuration):
         # 监听主机IP
         print("Starting to listen for host IP...")
         # self.listen_host_ip()
-        self.HOST_IP = "192.168.9.103"
+        self.HOST_IP = "192.168.9.105"
         print("Finished listening for host IP.")
 
         # 启动发送线程

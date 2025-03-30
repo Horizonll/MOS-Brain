@@ -36,6 +36,13 @@ class KickStateMachine:
                 "conditions": "good_fb",
                 "prepare": "adjust_fb",
             },
+            {
+                "trigger": "adjust_position",
+                "source": "finished",
+                "dest": "angel",
+                "conditions": "bad_fb",
+                "prepare": "adjust_fb",
+            }
         ]
 
         # Initialize state machine
@@ -190,3 +197,13 @@ class KickStateMachine:
             f"[FB CHECK] Ball Y: {self.agent.ball_y} (OK? {'Yes' if result else 'No'})"
         )
         return result
+    
+    def bad_fb(self):
+        """Check if forward position is correct"""
+        result = 420 <= self.agent.ball_y
+        self.agent.ready_to_kick = result
+        print(
+            f"[FB CHECK] Ball Y: {self.agent.ball_y} (OK? {'Yes' if result else 'No'})"
+        )
+        return not result
+
