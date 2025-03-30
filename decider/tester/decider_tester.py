@@ -20,7 +20,7 @@ COMMANDS_DATA = {
     "stop": {},
     "find_ball": {},
     "chase_ball": {},
-    "shoot": {},
+    "kick": {},
     "go_back_to_field": {'aim_x': 1000, 'aim_y': 2000},
     "exit": {},
 }

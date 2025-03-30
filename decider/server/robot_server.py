@@ -78,6 +78,12 @@ class RobotServer:
                     self.robot_ips[robot_id] = robot_data.get('ip')
 
                     self.agent.ball_x = robot_data.get('data').get('ballx')
+
+                    if robot_data.get('data').get('ballx') is not None:
+                        self.agent.ifBall = True
+                    else:
+                        self.agent.ifBall = False
+                    
                     # # 构建响应消息
                     # response = {
                     #     "status": "received",
