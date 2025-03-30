@@ -87,7 +87,7 @@ class ChaseBallStateMachine:
                 f"[CHASE BALL FSM] target_angle_rad ({target_angle_rad}) > {ang}. ball_distance: {self.agent.ball_distance}. Rotating..."
             )
             self.agent.speed_controller(
-                0, 0, - np.sign(self.agent.ball_distance) * configuration.walk_theta_vel
+                0, 0, np.sign(self.agent.ball_distance) * configuration.walk_theta_vel
             )
         elif abs(target_angle_rad) <= ang:
             print(
