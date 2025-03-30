@@ -216,20 +216,42 @@ class Agent:
 
     def publish_command(self, player_id, cmd):
         """
-        发布指令。
+        发布指令（带日志增强版）
 
         Args:
             player_id (int): 球员id
-            cmd (): 指令
+            cmd (str/dict): 指令内容
         """
-        # 将command, data, player_role, 时间戳等信息打包成字典
-        cmd_data = {
-            "command": cmd,
-            "data": {},
-            "send_time": time.time(),
-        }
+        try:
+            # 初始化日志（如果类中已有 logger 可省略）
+            if not hasattr(self, 'logger'):
+                self.logger = logging.getLogger(self.__class__.__name__)
 
-        asyncio.run(self.robot_server.send(player_id, cmd_data))
+            # 记录指令发送详情
+            cmd_str = cmd if isinstance(cmd, str) else cmd.get("name", str(cmd))
+            self.logger.info(f"[CMD] 正在发送指令 -> 球员 {player_id}: {cmd_str}")
+            
+            # 构造指令数据
+            start_time = time.time()
+            cmd_data = {
+                "command": cmd,
+                "data": {},
+                "send_time": start_time,
+            }
+
+            # 执行异步发送
+            asyncio.run(self.robot_server.send(player_id, cmd_data))
+            
+            # 记录性能指标
+            latency = (time.time() - start_time) * 1000  # 毫秒
+            self.logger.debug(f"[CMD] 指令发送成功 | 球员 {player_id} | 耗时 {latency:.2f}ms")
+
+        except asyncio.TimeoutError:
+            self.logger.error(f"[CMD] 指令发送超时 | 球员 {player_id} | 指令 {cmd_str}")
+        except ConnectionError as e:
+            self.logger.error(f"[CMD] 连接异常 | 球员 {player_id} | 错误: {str(e)}", exc_info=True)
+        except Exception as e:
+            self.logger.critical(f"[CMD] 未知错误 | 球员 {player_id} | 错误类型: {type(e).__name__}", exc_info=True)
 
     def initialize(self):
         """
@@ -408,12 +430,14 @@ class StateMachine:
                     pass
                 elif self.model.state == "defend":
                     print("defend")
-                    self.model.run_defend_ball()
+                    # self.model.run_defend_ball()
+                    self.model.run_shoot_ball()
                 elif self.model.state == "dribble":
                     print("dribble")
-                    self.model.run_dribble_ball()
+                    # self.model.run_dribble_ball()
+                    self.model.run_shoot_ball()
                 elif self.model.state == "shoot":
-                    print("shoot")
+                    # print("shoot")
                     self.model.run_shoot_ball()
                 elif self.model.state == "initial":
                     print("initial")
@@ -634,10 +658,13 @@ class DribbleBallStateMachine:
         else:
             self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["stop"])
 
-
 class ShootBallStateMachine:
     def __init__(self, agent: Agent):
         self.agent = agent
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.setLevel(logging.DEBUG)
+        
+        # 初始化状态机
         self.states = ["have_no_ball", "close_to_ball", "have_ball"]
         self.transitions = [
             {
@@ -645,99 +672,124 @@ class ShootBallStateMachine:
                 "source": "close_to_ball",
                 "dest": "have_ball",
                 "conditions": "ball_in_control",
-                "after": "shoot",
+                "after": ["shoot", "log_transition"],  # 添加日志方法
             },
             {
                 "trigger": "run",
                 "source": ["have_no_ball", "have_ball"],
                 "dest": "close_to_ball",
                 "conditions": "close_to_ball",
-                "after": "go_for_possession_avoid_collsion",  # 争夺控球, 把find和chase封装进去
+                "after": ["go_for_possession_avoid_collsion", "log_transition"],
             },
             {
                 "trigger": "run",
-                "source": ["close_to_ball", "have_ball"],
+                "source": ["close_to_ball", "have_ball", "have_no_ball"],
                 "dest": "have_no_ball",
                 "conditions": "ball_out_of_control",
-                "after": "go_for_possession",  # 争夺控球, 把find和chase封装进去
+                "after": ["go_for_possession", "log_transition"],
             },
         ]
+        
         self.machine = Machine(
             model=self,
             states=self.states,
             initial="have_no_ball",
             transitions=self.transitions,
+            after_state_change=self.on_state_change,  # 添加全局状态变更回调
         )
+        self.logger.info("状态机初始化完成，初始状态: have_no_ball")
+
+    def log_transition(self):
+        """记录状态迁移"""
+        self.logger.debug(f"执行迁移后的动作，当前状态: {self.state}")
+
+    def on_state_change(self, event=None):
+        """全局状态变更回调"""
+        if event:
+            self.logger.info(f"状态变更: {event.transition.source} -> {event.transition.dest}")
 
     def ball_in_control(self):
-        return self.agent.is_ball_in_control()
+        result = self.agent.is_ball_in_control()
+        self.logger.debug(f"检查球权控制状态: {'已控球' if result else '未控球'}")
+        return result
 
     def ball_out_of_control(self):
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
-        forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
-        forward_2_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
-        if forward_1_distance_to_ball > 0.5 and forward_2_distance_to_ball > 0.5:
-            return True
-        return False
+        forward_1_distance = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
+        forward_2_distance = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
+        result = (forward_1_distance > 0.5 and forward_2_distance > 0.5)
+        self.logger.debug(
+            f"检查球权丢失状态: 前锋1距离={forward_1_distance:.2f}, "
+            f"前锋2距离={forward_2_distance:.2f}, {'已丢失' if result else '仍保持'}"
+        )
+        return result
 
     def close_to_ball(self):
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
-        forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
-        forward_2_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
-        if forward_1_distance_to_ball < 0.5 or forward_2_distance_to_ball < 0.5:
-            return True
-        return False
+        forward_1_distance = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
+        forward_2_distance = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
+        result = (forward_1_distance < 0.5 or forward_2_distance < 0.5)
+        self.logger.debug(
+            f"检查近距离状态: 前锋1距离={forward_1_distance:.2f}, "
+            f"前锋2距离={forward_2_distance:.2f}, {'在范围内' if result else '未接近'}"
+        )
+        return result
 
     def shoot(self):
-        """
-        判断离球最近的非守门员机器人，然后让其进行射门
-        """
-        # 获取所有非守门员机器人到球的距离
+        """射门动作（添加距离信息日志）"""
         players_distance = self.agent.get_players_distance_to_ball_without_goalkeeper()
-        # 初始化最小距离为一个较大的值
         min_distance = float('inf')
-        # 初始化离球最近的机器人的 ID
         closest_player_id = None
-        # 遍历所有非守门员机器人的距离
+        
+        # 记录所有球员距离
+        distance_log = ", ".join(
+            [f"{role}: {players_distance[id]:.2f}" 
+             for role, id in self.agent.roles_to_id.items()]
+        )
+        self.logger.debug(f"球员距离球门数据: {distance_log}")
+
+        # 寻找最近球员
         for role, id in self.agent.roles_to_id.items():
-            # 获取当前机器人到球的距离
-            distance = players_distance[id]
-            # 如果当前距离小于最小距离
-            if distance < min_distance:
-                # 更新最小距离
-                min_distance = distance
-                # 更新离球最近的机器人的 ID
+            if players_distance[id] < min_distance:
+                min_distance = players_distance[id]
                 closest_player_id = id
-        # 如果找到了离球最近的机器人
+
         if closest_player_id is not None:
-            # 让离球最近的机器人执行射门命令
+            self.logger.info(f"执行射门: 球员 {closest_player_id} (距离={min_distance:.2f})")
             self.agent.publish_command(closest_player_id, COMMANDS["shoot"])
+        else:
+            self.logger.warning("射门失败: 未找到可用球员")
 
     def go_for_possession(self):
-        """
-        争夺控球
-        """
+        """争夺控球（添加策略说明）"""
+        self.logger.info("执行双前锋追球策略")
         self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["chase_ball"])
         self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["chase_ball"])
 
     def go_for_possession_avoid_collsion(self):
-        """
-        防止距离球太近时两机器人发生碰撞
-        """
+        """防碰撞策略（添加选择逻辑说明）"""
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
-        forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
-        forward_2_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
-        if forward_1_distance_to_ball < forward_2_distance_to_ball:
+        forward_1_distance = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
+        forward_2_distance = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
+        
+        # 记录比较结果
+        self.logger.debug(
+            f"防撞策略: 前锋1距离={forward_1_distance:.2f} vs 前锋2距离={forward_2_distance:.2f}"
+        )
+
+        if forward_1_distance < forward_2_distance:
+            self.logger.info("执行策略: 前锋1追球，前锋2待命")
             self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["stop"])
             self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["chase_ball"])
         else:
+            self.logger.info("执行策略: 前锋2追球，前锋1待命")
             self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["stop_moving"])
             self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["chase_ball"])
 
 
 def main():
     agent = Agent()
-    agent.ifBall = 1
+    agent.ifBall = False
     agent.run()
 
 

@@ -6,10 +6,9 @@ import time
 import logging
 
 
-
 class RobotClient:
     def __init__(self, agent):
-        
+
         self.agent = agent
         self.config = self.agent._config
         self.HOST_IP = self.get_host_ip()
@@ -20,7 +19,7 @@ class RobotClient:
         self.start_network_threads()
 
     def get_host_ip(self):
-        if(self.config['auto_find_server_ip'] == True):
+        if self.config['auto_find_server_ip'] is True:
             logging.info("Starting to listen for UDP broadcasts to get the host IP address")
             return self.listen_host_ip()
         else:
@@ -127,7 +126,7 @@ class RobotClient:
                 except json.JSONDecodeError as e:
                     logging.error(f"JSON decoding error: {e}")
         except Exception as e:
-            logging.error(f"Error handling connection: {e}")
+            logging.error(f"Error handling connection: {addr}:{e}")
         finally:
             writer.close()
             await writer.wait_closed()
@@ -144,7 +143,7 @@ class RobotClient:
                 if(data.decode("utf-8") == \
                         self.config["auto_find_server_ip_token"]):
                     self.HOST_IP = addr[0]
-                    logging.info(f"Updated the host IP address to: {host_ip}")
+                    logging.info(f"Updated the host IP address to: {self.HOST_IP}")
                     return self.HOST_IP
                 else:
                     logging.warning("Received message does not match the expected format")
@@ -152,3 +151,4 @@ class RobotClient:
                 logging.error(f"JSON decoding error: {e}")
             except KeyboardInterrupt:
                 logging.info("User interrupted the program, exiting...")
+                break
