@@ -82,7 +82,7 @@ class Agent:
         self._config = configuration.load_config()
         self._command = {
             "command": "stop",
-            "args": {},
+            "data": {},
             "timestamp": time.time(),
         }
         self._lst_command = self._command
@@ -168,6 +168,9 @@ class Agent:
         self._action.do_kick()
         logging.info("Executing the kicking action")
 
+    def get_command(self):
+        return self._command
+
     def get_self_pos(self):
         return self._vision.self_pos
 
@@ -185,6 +188,11 @@ class Agent:
 
     def get_if_ball(self):
         return self._vision.get_if_ball()
+    
+    def get_if_close_to_ball(self):
+        if self.get_if_ball():
+            return 0.1 <= self.get_ball_distance() <= 0.5
+        return math.sqrt((self.pos_x - self.ball_x_in_map) ** 2 + (self.pos_y - self.ball_y_in_map) ** 2) <= 100
 
     def get_ball_distance(self):
         return self._vision.ball_distance
