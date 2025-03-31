@@ -3,7 +3,7 @@ import json
 import socket
 import threading
 import time
-import logging
+import rospy
 
 
 class RobotClient:
@@ -13,17 +13,17 @@ class RobotClient:
         self.config = self.agent._config
         self.HOST_IP = self.get_host_ip()
         print("Host ip = " + self.HOST_IP)
-        logging.info("Host ip = " + self.HOST_IP)
+        rospy.loginfo("Host ip = " + self.HOST_IP)
 
         # Start network-related threads
         self.start_network_threads()
 
     def get_host_ip(self):
         if self.config['auto_find_server_ip'] is True:
-            logging.info("Starting to listen for UDP broadcasts to get the host IP address")
+            rospy.loginfo("Starting to listen for UDP broadcasts to get the host IP address")
             return self.listen_host_ip()
         else:
-            logging.info("Using the host IP address from the configuration file")
+            rospy.loginfo("Using the host IP address from the configuration file")
             return self.config.get('server_ip')
 
     def start_network_threads(self):
@@ -32,13 +32,13 @@ class RobotClient:
         send_thread.daemon = True
         send_thread.start()
         print("send_thread started")
-        logging.info("Started the sending loop thread")
+        rospy.loginfo("Started the sending loop thread")
 
         # Start the TCP client thread
         tcp_thread = threading.Thread(target=self.start_tcp_listener_loop)
         tcp_thread.daemon = True
         tcp_thread.start()
-        logging.info("Started the TCP client thread")
+        rospy.loginfo("Started the TCP client thread")
 
     def send_loop(self):
         while True:
@@ -62,16 +62,16 @@ class RobotClient:
                 time.sleep(0.5)
             except Exception as e:
                 print(f"Error in send_loop: {e}")
-                logging.error(f"Error sending data: {e}")
+                rospy.logerr(f"Error sending data: {e}")
 
     def send_robot_data(self, robot_data):
         try:
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client_socket.connect((self.HOST_IP, 8001))
             client_socket.sendall(json.dumps(robot_data).encode("utf-8"))
-            logging.info("Successfully sent robot data")
+            rospy.loginfo("Successfully sent robot data")
         except Exception as e:
-            logging.error(f"Error sending robot data: {e}")
+            rospy.logerr(f"Error sending robot data: {e}")
         finally:
             client_socket.close()
 
@@ -81,7 +81,7 @@ class RobotClient:
         try:
             loop.run_until_complete(self.tcp_listener())
         except Exception as e:
-            logging.error(f"Error starting the TCP listening loop: {e}")
+            rospy.logerr(f"Error starting the TCP listening loop: {e}")
         finally:
             loop.close()
 
@@ -89,21 +89,21 @@ class RobotClient:
         """Asynchronously listen for TCP command messages"""
         # Create an asynchronous server
         server = await asyncio.start_server(self.handle_connection, 
-                                self.HOST_IP, self.agent._config.get("server_port"))
+                                "0.0.0.0", self.agent._config.get("server_port"))
 
         addr = server.sockets[0].getsockname()
-        logging.info(f"Started listening for TCP command messages at address: {addr}")
+        rospy.loginfo(f"Started listening for TCP command messages at address: {addr}")
 
         try:
             async with server:
                 await server.serve_forever()
         except KeyboardInterrupt:
-            logging.info("User interrupted the program, exiting...")
+            rospy.loginfo("User interrupted the program, exiting...")
         finally:
             # Close the server
             server.close()
             await server.wait_closed()
-            logging.info("Server has been closed")
+            rospy.loginfo("Server has been closed")
 
     async def handle_connection(self, reader, writer):
         try:
@@ -112,11 +112,11 @@ class RobotClient:
                 if not data:
                     break
                 addr = writer.get_extra_info("peername")
-                logging.info(f"Received data from {addr}: {data}")
+                rospy.loginfo(f"Received data from {addr}: {data}")
 
                 try:
                     received_data = json.loads(data.decode("utf-8"))
-                    logging.info(f"Parsed JSON data: {received_data}")
+                    rospy.loginfo(f"Parsed JSON data: {received_data}")
 
                     # Here you can handle different commands specifically
                     if "command" in received_data:
@@ -124,9 +124,9 @@ class RobotClient:
                     else:
                         logging.warning("Received message does not contain the 'command' field")
                 except json.JSONDecodeError as e:
-                    logging.error(f"JSON decoding error: {e}")
+                    rospy.logerr(f"JSON decoding error: {e}")
         except Exception as e:
-            logging.error(f"Error handling connection: {addr}:{e}")
+            rospy.logerr(f"Error handling connection: {addr}:{e}")
         finally:
             writer.close()
             await writer.wait_closed()
@@ -143,12 +143,12 @@ class RobotClient:
                 if(data.decode("utf-8") == \
                         self.config["auto_find_server_ip_token"]):
                     self.HOST_IP = addr[0]
-                    logging.info(f"Updated the host IP address to: {self.HOST_IP}")
+                    rospy.loginfo(f"Updated the host IP address to: {self.HOST_IP}")
                     return self.HOST_IP
                 else:
                     logging.warning("Received message does not match the expected format")
             except json.JSONDecodeError as e:
-                logging.error(f"JSON decoding error: {e}")
+                rospy.logerr(f"JSON decoding error: {e}")
             except KeyboardInterrupt:
-                logging.info("User interrupted the program, exiting...")
+                rospy.loginfo("User interrupted the program, exiting...")
                 break

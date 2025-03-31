@@ -1,4 +1,4 @@
 .git/
 __pycache__
 .env/
-decider/config_override.json
+config_override.json
