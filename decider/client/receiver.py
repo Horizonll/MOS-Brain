@@ -192,9 +192,9 @@ class Gamebox:
             logging.error(ae.message)
         except socket.timeout:
             pass
-            logging.warning("Socket timeout")
+            rospy.logwarn("Socket timeout")
         except ConstError:
-            logging.warning("Parse Error: Probably using an old protocol!")
+            rospy.logwarn("Parse Error: Probably using an old protocol!")
         except Exception as e:
             logging.exception(e)
             pass

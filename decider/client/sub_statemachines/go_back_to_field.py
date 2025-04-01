@@ -14,6 +14,7 @@ class GoBackToFieldStateMachine:
         :param min_dist: 到达目标位置的最小距离阈值，默认为 300
         """
         self.agent = agent
+        self._config = self.agent.get_config()
         self.aim_x = aim_x
         self.aim_y = aim_y
         self.min_dist = min_dist
@@ -171,7 +172,7 @@ class GoBackToFieldStateMachine:
         print("[Go Back to Field] Moving forward...")
         print(f"[Go Back to Field] dist: {self.agent.go_back_to_field_dist}, yaw_diff: {self.agent.go_back_to_field_yaw_diff}, dir: {self.agent.go_back_to_field_dir}, pos_yaw: {self.agent.pos_yaw}")
         self.agent.update_go_back_to_field_status()
-        self.agent.cmd_vel(self.agent.walk_x_vel, 0, 0)
+        self.agent.cmd_vel(self._config.get("walk_vel_x", 0.3), 0, 0)
         time.sleep(0.2)
 
     def coarse_yaw_adjust(self):
@@ -187,16 +188,16 @@ class GoBackToFieldStateMachine:
             pass
         elif -20 < self.agent.go_back_to_field_yaw_diff and self.agent.go_back_to_field_yaw_diff < 20:
             print("[Go Back to Field] edge case, turning")
-            self.agent.cmd_vel(0, 0, self.last_rotate * self.agent.walk_theta_vel)
+            self.agent.cmd_vel(0, 0, self.last_rotate * self._config.get("walk_vel_theta", 0.3))
             time.sleep(0.2)
         elif -self.agent.go_back_to_field_yaw_diff > 20:
             print("[Go Back to Field] Turning right")
-            self.agent.cmd_vel(0, 0, -self.agent.walk_theta_vel)
+            self.agent.cmd_vel(0, 0, -self._config.get("walk_vel_theta", 0.3))
             self.last_rotate = -1
             time.sleep(0.2)
         else:
             print("[Go Back to Field] Turning left")
-            self.agent.cmd_vel(0, 0, self.agent.walk_theta_vel)
+            self.agent.cmd_vel(0, 0, self._config.get("walk_vel_theta", 0.3))
             self.last_rotate = 1
             time.sleep(0.2)
         self.agent.go_back_to_field_dir = np.arctan2(-self.aim_x + self.agent.pos_x, self.aim_y - self.agent.pos_y)
@@ -230,7 +231,7 @@ class GoBackToFieldStateMachine:
             pass
         elif -20 < self.agent.go_back_to_field_yaw_diff and self.agent.go_back_to_field_yaw_diff < 20:
             print("[Go Back to Field] edge case, turning")
-            self.agent.cmd_vel(0, 0, self.last_rotate * self.agent.walk_theta_vel)
+            self.agent.cmd_vel(0, 0, self.last_rotate * self._config.get("walk_vel_theta", 0.3))
             time.sleep(0.2)
         elif -self.agent.go_back_to_field_yaw_diff > 20:
             print("[Go Back to Field] Turning right slowly")
@@ -254,14 +255,14 @@ class GoBackToFieldStateMachine:
         time.sleep(1)
         if abs(self.agent.pos_yaw) > 160:
             print("[Go Back to Field] Correcting large yaw angle...")
-            self.agent.cmd_vel(0, 0, -np.sign(self.agent.pos_yaw) * self.agent.walk_theta_vel)
+            self.agent.cmd_vel(0, 0, -np.sign(self.agent.pos_yaw) * self._config.get("walk_vel_theta", 0.3))
         elif self.agent.pos_yaw > 30:
             print("[Go Back to Field] Arrived. Turning right")
-            self.agent.cmd_vel(0, 0, -self.agent.walk_theta_vel)
+            self.agent.cmd_vel(0, 0, -self._config.get("walk_vel_theta", 0.3))
             time.sleep(0.2)
         elif self.agent.pos_yaw < -30:
             print("[Go Back to Field] Arrived. Turning left")
-            self.agent.cmd_vel(0, 0, self.agent.walk_theta_vel)
+            self.agent.cmd_vel(0, 0, self._config.get("walk_vel_theta", 0.3))
             time.sleep(0.2)
         else:
             # ready

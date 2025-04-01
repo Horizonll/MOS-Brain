@@ -11,30 +11,37 @@ class KickStateMachine:
     def __init__(self, agent):
         """Initialize the kick state machine with an agent"""
         self.agent = agent
-
+        self._config = self.agent.get_config()
         # Define states and transitions
-        self.states = ["angel", "lr", "fb", "finished"]
+        self.states = ["angle_adjust", "horizontal_adjust", "back_forth_adjust", "finished"]
         self.transitions = [
             {
                 "trigger": "adjust_position",
-                "source": "angel",
-                "dest": "lr",
-                "conditions": "good_angel",
-                "prepare": "adjust_angel",
+                "source": "angle_adjust",
+                "dest": "horizontal_adjust",
+                "conditions": "good_angle",
+                "prepare": "adjust_angle",
             },
             {
                 "trigger": "adjust_position",
-                "source": "lr",
-                "dest": "fb",
-                "conditions": "good_lr",
-                "prepare": "adjust_lr",
+                "source": "horizontal_adjust",
+                "dest": "back_forth_adjust",
+                "conditions": "good_position_horizontally",
+                "prepare": "adjust_horizontally",
             },
             {
                 "trigger": "adjust_position",
-                "source": "fb",
+                "source": "back_forth_adjust",
                 "dest": "finished",
-                "conditions": "good_fb",
-                "prepare": "adjust_fb",
+                "conditions": "good_back_forth",
+                "prepare": "adjust_back_forth",
+            },
+            {
+                "trigger": "adjust_position",
+                "source": "finished",
+                "dest": "horizontal_adjust",
+                "conditions": "not_finished",
+                "prepare": "adjust_back_forth",
             },
         ]
 
@@ -42,7 +49,7 @@ class KickStateMachine:
         self.machine = Machine(
             model=self,
             states=self.states,
-            initial="angel",
+            initial="angle_adjust",
             transitions=self.transitions,
         )
         print(f"[KICK FSM] Initialized. Starting state: {self.state}")
@@ -73,7 +80,7 @@ class KickStateMachine:
             time.sleep(2)
             print("[KICK FSM] Kick executed successfully!")
 
-    def adjust_angel(self):
+    def adjust_angle(self):
         """Adjust robot's angle relative to goal"""
         print("[ANGLE ADJUST] Starting angle adjustment...")
         # self.agent.head_set(0.7, 0)
@@ -96,7 +103,7 @@ class KickStateMachine:
             print(f"[ANGLE ADJUST] Rotating CW (Δ={ang_delta:.2f})")
             self.agent.cmd_vel(0, 0.05, 0.3)
 
-    def good_angel(self):
+    def good_angle(self):
         """Check if angle is within acceptable range"""
         target_angle_rad = math.atan((self.agent.pos_x - 0) / (4500 - self.agent.pos_y))
         ang_tar = target_angle_rad * 180 / math.pi
@@ -107,8 +114,12 @@ class KickStateMachine:
             f"[ANGLE CHECK] Angle delta: {abs(ang_delta):.2f}° (OK? {'Yes' if result else 'No'})"
         )
         return result
+    
+    def not_finished(self):
+        """Check if angle is not within acceptable range"""
+        return (not self.good_angle()) or not self.good_back_forth()
 
-    def adjust_lr(self):
+    def adjust_horizontally(self):
         """Adjust left-right position relative to ball"""
         print("\n[LR ADJUST] Starting lateral adjustment...")
         # self.agent.head_set(head=0.9, neck=0)
@@ -118,8 +129,8 @@ class KickStateMachine:
         t0 = time.time()
         print("[LR ADJUST] Scanning for ball...")
 
-        # while self.agent.loop() and (self.agent.ball_x < 600 or self.agent.ball_x == 0):
-        while self.agent.ball_x < 600 or self.agent.ball_x == 0:
+        # while self.agent.loop() and (get_ball_pos_in_vis[0] < 600 or get_ball_pos_in_vis[0] == 0):
+        while get_ball_pos_in_vis[0] < 600 or get_ball_pos_in_vis[0] == 0:
             if time.time() - t0 > 10 or no_ball_count > 5:
                 print("[LR ADJUST] Timeout or lost ball during adjustment!")
                 return
@@ -130,10 +141,10 @@ class KickStateMachine:
                 time.sleep(0.7)
                 continue
 
-            print(f"[LR ADJUST] Moving right (Current X: {self.agent.ball_x})")
-            self.agent.cmd_vel(0, 0.6 * configuration.walk_y_vel, 0)
+            print(f"[LR ADJUST] Moving right (Current X: {get_ball_pos_in_vis[0]})")
+            self.agent.cmd_vel(0, 0.6 * self._config.get("walk_vel_y", 0.05), 0)
 
-        while self.agent.loop() and (self.agent.ball_x > 660 or self.agent.ball_x == 0):
+        while self.agent.loop() and (get_ball_pos_in_vis[0] > 660 or get_ball_pos_in_vis[0] == 0):
             if time.time() - t0 > 10 or no_ball_count > 5:
                 print("[LR ADJUST] Timeout or lost ball during adjustment!")
                 return
@@ -144,28 +155,28 @@ class KickStateMachine:
                 time.sleep(0.7)
                 continue
 
-            print(f"[LR ADJUST] Moving left (Current X: {self.agent.ball_x})")
-            self.agent.cmd_vel(0, -0.6 * configuration.walk_y_vel, 0)
+            print(f"[LR ADJUST] Moving left (Current X: {get_ball_pos_in_vis[0]})")
+            self.agent.cmd_vel(0, -0.6 * self._config.get("walk_vel_y", 0.05), 0)
 
         self.agent.stop(0.5)
         print("[LR ADJUST] Lateral adjustment completed")
 
-    def good_lr(self):
+    def good_position_horizontally(self):
         """Check if left-right position is correct"""
-        result = 600 <= self.agent.ball_x <= 660
+        result = 600 <= get_ball_pos_in_vis[0] <= 660
         print(
-            f"[LR CHECK] Ball X: {self.agent.ball_x} (OK? {'Yes' if result else 'No'})"
+            f"[LR CHECK] Ball X: {get_ball_pos_in_vis[0]} (OK? {'Yes' if result else 'No'})"
         )
         return result
 
-    def adjust_fb(self):
+    def adjust_back_forth(self):
         """Adjust forward-backward position relative to ball"""
         print("\n[FB ADJUST] Starting forward adjustment...")
         self.agent.stop(0.5)
         t0 = time.time()
         no_ball_count = 0
 
-        while self.agent.loop() and (self.agent.ball_y < 420 or self.agent.ball_y == 0):
+        while not self.good_back_forth():
             if time.time() - t0 > 10 or no_ball_count > 5:
                 print("[FB ADJUST] Timeout or lost ball during adjustment!")
                 return
@@ -176,17 +187,17 @@ class KickStateMachine:
                 time.sleep(0.7)
                 continue
 
-            print(f"[FB ADJUST] Moving forward (Current Y: {self.agent.ball_y})")
-            self.agent.cmd_vel(0.5 * configuration.walk_x_vel, 0, 0)
+            print(f"[FB ADJUST] Moving forward (Current Distance: {self.agent.get_distance_to_ball()})")
+            self.agent.cmd_vel(0.5 * self._config.get("walk_vel_x", 0.3), 0, 0)
 
         self.agent.stop(0.5)
         print("[FB ADJUST] Forward adjustment completed")
 
-    def good_fb(self):
+    def good_back_forth(self):
         """Check if forward position is correct"""
-        result = 420 <= self.agent.ball_y
+        result = (self.agent.get_distance_to_ball() < 420)
         self.agent.ready_to_kick = result
         print(
-            f"[FB CHECK] Ball Y: {self.agent.ball_y} (OK? {'Yes' if result else 'No'})"
+            f"[FB CHECK] Ball Distance: {self.agent.get_distance_to_ball()} (OK? {'Yes' if result else 'No'})"
         )
         return result

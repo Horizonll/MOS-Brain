@@ -16,6 +16,7 @@ class DribbleStateMachine:
         :param agent: 代理对象
         """
         self.agent = agent
+        self._config = self.agent.get_config()
         self.rotate_start_time = 0  # 记录旋转开始时间
         self.states = ["forward", "position_adjust", "angle_adjust", "finished"]
         self.transitions = [
@@ -127,7 +128,7 @@ class DribbleStateMachine:
         另一种调整角度的方法
         """
         print("[DRIBBLE FSM] Adjusting angle (method 1)...")
-        if not self.good_angel():  # 调整角度
+        if not self.good_angle():  # 调整角度
             if self.direction:
                 self.agent.cmd_vel(0, 0, 0.1)
             else:
@@ -161,7 +162,7 @@ class DribbleStateMachine:
         print(f"[DRIBBLE FSM] Bad position: {'Yes' if result else 'No'}")
         return result
 
-    def good_angel(self):
+    def good_angle(self):
         """
         检查角度是否合适
         :return: True 表示角度合适，False 表示角度不合适
@@ -181,7 +182,7 @@ class DribbleStateMachine:
         检查角度是否不合适
         :return: True 表示角度不合适，False 表示角度合适
         """
-        result = not self.good_angel()
+        result = not self.good_angle()
         print(f"[DRIBBLE FSM] Bad angle: {'Yes' if result else 'No'}")
         return result
 
