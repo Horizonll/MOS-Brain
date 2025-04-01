@@ -149,7 +149,7 @@ class DribbleStateMachine:
         :return: True 表示位置好，False 表示位置不好
         """
         result = abs(self.angle_to_goal_rad - self.angle_ball_to_goal_rad) < (20 * math.pi / 180) and abs(
-            self.agent.pos_yaw / math.pi * 180 - self.angle_to_goal_rad) < (20 * math.pi / 180)
+            self.agent.get_self_yaw() / math.pi * 180 - self.angle_to_goal_rad) < (20 * math.pi / 180)
         print(f"[DRIBBLE FSM] Good position: {'Yes' if result else 'No'}")
         return result
 
@@ -171,9 +171,9 @@ class DribbleStateMachine:
         ang_tar1 = rad1 * 180 / math.pi
         rad2 = math.atan((self.agent.pos_x + 1300) / (4500 - self.agent.pos_y))  # FIXME:球门右侧
         ang_tar2 = rad2 * 180 / math.pi
-        result = ang_tar1 < self.agent.pos_yaw < ang_tar2
+        result = ang_tar1 < self.agent.get_self_yaw() < ang_tar2
         if not result:
-            self.direction = ang_tar1 > self.agent.pos_yaw
+            self.direction = ang_tar1 > self.agent.get_self_yaw()
         print(f"[DRIBBLE FSM] Good angle: {'Yes' if result else 'No'}")
         return result
 
@@ -209,7 +209,7 @@ class DribbleStateMachine:
         检查是否可以继续向前
         :return: True 表示可以，False 表示不可以
         """
-        result = self.agent.pos_y < 3000 and abs(self.agent.pos_yaw / math.pi * 180 - self.angle_to_goal_rad) < (
+        result = self.agent.pos_y < 3000 and abs(self.agent.get_self_yaw() / math.pi * 180 - self.angle_to_goal_rad) < (
                 20 * math.pi / 180)
         print(f"[DRIBBLE FSM] Ok to forward: {'Yes' if result else 'No'}")
         return result
