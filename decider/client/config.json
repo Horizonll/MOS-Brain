@@ -11,8 +11,6 @@
     "auto_find_server_ip_listen_port": 50000,
     "auto_find_server_ip_token": "NjM5NWVkMSAgLQo=",
     "max_buffer_size": 1024,
-    "fake_async_time_out": 0.001, // python does not suuport aysnc, 
-    				  //so a timeout is used to emulate a C-style async tcp 
 
     // vision
     "vision_size": [1280, 736], // the size of photos used by vision
@@ -26,7 +24,6 @@
         "4": 5,       // T-Intersection
         "5": 5        // X-Intersection
     },
-    "pos_accuracy_critical": 0.0005,   // when accuracy is consider too low
     "predict_ball_pos": true,
     "predict_ball_pos_in_map": true,
     "move_head_time_gap": 0.1,   // second
@@ -34,6 +31,10 @@
     "looking_at_ball_integrated": [0.1, 0.1],      // integrated arguments
     "looking_at_ball_arguments": [[0.2, 0.0, 0.02], // P, I, D of head
                                   [0.2, 0.0, 0.02]], // P, I, D of neck
+    "pos_accuracy_critical": 0.0005,    // when accuracy is lower than this, 
+    					// self_pos is considered lost
+    "ball_accuracy_critical": 0.0005,   // when accuracy is lower than this, 
+    					// ball is considered lost
     "field_params" : {
         "LF": [-1000, -1200],
         "LB": [-1000, -2500],

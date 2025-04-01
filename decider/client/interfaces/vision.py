@@ -16,13 +16,16 @@ class Vision:
     # @public variants:
     #   VARIANTS        TYPE        DESCTIPTION
     #   self_pos        np.array    self position in map; already filtered
-    #   pos_yaw         angle       self orientation in degree, [-180, 180)
+    #   self_yaw         angle       self orientation in degree, [-180, 180)
     #   head            float       the angle of head
     #   neck            float       the angle of neck
-    #   ball_distance   float   the distance from robot to tht ball
+    #   ball_distance   float       the distance from robot to tht ball
     #
     # @public methods:
-    #   None   
+    #   look_at(head: float, neck: float)
+    #       disable automatically tracking and force to look_at
+    #       use (NaN, NaN) to enable tracking
+    #                                       
     #
     # @private variants
     #   _ball_pos_in_vis        the pixel coordinate of ball
@@ -32,6 +35,7 @@ class Vision:
     #   _self_pos_accuracy      the 'accuracy' of self_pos, the algorithm
     #                           to measure how 'inaccurary' has to be
     #                           improve. 
+    #   _force_look_at          a list (head, neck) to force camera orientation
     #   @@@@ TODO IMPROVE THE ALGORITHM TO MEASURE INACCURACY @@@@
     #   _vision_last_frame_time     the timestamp of last frame of vision
     #   _config                 a dictionary, the config
@@ -39,17 +43,17 @@ class Vision:
     #   _vision_sub             the handler of /vision/obj_pos
     #   _soccer_real_sub        the handler of /soccer_real_pos_in_map
     #   _head_pub               the handler of /head_goals
-    #   _last_move_head_time    last timestamp running _move_head()
-    #   _move_head_stage        the stage ( FSMID ) of _move_head()
-    #   _last_move_head_stage_time      timestamp for changing stage periodicly
+    #   _last_track_ball_time    last timestamp running _track_ball()
+    #   _track_ball_stage        the stage ( FSMID ) of _track_ball()
+    #   _last_track_ball_stage_time      timestamp for changing stage periodicly
     #
     # @private methods
-    #   _head_set(head: float, neck: float)     set head and neck angle
-    #   _position_callback(msg)                 callback of /pos_in_map
-    #   _soccer_real_callback(msg)      callback of /soccer_real_pos_in_map
+    #   _head_set(args: float[2])           set head and neck angle
+    #   _position_callback(msg)             callback of /pos_in_map
+    #   _soccer_real_callback(msg)          callback of /soccer_real_pos_in_map
     #   _vision_callback(target_matrix)     callback of /vision/obj_pos
-    #   _move_head()                        the main algorithm to move head
-    #   _move_head_stage_looking_at_ball()  looing at ball algorithm
+    #   _track_ball()                        the main algorithm to move head
+    #   _track_ball_stage_looking_at_ball()  looing at ball algorithm
 
     def __init__(self, config): 
 
@@ -60,15 +64,16 @@ class Vision:
         self._ball_pos_in_map = np.array([0, 0])
         self._vision_last_frame_time = 0
         self.self_pos = np.array([0,0])
-        self.pos_yaw = 0
+        self.self_yaw = 0
         self._self_pos_accuracy = 0
         self._ball_pos_accuracy = 0
-        self._last_move_head_time = -99999999
-        self._last_move_head_stage_time = 0
-        self._move_head_stage = 0
+        self._last_track_ball_time = -99999999
+        self._last_track_ball_stage_time = 0
+        self._track_ball_stage = 0
 
         self.head = 0.75
         self.neck = 0
+        self._force_look_at = [math.nan, math.nan]
 
         self._config = config
         self._pos_sub = rospy.Subscriber("/pos_in_map",  \
@@ -84,10 +89,10 @@ class Vision:
                                         JointState,  \
                                         queue_size = 1)
         
-        self._head_set(self.head, self.neck)
+        self._head_set([self.head, self.neck])
 
 
-    def _move_head_stage_looking_at_ball(self):
+    def _track_ball_stage_looking_at_ball(self):
         args = self._config["looking_at_ball_arguments"]
         width = self._config["vision_size"][0]
         height = self._config["vision_size"][1]
@@ -102,35 +107,39 @@ class Vision:
         self._head_set(self.head, self.neck)
 
 
-    def _move_head_stage_head_up(self):
-        self._head_set(0.70, self.pos_yaw)
+    def _track_ball_stage_head_up(self):
+        self._head_set([0.70, self.self_yaw])
 
 
-    def _move_head(self):
-        if(time.time() - self._last_move_head_time < \
+    def _track_ball(self):
+        if(time.time() - self._last_track_ball_time < \
                 self._config["move_head_time_gap"]):
             return
-        self._last_move_head_time = time.time()
+        self._last_track_ball_time = time.time()
 
         # change move head stage periodicly
-        if(time.time() - self._last_move_head_stage_time > 
+        if(time.time() - self._last_track_ball_stage_time > 
            self._config["move_head_stage_time_gap"]):
-            self._move_head_stage = (self._move_head_stage + 1) % 2
-            self._last_move_head_stage_time = time.time()
+            self._track_ball_stage = (self._track_ball_stage + 1) % 2
+            self._last_track_ball_stage_time = time.time()
         
-        # if(self._move_head_stage % 2 == 0):
-        self._move_head_stage_looking_at_ball()
+        # if(self._track_ball_stage % 2 == 0):
+        self._track_ball_stage_looking_at_ball()
         # else:
-        #    self._move_head_stage_head_up()
+        #    self._track_ball_stage_head_up()
     
 
-    # _head_set(head: float, neck: float):
+    # _head_set(args: float[2]):
     #   设置头的角度，并记录角度信息并发布
     #    @param head: 上下角度，[0,1.5]，1.5下，0上
     #    @param neck: 左右角度，[-1.1,1.1]，-1.1右，1.1左
-    def _head_set(self, head = 0, neck = 0):
-        head = np.clip(head, 0, 1.5)
-        neck = np.clip(neck, -1.1, 1.1)
+    def _head_set(self, args):
+        if(not math.isnan(self._force_look_at[0])):
+            args[0] = self._force_look_at[0]
+        if(not math.isnan(self._force_look_at[1])):
+            args[1] = self._force_look_at[1]
+        head = np.clip(args[0], 0, 1.5)
+        neck = np.clip(args[1], -1.1, 1.1)
         self.head, self.neck = head, neck
         head_goal = JointState()
         head_goal.name = ["head", "neck"]
@@ -141,7 +150,7 @@ class Vision:
 
     def _position_callback(self, msg):
         self.self_pos = np.array([msg.x, msg.y])
-        self.pos_yaw  = msg.theta
+        self.self_yaw = msg.theta
 
 
     def _soccer_real_callback(self, msg):
@@ -196,7 +205,7 @@ class Vision:
         
         self._vision_last_frame_time        = time.time()
         
-        self._move_head(); 
+        self._track_ball(); 
 
     def get_ball_pos(self):
         return self._ball_pos
@@ -208,5 +217,5 @@ class Vision:
         return self._ball_pos_in_map
 
     def get_if_ball(self):
-        return self.get_if_ball()
+        return self._ball_pos_accuracy > self._config["ball_accuracy_critical"]
 
