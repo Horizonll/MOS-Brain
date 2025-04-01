@@ -94,6 +94,10 @@ class Vision:
     
 
     def _track_ball_stage_looking_at_ball(self):
+        if(self._ball_pos_accuracy < self._config["_ball_pos_accuracy_look_around"]):
+            self.head = 0.7
+            self.neck = 0
+            return
         args = self._config["looking_at_ball_arguments"]
         width = self._config["vision_size"][0]
         height = self._config["vision_size"][1]
@@ -124,10 +128,11 @@ class Vision:
             self._track_ball_stage = (self._track_ball_stage + 1) % 2
             self._last_track_ball_stage_time = time.time()
         
-        # if(self._track_ball_stage % 2 == 0):
-        self._track_ball_stage_looking_at_ball()
-        # else:
-        #    self._track_ball_stage_head_up()
+        if(self._track_ball_stage % 2 == 0):
+            self._track_ball_stage_looking_at_ball()
+        else:
+            self._track_ball_stage_head_up()
+            
     
 
     # _head_set(args: float[2]):
@@ -210,7 +215,6 @@ class Vision:
 
     def look_at(self, args):
         self._force_look_at = args
-
 
     def get_ball_pos(self):
         return self._ball_pos

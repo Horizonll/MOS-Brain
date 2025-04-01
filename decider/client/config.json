@@ -49,6 +49,8 @@
     // self_pos is considered lost
     "ball_accuracy_critical": 0.0005, // when accuracy is lower than this, 
     // ball is considered lost
+    "_ball_pos_accuracy_look_around": 0.5, // when accuracy is lower than this,
+    					   // camera is looking around
     "field_params": {
         "LF": [
             -1000,
