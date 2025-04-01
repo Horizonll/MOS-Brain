@@ -15,6 +15,7 @@
     				  //so a timeout is used to emulate a C-style async tcp 
 
     // vision
+    "vision_size": [1280, 736], // the size of photos used by vision
     "pos_accuracy_add": {
         // the score 'add' to the self_pos_accuracy
         // when these items appears in vision

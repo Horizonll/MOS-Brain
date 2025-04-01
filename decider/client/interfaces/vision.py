@@ -89,17 +89,16 @@ class Vision:
 
     def _move_head_stage_looking_at_ball(self):
         args = self._config["looking_at_ball_arguments"]
-        addn =  (self._ball_pos_in_vis[0] - 640) / 1280 * args[1][0] + \
-                (self._ball_pos_in_vis_I[0] - 640) / 1280 * args[1][1] + \
-                (self._ball_pos_in_vis_D[0] - 640) / 1280 * args[1][2];
-        addh =  (self._ball_pos_in_vis[1] - 368) / 736 * args[0][0] + \
-                (self._ball_pos_in_vis_I[1] - 368) / 736 * args[0][1] + \
-                (self._ball_pos_in_vis_D[1] - 368) / 736 * args[0][2];
+        width = self._config["vision_size"][0]
+        height = self._config["vision_size"][1]
+        addn =  (self._ball_pos_in_vis[0] - width/2) / width * args[1][0] + \
+                (self._ball_pos_in_vis_I[0]) / width * args[1][1] + \
+                (self._ball_pos_in_vis_D[0]) / width * args[1][2];
+        addh =  (self._ball_pos_in_vis[1] - height/2) / height * args[0][0] + \
+                (self._ball_pos_in_vis_I[1]) / height * args[0][1] + \
+                (self._ball_pos_in_vis_D[1]) / height * args[0][2];
         self.head += addh
         self.neck -= addn
-        # print("x = " + str(self._ball_pos_in_vis[0]) + " y = " + str(self._ball_pos_in_vis[1]))
-        # print("add head = " + str(addh) + " add neck = " + str(addn))
-        # print("head = " + str(self.head) + " neck = " + str(self.neck))
         self._head_set(self.head, self.neck)
 
 
@@ -184,11 +183,11 @@ class Vision:
 
         if(ball_row is not None):
             self._ball_pos_in_vis_D = \
-                    (self._ball_pos_in_vis - ball_row[1:3]) * \
+                    (ball_row[1:3] - self._ball_pos_in_vis) * \
                     0.0001 / (time.time() - self._vision_last_frame_time)
             self._ball_pos_in_vis_I = self._ball_pos_in_vis_I * \
                     self._config["looking_at_ball_integrated"] +  \
-                    self._ball_pos_in_vis; 
+                    ball_row[1:3] - np.array(self._config["vision_size"]) / 2; 
 
             self._ball_pos_in_vis           = ball_row[1:3]
             self.ball_distance              = ball_row[4]
