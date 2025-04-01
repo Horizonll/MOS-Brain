@@ -174,6 +174,9 @@ class Agent:
                 distance = BIG_NUMBER
             else:
                 distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
+
+            if data.get("ball_distance") is not None:
+                distance = data.get("ball_distance")
             
             players_distance[robot_id] = distance
             
@@ -194,6 +197,9 @@ class Agent:
                     distance = BIG_NUMBER
                 else:
                     distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
+
+                if data.get("ball_distance") is not None:
+                    distance = data.get("ball_distance")
                     
                 players_distance[robot_id] = distance
             else:
