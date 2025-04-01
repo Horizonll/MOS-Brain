@@ -1,7 +1,7 @@
 {
     // velocities
-    "walk_vel_x": 0.5,
-    "walk_vel_y": 0.2,
+    "walk_vel_x": 0.2,
+    "walk_vel_y": 0.05,
     "walk_vel_theta": 0.3,
     // networking
     "server_ip": "192.168.9.100",
@@ -52,6 +52,8 @@
     "_ball_pos_accuracy_look_around": 0.5, // when accuracy is lower than this,
     					   // camera is looking around
     "search_ball_head_angle": [0.1, 0.3, 0.5, 0.7, 0.5, 0.3, 0.1], 
+    // camera is looking around
+    "field_params": {
         "LF": [
             -1000,
             -1200
