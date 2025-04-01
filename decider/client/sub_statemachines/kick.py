@@ -17,30 +17,48 @@ class KickStateMachine:
             {
                 "trigger": "adjust_position",
                 "source": "angle_adjust",
+                "dest": "angle_adjust",
+                "conditions": "not_good_angle",
+                "after": "adjust_angle",
+            },
+            {
+                "trigger": "adjust_position",
+                "source": "angle_adjust",
                 "dest": "horizontal_adjust",
                 "conditions": "good_angle",
-                "prepare": "adjust_angle",
+            },
+            {
+                "trigger": "adjust_position",
+                "source": "horizontal_adjust",
+                "dest": "horizontal_adjust",
+                "conditions": "not_good_position_horizontally",
+                "after": "adjust_horizontally",
             },
             {
                 "trigger": "adjust_position",
                 "source": "horizontal_adjust",
                 "dest": "back_forth_adjust",
                 "conditions": "good_position_horizontally",
-                "prepare": "adjust_horizontally",
+            },
+            {
+                "trigger": "adjust_position",
+                "source": "back_forth_adjust",
+                "dest": "back_forth_adjust",
+                "conditions": "not_good_back_forth",
+                "after": "adjust_back_forth",
             },
             {
                 "trigger": "adjust_position",
                 "source": "back_forth_adjust",
                 "dest": "finished",
                 "conditions": "good_back_forth",
-                "prepare": "adjust_back_forth",
             },
             {
                 "trigger": "adjust_position",
                 "source": "finished",
-                "dest": "horizontal_adjust",
+                "dest": "angle_adjust",
                 "conditions": "not_finished",
-                "prepare": "adjust_back_forth",
+                "after": "stop",
             },
         ]
 
@@ -57,10 +75,9 @@ class KickStateMachine:
         """Main execution loop for the state machine"""
         print("[KICK FSM] Starting kick sequence...")
         print(f"[KICK FSM] ifBall: {self.agent.get_if_ball()} state: {self.state}")
-        while (
+        if (
             self.state != "finished"
             and self.agent.get_if_ball()
-            and self.agent.get_command()["command"] == self.agent.info
         ):
             print(f"\n[KICK FSM] Current state: {self.state}")
             print(f"[KICK FSM] Triggering 'adjust_position' transition")
@@ -69,15 +86,20 @@ class KickStateMachine:
 
         if (
             self.state == "finished"
-            and self.agent.info == self.agent.get_command()["command"]
         ):
             print("\n[KICK FSM] Positioning complete! Executing kick...")
             self.agent.cmd_vel(0, 0, 0)
             # self.agent.head_set(head=0.1, neck=0)
             time.sleep(1)
-            self.agent.doKick()
+            self.agent.kick()
             time.sleep(2)
             print("[KICK FSM] Kick executed successfully!")
+
+    def stop(self):
+        """Stop the robot's movement"""
+        print("[KICK FSM] Stopping robot...")
+        self.agent.stop()
+        print("[KICK FSM] Robot stopped.")
 
     def adjust_angle(self):
         """Adjust robot's angle relative to goal"""
@@ -87,7 +109,7 @@ class KickStateMachine:
         # Calculate target angle using ball position
 
         #
-        target_angle_rad = math.atan((self.agent.pos_x - 0) / (4500 - self.agent.pos_y))
+        target_angle_rad = math.atan((self.agent.get_self_pos()[0] - 0) / (4500 - self.agent.get_self_pos()[1]))
         ang_tar = target_angle_rad * 180 / math.pi
         ang_delta = ang_tar - self.agent.get_self_yaw()
 
@@ -100,11 +122,11 @@ class KickStateMachine:
             self.agent.cmd_vel(0, -0.05, 0.3)
         elif ang_delta < -10:
             print(f"[ANGLE ADJUST] Rotating CW (Δ={ang_delta:.2f})")
-            self.agent.cmd_vel(0, 0.05, 0.3)
+            self.agent.cmd_vel(0, 0.05, -0.3)
 
     def good_angle(self):
         """Check if angle is within acceptable range"""
-        target_angle_rad = math.atan((self.agent.pos_x - 0) / (4500 - self.agent.pos_y))
+        target_angle_rad = math.atan((self.agent.get_self_pos()[0] - 0) / (4500 - self.agent.get_self_pos()[1]))
         ang_tar = target_angle_rad * 180 / math.pi
         ang_delta = ang_tar - self.agent.get_self_yaw()
         result = abs(ang_delta) < 10
@@ -113,6 +135,10 @@ class KickStateMachine:
             f"[ANGLE CHECK] Angle delta: {abs(ang_delta):.2f}° (OK? {'Yes' if result else 'No'})"
         )
         return result
+    
+    def not_good_angle(self):
+        """Check if angle is not within acceptable range"""
+        return not self.good_angle()
     
     def not_finished(self):
         """Check if angle is not within acceptable range"""
@@ -155,6 +181,10 @@ class KickStateMachine:
             f"[LR CHECK] Ball(Neck) Angle: {self.agent.get_neck()} (OK? {'Yes' if result else 'No'})"
         )
         return result
+    
+    def not_good_position_horizontally(self):
+        """Check if left-right position is not correct"""
+        return not self.good_position_horizontally()
     
     # def adjust_horizontally(self):
     #     """Adjust left-right position relative to ball"""
@@ -224,7 +254,7 @@ class KickStateMachine:
                 time.sleep(0.7)
                 continue
 
-            print(f"[FB ADJUST] Moving forward (Current Distance: {self.agent.get_distance_to_ball()})")
+            print(f"[FB ADJUST] Moving forward (Current Distance: {self.agent.get_ball_distance()})")
             self.agent.cmd_vel(0.5 * self._config.get("walk_vel_x", 0.3), 0, 0)
 
         self.agent.stop(0.5)
@@ -232,9 +262,13 @@ class KickStateMachine:
 
     def good_back_forth(self):
         """Check if forward position is correct"""
-        result = (self.agent.get_distance_to_ball() < 420)
+        result = (self.agent.get_ball_distance() < 300)
         self.agent.ready_to_kick = result
         print(
-            f"[FB CHECK] Ball Distance: {self.agent.get_distance_to_ball()} (OK? {'Yes' if result else 'No'})"
+            f"[FB CHECK] Ball Distance: {self.agent.get_ball_distance()} (OK? {'Yes' if result else 'No'})"
         )
         return result
+    
+    def not_good_back_forth(self):
+        """Check if forward position is not correct"""
+        return not self.good_back_forth()
