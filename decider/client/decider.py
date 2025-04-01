@@ -218,12 +218,9 @@ class Agent:
     def look_at(self, args):
         self._vision.look_at(args)
     
-    def stop(self):
+    def stop(self, sleep_time=0):
         self._action.cmd_vel(0, 0, 0)
-<<<<<<< HEAD
-=======
         time.sleep(sleep_time)
->>>>>>> 2028af4c1207cad4ed2f86601e85523a0c6d6da3
 
     def kick(self):
         self._action.do_kick()
