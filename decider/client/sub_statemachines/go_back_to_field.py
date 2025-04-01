@@ -244,13 +244,8 @@ class GoBackToFieldStateMachine:
         time.sleep(1)
         if abs(self.agent.get_self_yaw()) > 160:
             print("[Go Back to Field] Correcting large yaw angle...")
-<<<<<<< HEAD
-            self.agent.cmd_vel(0, 0, -np.sign(self.agent.pos_yaw) * self._config.get("walk_vel_theta", 0.3))
-        elif self.agent.pos_yaw > 30:
-=======
             self.agent.cmd_vel(0, 0, -np.sign(self.agent.get_self_yaw()) * self._config.get("walk_vel_theta", 0.3))
         elif self.agent.get_self_yaw() > 30:
->>>>>>> 2028af4c1207cad4ed2f86601e85523a0c6d6da3
             print("[Go Back to Field] Arrived. Turning right")
             self.agent.cmd_vel(0, 0, -self._config.get("walk_vel_theta", 0.3))
             time.sleep(0.2)

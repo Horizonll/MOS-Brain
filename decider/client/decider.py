@@ -13,6 +13,7 @@ import numpy as np
 import threading
 import logging
 import sub_statemachines
+import sub_statemachines
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -39,10 +40,15 @@ from robot_client import RobotClient
 class Agent:
     # @public variants:
     #           NONE
+    #           NONE
     #
     # @public methods:
     #   cmd_vel(vel_x : float, vel_y : float, vel_theta : float)
     #   kick()
+    #   look_at(head: float, neck: float)
+    #       disable automatically tracking and force to look_at
+    #       use (NaN, NaN) to enable tracking
+    #   
     #   look_at(head: float, neck: float)
     #       disable automatically tracking and force to look_at
     #       use (NaN, NaN) to enable tracking
@@ -121,6 +127,18 @@ class Agent:
             "go_back_to_field": self.go_back_to_field_state_machine.run,
             "stop": self.stop,
         }
+        self.chase_ball_state_machine = sub_statemachines.chase_ball(self)
+        self.find_ball_state_machine = sub_statemachines.find_ball(self)
+        self.kick_state_machine = sub_statemachines.kick(self)
+        self.go_back_to_field_state_machine = sub_statemachines.go_back_to_field(self)
+
+        self._state_machine_runners = {
+            "chase_ball": self.chase_ball_state_machine.run,
+            "find_ball": self.find_ball_state_machine.run,
+            "kick": self.kick_state_machine.run,
+            "go_back_to_field": self.go_back_to_field_state_machine.run,
+            "stop": self.stop,
+        }
         # for py_file in py_files:
         #    print("found : " + py_file)
         #    module_name = py_file.split('.')[-1] # also class name
@@ -134,7 +152,22 @@ class Agent:
         # if(self._command == self._lst_command):
         #     self._execute(self._command["command"], "run")
         #     return
+        # if(self._command == self._lst_command):
+        #     self._execute(self._command["command"], "run")
+        #     return
 
+        # old_state_machine = self._lst_command["command"]
+        # new_state_machine = self._command["command"]
+        # self._execute(old_state_machine, "stop", new_state_machine)
+        # self._execute(new_state_machine, "start", 
+        #               self._command["data"], old_state_machine)
+        # self._execute(new_state_machine, "run")
+
+        if self._state_machine_runners.get(self._command["command"]):
+            self._state_machine_runners[self._command["command"]]()
+        else:
+            logging.debug(f"State machine '{self._command['command']}' not found.")
+            self.stop()
         # old_state_machine = self._lst_command["command"]
         # new_state_machine = self._command["command"]
         # self._execute(old_state_machine, "stop", new_state_machine)
@@ -216,6 +249,7 @@ class Agent:
 
     def get_if_ball(self):
         return self._vision.get_if_ball()
+
 
     def get_if_close_to_ball(self):
         if self.get_if_ball():
