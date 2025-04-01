@@ -55,7 +55,7 @@ class ChaseBallStateMachine:
         print(
             f"[CHASE BALL FSM] Checking if close to ball. Result: {'Yes' if result else 'No'} distance: {self.agent.get_ball_distance()}"
         )
-        return result
+        return not result
 
     def run(self):
         """Main execution loop for the state machine"""

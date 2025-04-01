@@ -1,7 +1,6 @@
 # kick.py
 # State machine for robot kicking behavior
 
-from configuration import configuration
 import math
 import time
 from transitions import Machine

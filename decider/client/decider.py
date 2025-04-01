@@ -112,13 +112,13 @@ class Agent:
         # statemachine.run
 
         rospy.loginfo("Initializing sub-state machines")
-        py_files = Agent._get_python_files("sub_statemachines/")
-        print(py_files)
+        # py_files = Agent._get_python_files("sub_statemachines/")
+        # print(py_files)
         
-        self.chase_ball_state_machine = sub_statemachines.chase_ball(self)
-        self.find_ball_state_machine = sub_statemachines.find_ball(self)
-        self.kick_state_machine = sub_statemachines.kick(self)
-        self.go_back_to_field_state_machine = sub_statemachines.go_back_to_field(self)
+        self.chase_ball_state_machine = sub_statemachines.ChaseBallStateMachine(self)
+        self.find_ball_state_machine = sub_statemachines.FindBallStateMachine(self)
+        self.kick_state_machine = sub_statemachines.KickStateMachine(self)
+        self.go_back_to_field_state_machine = sub_statemachines.GoBackToFieldStateMachine(self)
 
         self._state_machine_runners = {
             "chase_ball": self.chase_ball_state_machine.run,
@@ -127,18 +127,7 @@ class Agent:
             "go_back_to_field": self.go_back_to_field_state_machine.run,
             "stop": self.stop,
         }
-        self.chase_ball_state_machine = sub_statemachines.chase_ball(self)
-        self.find_ball_state_machine = sub_statemachines.find_ball(self)
-        self.kick_state_machine = sub_statemachines.kick(self)
-        self.go_back_to_field_state_machine = sub_statemachines.go_back_to_field(self)
 
-        self._state_machine_runners = {
-            "chase_ball": self.chase_ball_state_machine.run,
-            "find_ball": self.find_ball_state_machine.run,
-            "kick": self.kick_state_machine.run,
-            "go_back_to_field": self.go_back_to_field_state_machine.run,
-            "stop": self.stop,
-        }
         # for py_file in py_files:
         #    print("found : " + py_file)
         #    module_name = py_file.split('.')[-1] # also class name

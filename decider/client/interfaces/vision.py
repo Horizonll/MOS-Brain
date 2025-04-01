@@ -70,6 +70,7 @@ class Vision:
         self._last_track_ball_time = -99999999
         self._last_track_ball_stage_time = 0
         self._track_ball_stage = 0
+        self.ball_distance = 6000
 
         self.head = 0.75
         self.neck = 0
@@ -104,7 +105,7 @@ class Vision:
                 (self._ball_pos_in_vis_D[1]) / height * args[0][2];
         self.head += addh
         self.neck -= addn
-        self._head_set(self.head, self.neck)
+        self._head_set((self.head, self.neck))
 
 
     def _track_ball_stage_head_up(self):

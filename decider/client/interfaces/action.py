@@ -41,9 +41,9 @@ class Action:
     #   publish a velocity command
     def cmd_vel(self, vel_x, vel_y, vel_theta):
         cmd = Twist()
-        cmd.linear.x = vel_x * self._config["max_vel_x"]
-        cmd.linear.y = vel_y * self._config["max_vel_y"]
-        cmd.angular.z = vel_theta * self._config["max_vel_theta"]
+        cmd.linear.x = vel_x * self._config["walk_vel_x"]
+        cmd.linear.y = vel_y * self._config["walk_vel_y"]
+        cmd.angular.z = vel_theta * self._config["walk_vel_theta"]
         self._cmd_vel_pub.publish(cmd)
 
     # do_kick()
