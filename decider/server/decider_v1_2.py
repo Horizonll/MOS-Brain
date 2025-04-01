@@ -430,12 +430,10 @@ class StateMachine:
                     pass
                 elif self.model.state == "defend":
                     print("defend")
-                    # self.model.run_defend_ball()
-                    self.model.run_shoot_ball()
+                    self.model.run_defend_ball()
                 elif self.model.state == "dribble":
                     print("dribble")
-                    # self.model.run_dribble_ball()
-                    self.model.run_shoot_ball()
+                    self.model.run_dribble_ball()
                 elif self.model.state == "shoot":
                     # print("shoot")
                     self.model.run_shoot_ball()

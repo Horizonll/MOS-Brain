@@ -90,10 +90,10 @@ class KickStateMachine:
         #
         target_angle_rad = math.atan((self.agent.pos_x - 0) / (4500 - self.agent.pos_y))
         ang_tar = target_angle_rad * 180 / math.pi
-        ang_delta = ang_tar - self.agent.pos_yaw
+        ang_delta = ang_tar - self.agent.get_self_yaw()
 
         print(
-            f"[ANGLE ADJUST] Target angle: {ang_tar:.2f}°, Current yaw: {self.agent.pos_yaw:.2f}°, Delta: {ang_delta:.2f}°"
+            f"[ANGLE ADJUST] Target angle: {ang_tar:.2f}°, Current yaw: {self.agent.get_self_yaw():.2f}°, Delta: {ang_delta:.2f}°"
         )
 
         if ang_delta > 10:
@@ -107,7 +107,7 @@ class KickStateMachine:
         """Check if angle is within acceptable range"""
         target_angle_rad = math.atan((self.agent.pos_x - 0) / (4500 - self.agent.pos_y))
         ang_tar = target_angle_rad * 180 / math.pi
-        ang_delta = ang_tar - self.agent.pos_yaw
+        ang_delta = ang_tar - self.agent.get_self_yaw()
         result = abs(ang_delta) < 10
 
         print(
@@ -127,10 +127,8 @@ class KickStateMachine:
 
         no_ball_count = 0
         t0 = time.time()
-        print("[LR ADJUST] Scanning for ball...")
 
-        # while self.agent.loop() and (get_ball_pos_in_vis[0] < 600 or get_ball_pos_in_vis[0] == 0):
-        while get_ball_pos_in_vis[0] < 600 or get_ball_pos_in_vis[0] == 0:
+        while not self.good_position_horizontally():
             if time.time() - t0 > 10 or no_ball_count > 5:
                 print("[LR ADJUST] Timeout or lost ball during adjustment!")
                 return
@@ -138,36 +136,76 @@ class KickStateMachine:
             if not self.agent.get_if_ball():
                 no_ball_count += 1
                 print(f"[LR ADJUST] Lost ball ({no_ball_count}/5)")
-                time.sleep(0.7)
+                time.sleep(0.2)
                 continue
 
-            print(f"[LR ADJUST] Moving right (Current X: {get_ball_pos_in_vis[0]})")
-            self.agent.cmd_vel(0, 0.6 * self._config.get("walk_vel_y", 0.05), 0)
+            if self.agent.get_neck() > 0:
+                print(f"[LR ADJUST] Moving left (Ball(Neck) Angle: {self.agent.get_neck()})")
+                self.agent.cmd_vel(0, - 0.6 * self._config.get("walk_vel_y", 0.05), 0)
+            elif self.agent.get_neck() < -0.25:
+                print(f"[LR ADJUST] Moving right (Ball(Neck) Angle: {self.agent.get_neck()})")
+                self.agent.cmd_vel(0, 0.6 * self._config.get("walk_vel_y", 0.05), 0)
 
-        while self.agent.loop() and (get_ball_pos_in_vis[0] > 660 or get_ball_pos_in_vis[0] == 0):
-            if time.time() - t0 > 10 or no_ball_count > 5:
-                print("[LR ADJUST] Timeout or lost ball during adjustment!")
-                return
-
-            if not self.agent.get_if_ball():
-                no_ball_count += 1
-                print(f"[LR ADJUST] Lost ball ({no_ball_count}/5)")
-                time.sleep(0.7)
-                continue
-
-            print(f"[LR ADJUST] Moving left (Current X: {get_ball_pos_in_vis[0]})")
-            self.agent.cmd_vel(0, -0.6 * self._config.get("walk_vel_y", 0.05), 0)
-
-        self.agent.stop(0.5)
+        self.agent.stop()
         print("[LR ADJUST] Lateral adjustment completed")
 
     def good_position_horizontally(self):
         """Check if left-right position is correct"""
-        result = 600 <= get_ball_pos_in_vis[0] <= 660
+        result = -0.25 <= self.agent.get_neck() <= 0
         print(
-            f"[LR CHECK] Ball X: {get_ball_pos_in_vis[0]} (OK? {'Yes' if result else 'No'})"
+            f"[LR CHECK] Ball(Neck) Angle: {self.agent.get_neck()} (OK? {'Yes' if result else 'No'})"
         )
         return result
+    
+    # def adjust_horizontally(self):
+    #     """Adjust left-right position relative to ball"""
+    #     print("\n[LR ADJUST] Starting lateral adjustment...")
+    #     # self.agent.head_set(head=0.9, neck=0)
+    #     self.agent.stop(1)
+
+    #     no_ball_count = 0
+    #     t0 = time.time()
+    #     print("[LR ADJUST] Scanning for ball...")
+
+    #     # while self.agent.loop() and (self.agent.get_ball_pos_in_vis()[0] < 600 or self.agent.get_ball_pos_in_vis()[0] == 0):
+    #     while self.agent.get_ball_pos_in_vis()[0] < 600 or self.agent.get_ball_pos_in_vis()[0] == 0:
+    #         if time.time() - t0 > 10 or no_ball_count > 5:
+    #             print("[LR ADJUST] Timeout or lost ball during adjustment!")
+    #             return
+
+    #         if not self.agent.get_if_ball():
+    #             no_ball_count += 1
+    #             print(f"[LR ADJUST] Lost ball ({no_ball_count}/5)")
+    #             time.sleep(0.7)
+    #             continue
+
+    #         print(f"[LR ADJUST] Moving right (Current X: {self.agent.get_ball_pos_in_vis()[0]})")
+    #         self.agent.cmd_vel(0, 0.6 * self._config.get("walk_vel_y", 0.05), 0)
+
+    #     while self.agent.loop() and (self.agent.get_ball_pos_in_vis()[0] > 660 or self.agent.get_ball_pos_in_vis()[0] == 0):
+    #         if time.time() - t0 > 10 or no_ball_count > 5:
+    #             print("[LR ADJUST] Timeout or lost ball during adjustment!")
+    #             return
+
+    #         if not self.agent.get_if_ball():
+    #             no_ball_count += 1
+    #             print(f"[LR ADJUST] Lost ball ({no_ball_count}/5)")
+    #             time.sleep(0.7)
+    #             continue
+
+    #         print(f"[LR ADJUST] Moving left (Current X: {self.agent.get_ball_pos_in_vis()[0]})")
+    #         self.agent.cmd_vel(0, -0.6 * self._config.get("walk_vel_y", 0.05), 0)
+
+    #     self.agent.stop(0.5)
+    #     print("[LR ADJUST] Lateral adjustment completed")
+
+    # def good_position_horizontally(self):
+    #     """Check if left-right position is correct"""
+    #     result = 600 <= self.agent.get_ball_pos_in_vis()[0] <= 660
+    #     print(
+    #         f"[LR CHECK] Ball X: {self.agent.get_ball_pos_in_vis()[0]} (OK? {'Yes' if result else 'No'})"
+    #     )
+    #     return result
 
     def adjust_back_forth(self):
         """Adjust forward-backward position relative to ball"""

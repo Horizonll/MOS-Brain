@@ -51,6 +51,8 @@ class RobotClient:
                         "ballx": self.agent.get_ball_pos_in_map()[0],
                         "bally": self.agent.get_ball_pos_in_map()[1],
                         "yaw": self.agent.get_self_yaw(),
+                        "ifBall": self.ifBall,
+                        "ball_distance": self.ball_distance,
                     },
                     "info": self.agent._command["command"],
                     "timestamp": time.time(),

@@ -12,7 +12,7 @@ import asyncio
 import numpy as np
 import threading
 import logging
-from sub_statemachines import chase_ball
+import sub_statemachines
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -109,28 +109,44 @@ class Agent:
         py_files = Agent._get_python_files("sub_statemachines/")
         print(py_files)
         
-        # self._state_machine = {"chase_ball": chase_ball.chase_ball(self)}
-        for py_file in py_files:
-            print("found : " + py_file)
-            module_name = py_file.split('.')[-1] # also class name
-            eval_str = "self._state_machine[\"" + module_name + "\"] = " \
-                     + py_file + "." + module_name
-            exec(eval_str) 
+        self.chase_ball_state_machine = sub_statemachines.chase_ball(self)
+        self.find_ball_state_machine = sub_statemachines.find_ball(self)
+        self.kick_state_machine = sub_statemachines.kick(self)
+        self.go_back_to_field_state_machine = sub_statemachines.go_back_to_field(self)
+
+        self._state_machine_runners = {
+            "chase_ball": self.chase_ball_state_machine.run,
+            "find_ball": self.find_ball_state_machine.run,
+            "kick": self.kick_state_machine.run,
+            "go_back_to_field": self.go_back_to_field_state_machine.run,
+            "stop": self.stop,
+        }
+        # for py_file in py_files:
+        #    print("found : " + py_file)
+        #    module_name = py_file.split('.')[-1] # also class name
+        #    eval_str = "self._state_machine[\"" + module_name + "\"] = " \
+        #                + py_file + "." + module_name
+        #    exec(eval_str) 
 
         rospy.loginfo("Agent instance initialization completed")
 
     def run(self):
-        if(self._command == self._lst_command):
-            self._execute(self._command["command"], "run")
-            return
+        # if(self._command == self._lst_command):
+        #     self._execute(self._command["command"], "run")
+        #     return
 
-        old_state_machine = self._lst_command["command"]
-        new_state_machine = self._command["command"]
-        self._execute(old_state_machine, "stop", new_state_machine)
-        self._execute(new_state_machine, "start", 
-                      self._command["data"], old_state_machine)
-        self._execute(new_state_machine, "run")
-    
+        # old_state_machine = self._lst_command["command"]
+        # new_state_machine = self._command["command"]
+        # self._execute(old_state_machine, "stop", new_state_machine)
+        # self._execute(new_state_machine, "start", 
+        #               self._command["data"], old_state_machine)
+        # self._execute(new_state_machine, "run")
+
+        if self._state_machine_runners.get(self._command["command"]):
+            self._state_machine_runners[self._command["command"]]()
+        else:
+            logging.debug(f"State machine '{self._command['command']}' not found.")
+            self.stop()
 
     # private: _execute: call state machines method
     def _execute(self, statemachine, func_name, *args):
@@ -171,6 +187,10 @@ class Agent:
     
     def stop(self):
         self._action.cmd_vel(0, 0, 0)
+<<<<<<< HEAD
+=======
+        time.sleep(sleep_time)
+>>>>>>> 2028af4c1207cad4ed2f86601e85523a0c6d6da3
 
     def kick(self):
         self._action.do_kick()
@@ -196,7 +216,7 @@ class Agent:
 
     def get_if_ball(self):
         return self._vision.get_if_ball()
-    
+
     def get_if_close_to_ball(self):
         if self.get_if_ball():
             return 0.1 <= self.get_ball_distance() <= 0.5

@@ -80,9 +80,9 @@ class RobotServer:
                     self.agent.ball_x = robot_data.get('data').get('ballx')
 
                     if robot_data.get('data').get('ballx') is not None:
-                        self.agent.get_if_ball() = True
+                        self.agent.ifBall = True
                     else:
-                        self.agent.get_if_ball() = False
+                        self.agent.ifBall = False
                     
                     # # 构建响应消息
                     # response = {
