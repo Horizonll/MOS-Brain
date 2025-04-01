@@ -106,15 +106,16 @@ class Agent:
         # statemachine.run
 
         rospy.loginfo("Initializing sub-state machines")
-        # py_files = Agent._get_python_files("sub_statemachines/")
+        py_files = Agent._get_python_files("sub_statemachines/")
+        print(py_files)
         
-        self._state_machine = {"chase_ball": chase_ball.chase_ball(self)}
-        # for py_file in py_files:
-        #    print("found : " + py_file)
-        #    module_name = py_file.split('.')[-1] # also class name
-        #    eval_str = "self._state_machine[\"" + module_name + "\"] = " \
-        #                + py_file + "." + module_name
-        #    exec(eval_str) 
+        # self._state_machine = {"chase_ball": chase_ball.chase_ball(self)}
+        for py_file in py_files:
+            print("found : " + py_file)
+            module_name = py_file.split('.')[-1] # also class name
+            eval_str = "self._state_machine[\"" + module_name + "\"] = " \
+                     + py_file + "." + module_name
+            exec(eval_str) 
 
         rospy.loginfo("Agent instance initialization completed")
 
@@ -151,15 +152,11 @@ class Agent:
 
     # private: _get_python_files: find all python file in a directory
     @staticmethod
-    def _get_python_files(start_dir):
+    def _get_python_files(sub_dir):
         py_files = []
-        for root, dirs, files in os.walk(start_dir):
-            for filename in files:
-                print(filename)
-                if filename.endswith('.py'):
-                    full_path = os.path.join(root, filename)
-                py_files.append(full_path[0:-3].replace('/', '.'))
-        print(py_files)
+        for filename in os.listdir(sub_dir):
+            if filename.endswith('.py') and not filename.startswith("_"):
+                py_files.append(sub_dir[:-2] + "." + filename[:-3])
         return py_files
 
 
