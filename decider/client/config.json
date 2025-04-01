@@ -1,7 +1,7 @@
 {
     // velocities
-    "walk_vel_x": 0.1,
-    "walk_vel_y": 0.05,
+    "walk_vel_x": 0.5,
+    "walk_vel_y": 0.2,
     "walk_vel_theta": 0.3,
     // networking
     "server_ip": "192.168.9.100",
@@ -35,12 +35,12 @@
     ], // integrated arguments
     "looking_at_ball_arguments": [
         [
-            0.2,
+            0.4,
             0.0,
             0.2
         ], // P, I, D of head
         [
-            0.2,
+            0.4,
             0.0,
             0.2
         ]
