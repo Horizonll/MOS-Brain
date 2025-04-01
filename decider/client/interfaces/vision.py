@@ -22,7 +22,7 @@ class Vision:
     #   ball_distance   float       the distance from robot to tht ball
     #
     # @public methods:
-    #   look_at(head: float, neck: float)
+    #   look_at(args)
     #       disable automatically tracking and force to look_at
     #       use (NaN, NaN) to enable tracking
     #                                       
@@ -90,7 +90,7 @@ class Vision:
                                         queue_size = 1)
         
         self._head_set([self.head, self.neck])
-
+    
 
     def _track_ball_stage_looking_at_ball(self):
         args = self._config["looking_at_ball_arguments"]
@@ -206,6 +206,10 @@ class Vision:
         self._vision_last_frame_time        = time.time()
         
         self._track_ball(); 
+
+    def look_at(self, args):
+        self._force_look_at = args
+
 
     def get_ball_pos(self):
         return self._ball_pos

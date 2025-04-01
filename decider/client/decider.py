@@ -169,8 +169,8 @@ class Agent:
         rospy.loginfo(f"Setting the robot's speed: linear velocity x={vel_x}, "
                 + "y={vel_y}, angular velocity theta={vel_theta}")
 
-    def look_at(head: float, neck: float):
-        self._vision.look_at(head, neck)
+    def look_at(self, args):
+        self._vision.look_at(args)
     
     def stop(self):
         self._action.cmd_vel(0, 0, 0)
