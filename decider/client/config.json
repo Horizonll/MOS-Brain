@@ -51,7 +51,7 @@
     // ball is considered lost
     "_ball_pos_accuracy_look_around": 0.5, // when accuracy is lower than this,
     					   // camera is looking around
-    "field_params": {
+    "search_ball_head_angle": [0.1, 0.3, 0.5, 0.7, 0.5, 0.3, 0.1], 
         "LF": [
             -1000,
             -1200
