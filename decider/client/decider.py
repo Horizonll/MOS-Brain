@@ -277,7 +277,7 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, configuration):
             )
         )
 
-    def stop(self, sleep_time):
+    def stop(self, sleep_time=0):
         self.speed_controller(0, 0, 0)
         time.sleep(sleep_time)
 
