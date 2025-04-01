@@ -164,11 +164,6 @@ class Agent:
         #               self._command["data"], old_state_machine)
         # self._execute(new_state_machine, "run")
 
-        if self._state_machine_runners.get(self._command["command"]):
-            self._state_machine_runners[self._command["command"]]()
-        else:
-            logging.debug(f"State machine '{self._command['command']}' not found.")
-            self.stop()
 
     # private: _execute: call state machines method
     def _execute(self, statemachine, func_name, *args):

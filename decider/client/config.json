@@ -1,6 +1,6 @@
 {
     // velocities
-    "walk_vel_x": 0.2,
+    "walk_vel_x": 0.1,
     "walk_vel_y": 0.05,
     "walk_vel_theta": 0.3,
     // networking
@@ -47,11 +47,19 @@
     ], // P, I, D of neck
     "pos_accuracy_critical": 0.0005, // when accuracy is lower than this, 
     // self_pos is considered lost
-    "ball_accuracy_critical": 0.0005, // when accuracy is lower than this, 
+    "ball_accuracy_critical": 0.1, // when accuracy is lower than this, 
     // ball is considered lost
     "_ball_pos_accuracy_look_around": 0.5, // when accuracy is lower than this,
-    					   // camera is looking around
-    "search_ball_head_angle": [0.1, 0.3, 0.5, 0.7, 0.5, 0.3, 0.1], 
+    // camera is looking around
+    "search_ball_head_angle": [
+        0.1,
+        0.3,
+        0.5,
+        0.7,
+        0.5,
+        0.3,
+        0.1
+    ],
     // camera is looking around
     "field_params": {
         "LF": [

@@ -189,7 +189,7 @@ class GoBackToFieldStateMachine:
             self.agent.cmd_vel(0, 0, self._config.get("walk_vel_theta", 0.3))
             self.last_rotate = 1
             time.sleep(0.2)
-        self.go_back_to_field_dir = np.arctan2(-self.aim_x + self.agent.pos_x, self.aim_y - self.agent.pos_y)
+        self.go_back_to_field_dir = np.arctan2(-self.aim_x + self.agent.get_self_pos()[0], self.aim_y - self.agent.get_self_pos()[1])
         self.go_back_to_field_yaw_diff = np.degrees(
             np.arctan2(
                 np.sin(self.go_back_to_field_dir - self.agent.get_self_yaw() * np.pi / 180),

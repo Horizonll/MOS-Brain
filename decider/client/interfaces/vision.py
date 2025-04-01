@@ -71,6 +71,7 @@ class Vision:
         self._last_track_ball_stage_time = 0
         self._track_ball_stage = 0
         self.ball_distance = 6000
+        self._search_ball_phase = 0
 
         self.head = 0.75
         self.neck = 0
@@ -97,10 +98,10 @@ class Vision:
         print("self_ball_pos_accuracy: " + str(self._ball_pos_accuracy))
         if(self._ball_pos_accuracy < self._config["_ball_pos_accuracy_look_around"]):
             phase_count = len(self._config["search_ball_head_angle"])
-            self.head = self._config["search_ball_head_angle"][self._search_ball_phase]:
+            self.head = self._config["search_ball_head_angle"][self._search_ball_phase]
             self.neck = 0
             self._head_set([self.head, self.neck])
-            self._search_ball_phase++;
+            self._search_ball_phase += 1
             self._search_ball_phase %= phase_count
             return
         args = self._config["looking_at_ball_arguments"]

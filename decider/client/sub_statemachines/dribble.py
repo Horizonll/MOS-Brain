@@ -166,9 +166,9 @@ class DribbleStateMachine:
         检查角度是否合适
         :return: True 表示角度合适，False 表示角度不合适
         """
-        rad1 = math.atan((self.agent.pos_x - 1300) / (4500 - self.agent.pos_y))  # FIXME:球门左侧
+        rad1 = math.atan((self.agent.get_self_pos()[0] - 1300) / (4500 - self.agent.get_self_pos()[1]))  # FIXME:球门左侧
         ang_tar1 = rad1 * 180 / math.pi
-        rad2 = math.atan((self.agent.pos_x + 1300) / (4500 - self.agent.pos_y))  # FIXME:球门右侧
+        rad2 = math.atan((self.agent.get_self_pos()[0] + 1300) / (4500 - self.agent.get_self_pos()[1]))  # FIXME:球门右侧
         ang_tar2 = rad2 * 180 / math.pi
         result = ang_tar1 < self.agent.get_self_yaw() < ang_tar2
         if not result:
@@ -208,7 +208,7 @@ class DribbleStateMachine:
         检查是否可以继续向前
         :return: True 表示可以，False 表示不可以
         """
-        result = self.agent.pos_y < 3000 and abs(self.agent.get_self_yaw() / math.pi * 180 - self.angle_to_goal_rad) < (
+        result = self.agent.get_self_pos()[1] < 3000 and abs(self.agent.get_self_yaw() / math.pi * 180 - self.angle_to_goal_rad) < (
                 20 * math.pi / 180)
         print(f"[DRIBBLE FSM] Ok to forward: {'Yes' if result else 'No'}")
         return result
@@ -227,14 +227,14 @@ class DribbleStateMachine:
         计算角度
         """
         print("[DRIBBLE FSM] Calculating angles...")
-        if self.agent.pos_x > 0:
-            if self.agent.pos_x > 1500:
-                angle_to_goal_rad = math.atan((self.agent.pos_x - 1300) / (4500 - self.agent.pos_y))
+        if self.agent.get_self_pos()[0] > 0:
+            if self.agent.get_self_pos()[0] > 1500:
+                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] - 1300) / (4500 - self.agent.get_self_pos()[1]))
             else:
                 angle_to_goal_rad = 0.0
         else:
-            if self.agent.pos_x < -1500:
-                angle_to_goal_rad = math.atan((self.agent.pos_x + 1300) / (4500 - self.agent.pos_y))
+            if self.agent.get_self_pos()[0] < -1500:
+                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] + 1300) / (4500 - self.agent.get_self_pos()[1]))
             else:
                 angle_to_goal_rad = 0.0
 
