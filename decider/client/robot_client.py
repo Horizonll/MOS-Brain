@@ -69,7 +69,7 @@ class RobotClient:
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client_socket.connect((self.HOST_IP, 8001))
             client_socket.sendall(json.dumps(robot_data).encode("utf-8"))
-            rospy.loginfo("Successfully sent robot data")
+            # rospy.loginfo("Successfully sent robot data")
         except Exception as e:
             rospy.logerr(f"Error sending robot data: {e}")
         finally:

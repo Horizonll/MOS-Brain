@@ -82,7 +82,6 @@ class KickStateMachine:
             print(f"\n[KICK FSM] Current state: {self.state}")
             print(f"[KICK FSM] Triggering 'adjust_position' transition")
             self.adjust_position()  # Changed from trigger to direct call
-            time.sleep(0.3)
 
         if (
             self.state == "finished"
@@ -94,6 +93,7 @@ class KickStateMachine:
             self.agent.kick()
             time.sleep(2)
             print("[KICK FSM] Kick executed successfully!")
+            self.adjust_position()
 
     def stop(self):
         """Stop the robot's movement"""
@@ -166,10 +166,10 @@ class KickStateMachine:
 
             if self.agent.get_neck() > 0:
                 print(f"[LR ADJUST] Moving left (Ball(Neck) Angle: {self.agent.get_neck()})")
-                self.agent.cmd_vel(0, - 0.6 * self._config.get("walk_vel_y", 0.05), 0)
+                self.agent.cmd_vel(0, 0.6 * self._config.get("walk_vel_y", 0.05), 0)
             elif self.agent.get_neck() < -0.25:
                 print(f"[LR ADJUST] Moving right (Ball(Neck) Angle: {self.agent.get_neck()})")
-                self.agent.cmd_vel(0, 0.6 * self._config.get("walk_vel_y", 0.05), 0)
+                self.agent.cmd_vel(0, - 0.6 * self._config.get("walk_vel_y", 0.05), 0)
 
         self.agent.stop()
         print("[LR ADJUST] Lateral adjustment completed")
@@ -262,7 +262,7 @@ class KickStateMachine:
 
     def good_back_forth(self):
         """Check if forward position is correct"""
-        result = (self.agent.get_ball_distance() < 300)
+        result = (self.agent.get_ball_distance() < 0.4)
         self.agent.ready_to_kick = result
         print(
             f"[FB CHECK] Ball Distance: {self.agent.get_ball_distance()} (OK? {'Yes' if result else 'No'})"
