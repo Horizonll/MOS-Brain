@@ -74,7 +74,7 @@ class ChaseBallStateMachine:
         print(f"[CHASE BALL FSM] Triggering 'chase_ball' transition")
         self.machine.model.trigger("chase_ball")
 
-    def move_to_ball(self, ang=0.25):
+    def move_to_ball(self, ang=0.15):
         """Move the agent towards the ball"""
         print("[CHASE BALL FSM] Starting to move towards the ball...")
         ball_pos_in_map = self.agent.get_ball_pos_in_map()
