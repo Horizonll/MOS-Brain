@@ -5,7 +5,6 @@ from transitions import Machine
 from sensor_msgs.msg import JointState
 import time
 import rospy
-from configuration import configuration
 
 class FindBallStateMachine:
     def __init__(self, agent):
@@ -112,7 +111,7 @@ class FindBallStateMachine:
         print("[FIND BALL FSM] Starting rotation...")
         self.agent.cmd_vel(0, 0, self._config.get("walk_vel_theta", 0.3))
         self.rotate_start_time = time.time()  # 记录旋转开始时间
-        print(f"[FIND BALL FSM] Rotating at {self._config.get("walk_vel_theta", 0.3)} rad/s")
+        print(f"[FIND BALL FSM] Rotating at {self._config.get('walk_vel_theta', 0.3)} rad/s")
 
     def stop_rotation(self, event=None):
         """停止旋转"""

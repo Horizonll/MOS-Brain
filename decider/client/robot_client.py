@@ -46,17 +46,15 @@ class RobotClient:
                 robot_data = {
                     "id": self.agent.id if hasattr(self.agent, 'id') else 0,
                     "data": {
-                        "x": self.agent.get_self_pos()[0],
-                        "y": self.agent.get_self_pos()[1],
-                        "ballx": self.agent.get_ball_pos_in_map()[0],
-                        "bally": self.agent.get_ball_pos_in_map()[1],
-                        "yaw": self.agent.get_self_yaw(),
-                        "ifBall": self.ifBall,
-                        "ball_distance": self.ball_distance,
+                        "x": float(self.agent.get_self_pos()[0]),
+                        "y": float(self.agent.get_self_pos()[1]),
+                        "ballx": float(self.agent.get_ball_pos_in_map()[0]),
+                        "bally": float(self.agent.get_ball_pos_in_map()[1]),
+                        "yaw": float(self.agent.get_self_yaw()),
+                        "ball_distance": float(self.agent.get_ball_distance()),
                     },
                     "info": self.agent._command["command"],
                     "timestamp": time.time(),
-                    # "ip": self.ip,
                 }
                 if not self.agent.get_if_ball():
                     robot_data["ballx"] = robot_data["bally"] = None

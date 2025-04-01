@@ -4,7 +4,7 @@ import numpy as np
 
 
 class GoBackToFieldStateMachine:
-    def __init__(self, agent, aim_x, aim_y, min_dist=1000):
+    def __init__(self, agent, aim_x=3300, aim_y=500, min_dist=1000):
         """
         初始化返回场地状态机
 
