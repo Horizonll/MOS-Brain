@@ -16,31 +16,49 @@ class KickStateMachine:
         self.transitions = [
             {
                 "trigger": "adjust_position",
-                "source": ["angle_adjust"],
+                "source": "angle_adjust",
+                "dest": "angle_adjust",
+                "conditions": "not_good_angle",
+                "after": "adjust_angle",
+            },
+            {
+                "trigger": "adjust_position",
+                "source": "angle_adjust",
                 "dest": "horizontal_adjust",
                 "conditions": "good_angle",
-                "after": "adjust_angle",
+            },
+            {
+                "trigger": "adjust_position",
+                "source": "horizontal_adjust",
+                "dest": "horizontal_adjust",
+                "conditions": "not_good_position_horizontally",
+                "after": "adjust_horizontally",
             },
             {
                 "trigger": "adjust_position",
                 "source": "horizontal_adjust",
                 "dest": "back_forth_adjust",
                 "conditions": "good_position_horizontally",
-                "prepare": "adjust_horizontally",
+            },
+            {
+                "trigger": "adjust_position",
+                "source": "back_forth_adjust",
+                "dest": "back_forth_adjust",
+                "conditions": "not_good_back_forth",
+                "after": "adjust_back_forth",
             },
             {
                 "trigger": "adjust_position",
                 "source": "back_forth_adjust",
                 "dest": "finished",
                 "conditions": "good_back_forth",
-                "prepare": "adjust_back_forth",
             },
             {
                 "trigger": "adjust_position",
                 "source": "finished",
                 "dest": "angle_adjust",
                 "conditions": "not_finished",
-                "prepare": "adjust_back_forth",
+                "after": "stop",
             },
         ]
 
@@ -77,6 +95,12 @@ class KickStateMachine:
             time.sleep(2)
             print("[KICK FSM] Kick executed successfully!")
 
+    def stop(self):
+        """Stop the robot's movement"""
+        print("[KICK FSM] Stopping robot...")
+        self.agent.stop()
+        print("[KICK FSM] Robot stopped.")
+
     def adjust_angle(self):
         """Adjust robot's angle relative to goal"""
         print("[ANGLE ADJUST] Starting angle adjustment...")
@@ -111,6 +135,10 @@ class KickStateMachine:
             f"[ANGLE CHECK] Angle delta: {abs(ang_delta):.2f}° (OK? {'Yes' if result else 'No'})"
         )
         return result
+    
+    def not_good_angle(self):
+        """Check if angle is not within acceptable range"""
+        return not self.good_angle()
     
     def not_finished(self):
         """Check if angle is not within acceptable range"""
@@ -153,6 +181,10 @@ class KickStateMachine:
             f"[LR CHECK] Ball(Neck) Angle: {self.agent.get_neck()} (OK? {'Yes' if result else 'No'})"
         )
         return result
+    
+    def not_good_position_horizontally(self):
+        """Check if left-right position is not correct"""
+        return not self.good_position_horizontally()
     
     # def adjust_horizontally(self):
     #     """Adjust left-right position relative to ball"""
@@ -236,3 +268,7 @@ class KickStateMachine:
             f"[FB CHECK] Ball Distance: {self.agent.get_ball_distance()} (OK? {'Yes' if result else 'No'})"
         )
         return result
+    
+    def not_good_back_forth(self):
+        """Check if forward position is not correct"""
+        return not self.good_back_forth()
