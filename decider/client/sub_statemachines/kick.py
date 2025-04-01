@@ -164,7 +164,7 @@ class KickStateMachine:
                 time.sleep(0.2)
                 continue
 
-            if self.agent.get_neck() > 0:
+            if self.agent.get_neck() > -0.1:
                 print(f"[LR ADJUST] Moving left (Ball(Neck) Angle: {self.agent.get_neck()})")
                 self.agent.cmd_vel(0, 0.6 * self._config.get("walk_vel_y", 0.05), 0)
             elif self.agent.get_neck() < -0.25:
@@ -176,7 +176,7 @@ class KickStateMachine:
 
     def good_position_horizontally(self):
         """Check if left-right position is correct"""
-        result = -0.25 <= self.agent.get_neck() <= 0
+        result = -0.25 <= self.agent.get_neck() <= -0.15
         print(
             f"[LR CHECK] Ball(Neck) Angle: {self.agent.get_neck()} (OK? {'Yes' if result else 'No'})"
         )
