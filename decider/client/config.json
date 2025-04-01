@@ -1,8 +1,8 @@
 {
     // velocities
-    "max_vel_x": 0.1,
-    "max_vel_y": 0.05,
-    "max_vel_theta": 0.3,
+    "walk_vel_x": 0.1,
+    "walk_vel_y": 0.05,
+    "walk_vel_theta": 0.3,
 
     // networking
     "server_ip": "192.168.9.100", 
@@ -32,5 +32,12 @@
     "move_head_stage_time_gap": 10000,   // second
     "looking_at_ball_integrated": [0.1, 0.1],      // integrated arguments
     "looking_at_ball_arguments": [[0.2, 0.0, 0.02], // P, I, D of head
-                                  [0.2, 0.0, 0.02]] // P, I, D of neck
+                                  [0.2, 0.0, 0.02]], // P, I, D of neck
+    "field_params" : {
+        "LF": [-1000, -1200],
+        "LB": [-1000, -2500],
+        "RF": [0, 3000],
+        "RB": [1000, -2500],
+        "GK": [0, -4000]
+    }
 }

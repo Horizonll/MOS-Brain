@@ -5,13 +5,13 @@ import math
 import time
 from transitions import Machine
 import numpy as np
-from configuration import configuration
 
 
 class ChaseBallStateMachine:
     def __init__(self, agent):
         """Initialize the chase ball state machine with an agent"""
         self.agent = agent
+        self._config = self.agent.get_config()
 
         # Define states and transitions
         self.states = ["chase", "arrived"]
@@ -78,34 +78,31 @@ class ChaseBallStateMachine:
         """Move the agent towards the ball"""
         print("[CHASE BALL FSM] Starting to move towards the ball...")
         ball_pos_in_map = self.agent.get_ball_pos_in_map()
+        pos = self.agent.get_self_pos()
+        yaw = self.agent.get_self_yaw()
         target_angle_rad = (
             -math.atan(
-                (self.agent.ball_x_in_map - self.agent.pos_x)
-                / (self.agent.ball_y_in_map - self.agent.pos_y)
+                (ball_pos_in_map[0] - pos[0])
+                / (ball_pos_in_map[1] - pos[1])
             )
-            - self.agent.pos_yaw * math.pi / 180
-        ) * (self.agent.get_ball_distance())
-
-        # if self.agent.get_ball_distance() < 1:
-        #     # self.agent.head_set(head=0.5, neck=0)
-        # else:
-        #     # self.agent.head_set(head=0, neck=0)
+            - yaw * math.pi / 180
+        ) * (self.agent.get_ball_distance()) * 1.5
 
         if abs(target_angle_rad) > ang:
             print(
                 f"[CHASE BALL FSM] target_angle_rad ({target_angle_rad}) > {ang}. ball_distance: {self.agent.get_ball_distance()}. Rotating..."
             )
             self.agent.cmd_vel(
-                0, 0, - np.sign(target_angle_rad) * configuration.walk_theta_vel
+                0, 0, - np.sign(target_angle_rad) * self._config.get("walk_vel_theta", 0.3)
             )
         elif abs(target_angle_rad) <= ang:
             print(
                 f"[CHASE BALL FSM] target_angle_rad ({target_angle_rad}) <= {ang}. ball_distance: {self.agent.get_ball_distance()} Moving forward..."
             )
             self.agent.cmd_vel(
-                configuration.walk_x_vel,
+                self._config.get("walk_vel_x", 0.3),
                 0,
-                # 2.5 * self.agent.cam_neck * configuration.walk_theta_vel,
+                # 2.5 * self.agent.cam_neck * self._config.get("walk_vel_theta", 0.3),
                 0,
             )
             time.sleep(0.1)

@@ -145,7 +145,7 @@ class Vision:
 
 
     def _soccer_real_callback(self, msg):
-        self._ball_in_map = np.array([msg.x, msg.y])
+        self._ball_pos_in_map = np.array([msg.x, msg.y])
 
 
     def _vision_callback(self, msg):
@@ -199,13 +199,13 @@ class Vision:
         self._move_head(); 
 
     def get_ball_pos(self):
-        return self._ball_pos()
+        return self._ball_pos
 
     def get_ball_pos_in_vis(self):
-        return self._ball_pos_in_vis()
+        return self._ball_pos_in_vis
 
     def get_ball_pos_in_map(self):
-        return self.get_ball_pos_in_map()
+        return self._ball_pos_in_map
 
     def get_if_ball(self):
         return self.get_if_ball()

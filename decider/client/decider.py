@@ -166,6 +166,9 @@ class Agent:
         rospy.loginfo(f"Setting the robot's speed: linear velocity x={vel_x}, "
                 + "y={vel_y}, angular velocity theta={vel_theta}")
 
+    def stop(self):
+        self._action.cmd_vel(0, 0, 0)
+
     def kick(self):
         self._action.do_kick()
         rospy.loginfo("Executing the kicking action")
@@ -194,7 +197,8 @@ class Agent:
     def get_if_close_to_ball(self):
         if self.get_if_ball():
             return 0.1 <= self.get_ball_distance() <= 0.5
-        return math.sqrt((self.pos_x - self.ball_x_in_map) ** 2 + (self.pos_y - self.ball_y_in_map) ** 2) <= 100
+        else:
+            return False
 
     def get_ball_distance(self):
         return self._vision.ball_distance
@@ -204,6 +208,9 @@ class Agent:
 
     def get_head(self):
         return self._vision.head
+    
+    def get_config(self):
+        return self._config
 
 
 def main():

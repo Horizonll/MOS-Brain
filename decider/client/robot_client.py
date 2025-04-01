@@ -46,18 +46,18 @@ class RobotClient:
                 robot_data = {
                     "id": self.agent.id if hasattr(self.agent, 'id') else 0,
                     "data": {
-                        # "x": self.agent.get_self_pos()[0] if hasattr(self.agent, 'get_self_pos') else 0,
-                        # "y": self.agent.get_self_pos()[1] if hasattr(self.agent, 'get_self_pos') else 0,
-                        # "ballx": self.agent.get_ball_pos_in_map()[0] if hasattr(self.agent, 'get_ball_pos_in_map') else 0,
-                        # "bally": self.agent.get_ball_pos_in_map()[1] if hasattr(self.agent, 'get_ball_pos_in_map') else 0,
-                        # "yaw": self.agent.get_self_yaw() if hasattr(self.agent, 'get_self_yaw') else 0,
+                        "x": self.agent.get_self_pos()[0],
+                        "y": self.agent.get_self_pos()[1],
+                        "ballx": self.agent.get_ball_pos_in_map()[0],
+                        "bally": self.agent.get_ball_pos_in_map()[1],
+                        "yaw": self.agent.get_self_yaw(),
                     },
                     "info": self.agent._command["command"],
                     "timestamp": time.time(),
-                    # "ip": self.ip,
+                    "ip": self.ip,
                 }
-                # if not self.agent.get_if_ball()():
-                #     robot_data["ballx"] = robot_data["bally"] = None
+                if not self.agent.get_if_ball():
+                    robot_data["ballx"] = robot_data["bally"] = None
                 self.send_robot_data(robot_data)
                 time.sleep(0.5)
             except Exception as e:
@@ -122,7 +122,7 @@ class RobotClient:
                     if "command" in received_data:
                         self.agent._command = received_data
                     else:
-                        logging.warning("Received message does not contain the 'command' field")
+                        rospy.logwarn("Received message does not contain the 'command' field")
                 except json.JSONDecodeError as e:
                     rospy.logerr(f"JSON decoding error: {e}")
         except Exception as e:
@@ -146,7 +146,7 @@ class RobotClient:
                     rospy.loginfo(f"Updated the host IP address to: {self.HOST_IP}")
                     return self.HOST_IP
                 else:
-                    logging.warning("Received message does not match the expected format")
+                    rospy.logwarn("Received message does not match the expected format")
             except json.JSONDecodeError as e:
                 rospy.logerr(f"JSON decoding error: {e}")
             except KeyboardInterrupt:

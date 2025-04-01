@@ -11,6 +11,7 @@ class FindBallStateMachine:
     def __init__(self, agent):
         """Initialize the find ball state machine with an agent"""
         self.agent = agent
+        self._config = self.agent.get_config()
         self.rotate_start_time = 0  # 记录旋转开始时间
 
         # 定义状态和转换规则
@@ -109,9 +110,9 @@ class FindBallStateMachine:
     def start_rotation(self, event=None):
         """开始旋转身体寻找球"""
         print("[FIND BALL FSM] Starting rotation...")
-        self.agent.cmd_vel(0, 0, configuration.walk_theta_vel)
+        self.agent.cmd_vel(0, 0, self._config.get("walk_vel_theta", 0.3))
         self.rotate_start_time = time.time()  # 记录旋转开始时间
-        print(f"[FIND BALL FSM] Rotating at {configuration.walk_theta_vel} rad/s")
+        print(f"[FIND BALL FSM] Rotating at {self._config.get("walk_vel_theta", 0.3)} rad/s")
 
     def stop_rotation(self, event=None):
         """停止旋转"""
@@ -196,7 +197,7 @@ class FindBallStateMachine:
 #                     neck=configuration.find_neck_pos[pos],
 #                 )
 
-#         self.agent.cmd_vel(0, 0, configuration.walk_theta_vel)
+#         self.agent.cmd_vel(0, 0, self._config.get("walk_vel_theta", 0.3))
 #         t = time.time()
 #         while self.agent.loop() and time.time() - t < 10:
 #             for pos in [0, 3]:

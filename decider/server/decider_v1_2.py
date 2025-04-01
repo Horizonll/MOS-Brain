@@ -424,7 +424,7 @@ class StateMachine:
                     pass
 
                 self.model.play()
-                time.sleep(0.1)
+                time.sleep(0.2)
 
                 if self.model.state == "stop":
                     pass
@@ -717,7 +717,7 @@ class ShootBallStateMachine:
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
         forward_1_distance = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
         forward_2_distance = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
-        result = (forward_1_distance > 0.5 and forward_2_distance > 0.5)
+        result = (forward_1_distance > 500 and forward_2_distance > 500)
         self.logger.debug(
             f"检查球权丢失状态: 前锋1距离={forward_1_distance:.2f}, "
             f"前锋2距离={forward_2_distance:.2f}, {'已丢失' if result else '仍保持'}"
@@ -728,7 +728,7 @@ class ShootBallStateMachine:
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
         forward_1_distance = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
         forward_2_distance = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
-        result = (forward_1_distance < 0.5 or forward_2_distance < 0.5)
+        result = (forward_1_distance < 500 or forward_2_distance < 500)
         self.logger.debug(
             f"检查近距离状态: 前锋1距离={forward_1_distance:.2f}, "
             f"前锋2距离={forward_2_distance:.2f}, {'在范围内' if result else '未接近'}"
