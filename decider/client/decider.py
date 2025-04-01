@@ -38,12 +38,15 @@ from robot_client import RobotClient
 
 class Agent:
     # @public variants:
-    #       VARIANTS             TYPE                 DESCRIPTION
+    #           NONE
     #
     # @public methods:
     #   cmd_vel(vel_x : float, vel_y : float, vel_theta : float)
     #   kick()
-    #   run()
+    #   look_at(head: float, neck: float)
+    #       disable automatically tracking and force to look_at
+    #       use (NaN, NaN) to enable tracking
+    #   
     #
     # @public methods to get varants:
     #       METHODS             TYPE                DESCRIPTION
@@ -182,7 +185,10 @@ class Agent:
         rospy.loginfo(f"Setting the robot's speed: linear velocity x={vel_x}, "
                 + "y={vel_y}, angular velocity theta={vel_theta}")
 
-    def stop(self, sleep_time=0):
+    def look_at(self, args):
+        self._vision.look_at(args)
+    
+    def stop(self):
         self._action.cmd_vel(0, 0, 0)
         time.sleep(sleep_time)
 

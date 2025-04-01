@@ -56,7 +56,7 @@ class RobotClient:
                     },
                     "info": self.agent._command["command"],
                     "timestamp": time.time(),
-                    "ip": self.ip,
+                    # "ip": self.ip,
                 }
                 if not self.agent.get_if_ball():
                     robot_data["ballx"] = robot_data["bally"] = None
