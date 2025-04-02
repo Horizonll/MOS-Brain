@@ -168,7 +168,7 @@ class KickStateMachine:
 
     def good_position_horizontally(self):
         """Check if left-right position is correct"""
-        result = -0.25 <= self.agent.get_neck() <= -0.05
+        result = -0.25 <= self.agent.get_neck() <= 0
         print(
             f"[LR CHECK] Ball(Neck) Angle: {self.agent.get_neck()} (OK? {'Yes' if result else 'No'})"
         )
