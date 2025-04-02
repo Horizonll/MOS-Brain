@@ -148,7 +148,6 @@ class KickStateMachine:
         """Adjust left-right position relative to ball"""
         print("\n[LR ADJUST] Starting lateral adjustment...")
         # self.agent.head_set(head=0.9, neck=0)
-        self.agent.stop(1)
 
         no_ball_count = 0
 
