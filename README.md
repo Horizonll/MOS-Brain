@@ -10,6 +10,11 @@ The decision-rev of MOS-8.5.
 4. 打开终端，运行`python3 ~/MOS-brain/decider/client/local_decider_tester.py`，该操作将启动roscore、视觉、步态、决策程序，需要将机器人平放或提起来防止受损。
 5. 等待步态和视觉程序启动
 6. 在终端中输入指令，机器人将执行相应动作。
+- chase_ball：追球，离得近时会停下
+- shoot：射门，离得近时再执行
+- go_back_to_field：回场，离得近时会停下，默认去(0,2000,0)，可以在local_decider_tester.py中修改
+- find_ball：逆时针转身找球
+- stop：停止，停止所有动作
 
 #### 现存问题
 
