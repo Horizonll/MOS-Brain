@@ -49,6 +49,7 @@ class RobotServer:
 
     async def handle_robot(self, reader, writer):
         addr = writer.get_extra_info('peername')
+        robot_ip = addr[0]  # 提取 IP 地址部分
         robot_id = None
         try:
             while True:
@@ -75,7 +76,7 @@ class RobotServer:
                     self.agent.robots_data[robot_id]['status'] = 'connected'
                     self.agent.robots_data[robot_id]['data'].update(robot_data.get('data'))
                     # 更新机器人的 IP 地址
-                    self.robot_ips[robot_id] = robot_data.get('ip')
+                    self.robot_ips[robot_id] = robot_ip
 
                     self.agent.ball_x = robot_data.get('data').get('ballx')
 
