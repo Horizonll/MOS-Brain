@@ -16,7 +16,7 @@ class KickStateMachine:
         self.transitions = [
             {
                 "trigger": "adjust_position",
-                "source": "angle_adjust",
+                "source": ["angle_adjust", "horizontal_adjust", "back_forth_adjust"],
                 "dest": "angle_adjust",
                 "conditions": "not_good_angle",
                 "after": "adjust_angle",
@@ -29,7 +29,7 @@ class KickStateMachine:
             },
             {
                 "trigger": "adjust_position",
-                "source": "horizontal_adjust",
+                "source": ["horizontal_adjust", "back_forth_adjust"],
                 "dest": "horizontal_adjust",
                 "conditions": "not_good_position_horizontally",
                 "after": "adjust_horizontally",
@@ -151,20 +151,14 @@ class KickStateMachine:
         self.agent.stop(1)
 
         no_ball_count = 0
-        t0 = time.time()
 
         if not self.good_position_horizontally():
-            if time.time() - t0 > 10 or no_ball_count > 5:
-                print("[LR ADJUST] Timeout or lost ball during adjustment!")
-                return
 
             if not self.agent.get_if_ball():
                 no_ball_count += 1
                 print(f"[LR ADJUST] Lost ball ({no_ball_count}/5)")
                 time.sleep(0.2)
-                continue
-
-            if self.agent.get_neck() > -0.05:
+            elif self.agent.get_neck() > -0.05:
                 print(f"[LR ADJUST] Moving left (Ball(Neck) Angle: {self.agent.get_neck()})")
                 self.agent.cmd_vel(0, 0.6 * self._config.get("walk_vel_y", 0.05), 0)
             elif self.agent.get_neck() < -0.25:
