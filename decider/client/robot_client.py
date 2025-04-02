@@ -67,7 +67,10 @@ class RobotClient:
     def send_robot_data(self, robot_data):
         try:
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client_socket.connect((self.HOST_IP, 8001))
+            if self.agent.if_local_test == True:
+                client_socket.connect(('127.0.0.1', 8001))
+            else:
+                client_socket.connect((self.HOST_IP, 8001))
             client_socket.sendall(json.dumps(robot_data).encode("utf-8"))
             # rospy.loginfo("Successfully sent robot data")
         except Exception as e:
