@@ -4,7 +4,7 @@ import numpy as np
 
 
 class GoBackToFieldStateMachine:
-    def __init__(self, agent, aim_x=3300, aim_y=500, min_dist=200):
+    def __init__(self, agent, aim_x=3300, aim_y=500, min_dist=300):
         """
         初始化返回场地状态机
 
@@ -20,6 +20,8 @@ class GoBackToFieldStateMachine:
         self.min_dist = min_dist
         self.last_rotate = 1 # 上次旋转的方向,-1为右，1为左
         self.aim_yaw_last_rotate = 1 # 到达目标位置后，调整yaw的方向避免180度的情况抽搐
+        # 将上次到达目标位置的时间初始化为小于当前时间5分钟
+        self.last_arrive_time = time.time() - 5 * 60
         # 定义状态机的状态
         self.states = [
             "moving_to_target",  # 向目标位置移动
@@ -35,6 +37,7 @@ class GoBackToFieldStateMachine:
                 "source": "yaw_adjusting",
                 "dest": "arrived_at_target",
                 "conditions": "good_yaw",
+                "after": "arrived_stop_moving",
             },
             {
                 "trigger": "update_status",
@@ -58,7 +61,7 @@ class GoBackToFieldStateMachine:
             },
             {
                 "trigger": "update_status",
-                "source": ["coarse_yaw_adjusting", "fine_yaw_adjusting", "moving_to_target", "arrived_at_target"],
+                "source": ["coarse_yaw_adjusting", "fine_yaw_adjusting", "moving_to_target"],
                 "dest": "moving_to_target",
                 "conditions": "dont_need_coarse_yaw_adjustment",
                 "after": "move_forward",
@@ -137,7 +140,11 @@ class GoBackToFieldStateMachine:
         """
         状态机的主运行函数，控制机器人返回场地的整个流程
         """
-        self.agent.look_at([0.0, 0.0])
+        if self.state != "arrived_at_target":
+            self.agent.look_at([0.0, 0.0])
+        else:
+            self.agent.look_at([None, None])
+        
         self.agent.is_going_back_to_field = True
         print("[Go Back to Field FSM] Starting to go back to field...")
         self.aim_x = self.agent.get_command().get('data').get('aim_x', 0)
@@ -173,7 +180,7 @@ class GoBackToFieldStateMachine:
         print(f"[Go Back to Field] dist: {self.go_back_to_field_dist}, yaw_diff: {self.go_back_to_field_yaw_diff}, dir: {self.go_back_to_field_dir}, pos_yaw: {self.agent.get_self_yaw()}")
         self.update_go_back_to_field_status()
         self.agent.cmd_vel(self._config.get("walk_vel_x", 0.3), 0, 0)
-        time.sleep(0.2)
+        
 
     def coarse_yaw_adjust(self):
         """
@@ -215,7 +222,8 @@ class GoBackToFieldStateMachine:
 
         :return: 如果朝向正确返回 True，否则返回 False
         """
-        result = -10 < self.go_back_to_field_yaw_diff < 10
+        aim_yaw_diff = self.aim_yaw - self.agent.get_self_yaw()
+        result = -10 < aim_yaw_diff < 10
         print(f"[Go Back to Field] Good yaw? {'Yes' if result else 'No'}")
         return result
 
@@ -273,12 +281,27 @@ class GoBackToFieldStateMachine:
             self.agent.is_going_back_to_field = False
             print("[Go Back to Field FSM] Arrived at target!")
 
-        def not_arrived(self):
-            """
-            检查是否未到达目标位置
+    def not_arrived(self):
+        """
+        检查是否未到达目标位置
 
-            :return: 如果未到达返回 True，否则返回 False
-            """
-            result = not (self.good_position() or self.good_yaw())
-            print(f"[Go Back to Field] Not arrived? {'Yes' if result else 'No'}")
-            return result
+        :return: 如果未到达返回 True，否则返回 False
+        """
+        if time.time() - self.last_arrive_time < 5:
+            print("[Go Back to Field] Last arrive time is less than 5 seconds ago, not arrived.")
+            return False
+
+        result = not(self.go_back_to_field_dist < self.min_dist * 1.5  and self.good_yaw())
+
+        print(f"[Go Back to Field] Not arrived? {'Yes' if result else 'No'}")
+        return result
+
+    def arrived_stop_moving(self):
+        """
+        到达目标位置后停止移动
+        """
+        print("[Go Back to Field] Stopping moving...")
+        self.agent.stop(0.5)
+        self.update_go_back_to_field_status()
+        self.last_arrive_time = time.time()
+        self.agent.look_at([None, None])

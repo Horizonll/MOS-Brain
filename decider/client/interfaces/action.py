@@ -70,9 +70,9 @@ class Action:
 
     # _action_cb(), etc. : private
     #   Do nothing
-    def _done_cb():
+    def _done_cb(self):
         pass
-    def _feedback_cb():
+    def _feedback_cb(self):
         pass
-    def _action_cb():
+    def _action_cb(self):
         pass

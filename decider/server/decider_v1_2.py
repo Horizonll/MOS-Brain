@@ -169,15 +169,15 @@ class Agent:
             player_pos = [data.get('x'), data.get('y')]
             ball_pos = [data.get('ballx'), data.get('bally')]
 
+            if player_pos[0] is not None:
+                distance = data.get('ball_distance', BIG_NUMBER)
+
             # 检查是否为 NoneType
             if any(v is None for v in player_pos) or any(v is None for v in ball_pos):
                 distance = BIG_NUMBER
             else:
                 distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
 
-            if data.get("ball_distance") is not None:
-                distance = data.get("ball_distance")
-            
             players_distance[robot_id] = distance
             
         return players_distance
@@ -198,8 +198,8 @@ class Agent:
                 else:
                     distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
 
-                if data.get("ball_distance") is not None:
-                    distance = data.get("ball_distance")
+                if player_pos[0] is not None:
+                    distance = data.get('ball_distance', BIG_NUMBER)
                     
                 players_distance[robot_id] = distance
             else:
@@ -339,7 +339,7 @@ class Agent:
     def ball_pos(self):
         return self._ball_pos
 
-    def is_ball_in_control(self):
+    def if_ball_in_sight(self):
         """
         判断球是否在控制中。
 
@@ -430,16 +430,16 @@ class StateMachine:
                     pass
 
                 self.model.play()
-                time.sleep(0.2)
+                time.sleep(0.1)
 
                 if self.model.state == "stop":
                     pass
                 elif self.model.state == "defend":
                     print("defend")
-                    self.model.run_defend_ball()
+                    self.model.run_shoot_ball()
                 elif self.model.state == "dribble":
                     print("dribble")
-                    self.model.run_dribble_ball()
+                    self.model.run_shoot_ball()
                 elif self.model.state == "shoot":
                     # print("shoot")
                     self.model.run_shoot_ball()
@@ -606,7 +606,7 @@ class DribbleBallStateMachine:
         )
 
     def ball_in_control(self):
-        return self.agent.is_ball_in_control()
+        return self.agent.if_ball_in_sight()
 
     def ball_out_of_control(self):
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
@@ -680,7 +680,7 @@ class ShootBallStateMachine:
             },
             {
                 "trigger": "run",
-                "source": ["have_no_ball", "have_ball"],
+                "source": ["have_no_ball"],
                 "dest": "close_to_ball",
                 "conditions": "close_to_ball",
                 "after": ["go_for_possession_avoid_collsion", "log_transition"],
@@ -713,15 +713,19 @@ class ShootBallStateMachine:
             self.logger.info(f"状态变更: {event.transition.source} -> {event.transition.dest}")
 
     def ball_in_control(self):
-        result = self.agent.is_ball_in_control()
-        self.logger.debug(f"检查球权控制状态: {'已控球' if result else '未控球'}")
-        return result
+        players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
+        forward_1_distance = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
+        forward_2_distance = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
+        result1 = (forward_1_distance < 0.5 or forward_2_distance < 0.5)
+
+        self.logger.debug(f"检查球权控制状态: {'已控球' if result1 else '未控球'}")
+        return result1
 
     def ball_out_of_control(self):
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
         forward_1_distance = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
         forward_2_distance = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
-        result = (forward_1_distance > 500 and forward_2_distance > 500)
+        result = (forward_1_distance > 0.8 and forward_2_distance > 0.8)
         self.logger.debug(
             f"检查球权丢失状态: 前锋1距离={forward_1_distance:.2f}, "
             f"前锋2距离={forward_2_distance:.2f}, {'已丢失' if result else '仍保持'}"
@@ -732,7 +736,7 @@ class ShootBallStateMachine:
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
         forward_1_distance = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
         forward_2_distance = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
-        result = (forward_1_distance < 500 or forward_2_distance < 500)
+        result = (forward_1_distance < 0.8 or forward_2_distance < 0.8)
         self.logger.debug(
             f"检查近距离状态: 前锋1距离={forward_1_distance:.2f}, "
             f"前锋2距离={forward_2_distance:.2f}, {'在范围内' if result else '未接近'}"
@@ -787,7 +791,7 @@ class ShootBallStateMachine:
             self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["chase_ball"])
         else:
             self.logger.info("执行策略: 前锋2追球，前锋1待命")
-            self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["stop_moving"])
+            self.agent.publish_command(self.agent.roles_to_id["forward_1"], COMMANDS["stop"])
             self.agent.publish_command(self.agent.roles_to_id["forward_2"], COMMANDS["chase_ball"])
 
 

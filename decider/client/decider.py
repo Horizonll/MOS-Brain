@@ -90,6 +90,7 @@ class Agent:
 
         # Initializing public variables
         self._config = configuration.load_config()
+        self.id = 1
         self._command = {
             "command": "stop",
             "data": {},
@@ -152,7 +153,10 @@ class Agent:
         #               self._command["data"], old_state_machine)
         # self._execute(new_state_machine, "run")
 
-        if self._state_machine_runners.get(self._command["command"]):
+        if ((not self.get_if_ball()) and (self._command["command"] == 'chase_ball' or \
+                                          self._command["command"] == 'kick')):
+            self._state_machine_runners['find_ball']()
+        elif self._state_machine_runners.get(self._command["command"]):
             self._state_machine_runners[self._command["command"]]()
         else:
             logging.debug(f"State machine '{self._command['command']}' not found.")

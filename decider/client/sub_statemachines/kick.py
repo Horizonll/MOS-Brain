@@ -246,7 +246,7 @@ class KickStateMachine:
 
     def good_back_forth(self):
         """Check if forward position is correct"""
-        result = (self.agent.get_ball_distance() < 0.37)
+        result = (self.agent.get_ball_distance() < 0.35)
         self.agent.ready_to_kick = result
         print(
             f"[FB CHECK] Ball Distance: {self.agent.get_ball_distance()} (OK? {'Yes' if result else 'No'})"

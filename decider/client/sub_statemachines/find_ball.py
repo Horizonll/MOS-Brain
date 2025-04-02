@@ -71,16 +71,17 @@ class FindBallStateMachine:
     # 状态检查条件 --------------------------------------------------
     def ball_in_sight(self, event=None):  
         """检查是否看到球"""
-        result = self.agent.ball_in_sight()
+        result = self.agent.get_if_ball()
         print(f"[FIND BALL FSM] Ball in sight: {'Yes' if result else 'No'}")
         return result
 
     def protection_done(self, event=None):  
         """检查保护姿势是否完成（0.5秒超时）"""
-        elapsed = time.time() - self.enter_time
-        result = self.state == "protecting" and elapsed > 0.5
-        print(f"[FIND BALL FSM] Protection done: {'Yes' if result else f'No ({elapsed:.1f}s)'}")
-        return result
+        # elapsed = time.time() - self.enter_time
+        # result = self.state == "protecting" and elapsed > 0.5
+        # print(f"[FIND BALL FSM] Protection done: {'Yes' if result else f'No ({elapsed:.1f}s)'}")
+        # return result
+        return True
 
     def rotation_timeout(self, event=None): 
         """检查旋转是否超时（10秒）"""
@@ -99,11 +100,11 @@ class FindBallStateMachine:
     def set_protect_pose(self, event=None): 
         """设置保护姿势（手臂位置）"""
         print("[FIND BALL FSM] Setting protect pose...")
-        protect_pose = JointState()
-        protect_pose.name = ["L_arm_1", "L_arm_2", "L_arm_3", "R_arm_1", "R_arm_2", "R_arm_3"]
-        protect_pose.position = [0, 1.2, -0.5, 0, -1.2, 0.5]
-        self.agent.joint_goal_publisher.publish(protect_pose)
-        self.enter_time = time.time()  # 记录进入保护姿势的时间
+        # protect_pose = JointState()
+        # protect_pose.name = ["L_arm_1", "L_arm_2", "L_arm_3", "R_arm_1", "R_arm_2", "R_arm_3"]
+        # protect_pose.position = [0, 1.2, -0.5, 0, -1.2, 0.5]
+        # self.agent.joint_goal_publisher.publish(protect_pose)
+        # self.enter_time = time.time()  # 记录进入保护姿势的时间
         print("[FIND BALL FSM] Protect pose set")
 
     def start_rotation(self, event=None):
