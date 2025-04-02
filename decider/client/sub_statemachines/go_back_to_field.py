@@ -132,9 +132,9 @@ class GoBackToFieldStateMachine:
         """
         self.agent.is_going_back_to_field = True
         print("[Go Back to Field FSM] Starting to go back to field...")
-        self.aim_x = self.agent.get_command().get('data').get('x')
-        self.aim_y = self.agent.get_command().get('data').get('y')
-        self.aim_yaw = self.agent.get_command().get('data').get('yaw')
+        self.aim_x = self.agent.get_command().get('data').get('aim_x', 0)
+        self.aim_y = self.agent.get_command().get('data').get('aim_y', 2000)
+        self.aim_yaw = self.agent.get_command().get('data').get('aim_yaw', 0)
         self.update_go_back_to_field_status()
         print(f"\n[Go Back to Field FSM] Current state: {self.state}")
         print("[Go Back to Field FSM] Triggering 'update_status' transition")
