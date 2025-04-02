@@ -69,6 +69,7 @@ class ChaseBallStateMachine:
 
     def run(self):
         """Main execution loop for the state machine"""
+        self.agent.look_at([None, None])
         command = self.agent.get_command()["command"]
         print(
             f"[CHASE BALL FSM] agent.command: {command}, state: {self.state}"
@@ -79,6 +80,8 @@ class ChaseBallStateMachine:
             # self.agent.head_set(head=0.5, neck=0)
             self.stop_moving()
             return
+
+
 
         print(f"\n[CHASE BALL FSM] Current state: {self.state}")
         print(f"[CHASE BALL FSM] Triggering 'chase_ball' transition")
@@ -118,8 +121,7 @@ class ChaseBallStateMachine:
                 # 2.5 * self.agent.cam_neck * self._config.get("walk_vel_theta", 0.3),
                 0,
             )
-            time.sleep(0.1)
-        time.sleep(0.5)
+
         print("[CHASE BALL FSM] Movement step completed.")
 
     def stop_moving(self):

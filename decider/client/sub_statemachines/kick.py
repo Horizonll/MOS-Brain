@@ -75,6 +75,7 @@ class KickStateMachine:
         """Main execution loop for the state machine"""
         print("[KICK FSM] Starting kick sequence...")
         print(f"[KICK FSM] ifBall: {self.agent.get_if_ball()} state: {self.state}")
+        self.agent.look_at([None, None])
         if (self.agent.get_ball_distance() > 0.8) and (self.state != "finished"):
             print("[KICK FSM] Ball is too far. Stopping robot.")
             self.agent.stop()

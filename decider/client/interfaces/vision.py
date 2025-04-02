@@ -75,7 +75,7 @@ class Vision:
 
         self.head = 0.75
         self.neck = 0
-        self._force_look_at = [math.nan, math.nan]
+        self._force_look_at = [None, None]
 
         self._config = config
         self._pos_sub = rospy.Subscriber("/pos_in_map",  \
@@ -114,7 +114,7 @@ class Vision:
                 (self._ball_pos_in_vis_D[1]) / height * args[0][2];
         self.head += addh
         self.neck -= addn
-        self._head_set((self.head, self.neck))
+        self._head_set([self.head, self.neck])
 
 
     def _track_ball_stage_head_up(self):
@@ -145,9 +145,9 @@ class Vision:
     #    @param head: 上下角度，[0,1.5]，1.5下，0上
     #    @param neck: 左右角度，[-1.1,1.1]，-1.1右，1.1左
     def _head_set(self, args):
-        if(not math.isnan(self._force_look_at[0])):
+        if(not self._force_look_at[0] is None):
             args[0] = self._force_look_at[0]
-        if(not math.isnan(self._force_look_at[1])):
+        if(not self._force_look_at[1] is None):
             args[1] = self._force_look_at[1]
         head = np.clip(args[0], 0, 1.5)
         neck = np.clip(args[1], -1.1, 1.1)

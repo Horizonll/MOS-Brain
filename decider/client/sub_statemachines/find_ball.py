@@ -122,6 +122,7 @@ class FindBallStateMachine:
 
     def run(self):
         """运行状态机"""
+        self.agent.look_at([None, None])
         self.step()
         print("[FIND BALL FSM] Running...")
 
