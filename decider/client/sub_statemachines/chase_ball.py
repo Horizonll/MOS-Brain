@@ -47,15 +47,20 @@ class ChaseBallStateMachine:
         print(
             f"[CHASE BALL FSM] Checking if close to ball. Result: {'Yes' if result else 'No'} distance: {self.agent.get_ball_distance()}"
         )
-        return result and (self.agent.get_neck() < 0.7)
+        return result and (self.agent.get_neck() < 0.07)
     
     def not_close_to_ball(self):
         """Check if the agent is close to the ball"""
         result = self.agent.get_if_close_to_ball()
+
+        target_angle_rad = (
+            self.agent.get_neck()
+        ) * (self.agent.get_ball_distance())
+
         print(
             f"[CHASE BALL FSM] Checking if close to ball. Result: {'Yes' if result else 'No'} distance: {self.agent.get_ball_distance()}"
         )
-        return not result
+        return not result and (target_angle_rad < 0.1)
 
     def run(self):
         """Main execution loop for the state machine"""
@@ -74,7 +79,7 @@ class ChaseBallStateMachine:
         print(f"[CHASE BALL FSM] Triggering 'chase_ball' transition")
         self.machine.model.trigger("chase_ball")
 
-    def move_to_ball(self, ang=0.7):
+    def move_to_ball(self, ang=0.1):
         """Move the agent towards the ball"""
         print("[CHASE BALL FSM] Starting to move towards the ball...")
         ball_pos_in_map = self.agent.get_ball_pos_in_map()
@@ -89,7 +94,7 @@ class ChaseBallStateMachine:
         # ) * (self.agent.get_ball_distance()) * 1.5
         target_angle_rad = (
             self.agent.get_neck()
-        )
+        ) * (self.agent.get_ball_distance())
 
         if abs(target_angle_rad) > ang:
             print(
