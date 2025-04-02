@@ -263,7 +263,7 @@ def main():
         signal.signal(signal.SIGINT, sigint_handler)
         while True:
             agent.run()
-            time.sleep(0.3)
+            time.sleep(0.1)
     except KeyboardInterrupt:
         rospy.loginfo("Program interrupted by the user")
         exit()

@@ -47,7 +47,7 @@ class ChaseBallStateMachine:
 
         target_angle_rad = (
             self.agent.get_neck()
-        ) * (self.agent.get_ball_distance())
+        )
 
         print(
             f"[CHASE BALL FSM] Checking if close to ball. Result: {'Yes' if result else 'No'} distance: {self.agent.get_ball_distance()}"
@@ -60,7 +60,7 @@ class ChaseBallStateMachine:
 
         target_angle_rad = (
             self.agent.get_neck()
-        ) * (self.agent.get_ball_distance())
+        )
 
         print(
             f"[CHASE BALL FSM] Checking if close to ball. Result: {'Yes' if result else 'No'} distance: {self.agent.get_ball_distance()}"
@@ -99,7 +99,7 @@ class ChaseBallStateMachine:
         # ) * (self.agent.get_ball_distance()) * 1.5
         target_angle_rad = (
             self.agent.get_neck()
-        ) * (self.agent.get_ball_distance())
+        )
 
         if abs(target_angle_rad) > ang:
             print(
