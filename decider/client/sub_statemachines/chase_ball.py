@@ -80,12 +80,15 @@ class ChaseBallStateMachine:
         ball_pos_in_map = self.agent.get_ball_pos_in_map()
         pos = self.agent.get_self_pos()
         yaw = self.agent.get_self_yaw()
+        # target_angle_rad = (
+        #     -math.atan(
+        #         (ball_pos_in_map[0] - pos[0])
+        #         / (ball_pos_in_map[1] - pos[1])
+        #     )
+        #     - yaw * math.pi / 180
+        # ) * (self.agent.get_ball_distance()) * 1.5
         target_angle_rad = (
-            -math.atan(
-                (ball_pos_in_map[0] - pos[0])
-                / (ball_pos_in_map[1] - pos[1])
-            )
-            - yaw * math.pi / 180
+            self.agent.get_neck()
         ) * (self.agent.get_ball_distance()) * 1.5
 
         if abs(target_angle_rad) > ang:
