@@ -47,7 +47,7 @@ class ChaseBallStateMachine:
         print(
             f"[CHASE BALL FSM] Checking if close to ball. Result: {'Yes' if result else 'No'} distance: {self.agent.get_ball_distance()}"
         )
-        return result
+        return result and (self.agent.get_neck() < 0.7)
     
     def not_close_to_ball(self):
         """Check if the agent is close to the ball"""
