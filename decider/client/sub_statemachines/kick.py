@@ -153,7 +153,7 @@ class KickStateMachine:
         no_ball_count = 0
         t0 = time.time()
 
-        while not self.good_position_horizontally():
+        if not self.good_position_horizontally():
             if time.time() - t0 > 10 or no_ball_count > 5:
                 print("[LR ADJUST] Timeout or lost ball during adjustment!")
                 return
@@ -171,10 +171,6 @@ class KickStateMachine:
                 print(f"[LR ADJUST] Moving right (Ball(Neck) Angle: {self.agent.get_neck()})")
                 self.agent.cmd_vel(0, - 0.6 * self._config.get("walk_vel_y", 0.05), 0)
 
-            
-
-        self.agent.stop()
-        print("[LR ADJUST] Lateral adjustment completed")
 
     def good_position_horizontally(self):
         """Check if left-right position is correct"""
@@ -241,25 +237,12 @@ class KickStateMachine:
     def adjust_back_forth(self):
         """Adjust forward-backward position relative to ball"""
         print("\n[FB ADJUST] Starting forward adjustment...")
-        self.agent.stop(0.5)
-        t0 = time.time()
-        no_ball_count = 0
 
-        while not self.good_back_forth():
-            if time.time() - t0 > 10 or no_ball_count > 5:
-                print("[FB ADJUST] Timeout or lost ball during adjustment!")
-                return
-
-            if not self.agent.get_if_ball():
-                no_ball_count += 1
-                print(f"[FB ADJUST] Lost ball ({no_ball_count}/5)")
-                time.sleep(0.7)
-                continue
+        if not self.good_back_forth():
 
             print(f"[FB ADJUST] Moving forward (Current Distance: {self.agent.get_ball_distance()})")
             self.agent.cmd_vel(0.5 * self._config.get("walk_vel_x", 0.3), 0, 0)
 
-        self.agent.stop(0.5)
         print("[FB ADJUST] Forward adjustment completed")
 
     def good_back_forth(self):
