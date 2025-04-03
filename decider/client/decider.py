@@ -45,14 +45,9 @@ class Agent:
     # @public methods:
     #   cmd_vel(vel_x : float, vel_y : float, vel_theta : float)
     #   kick()
-    #   look_at(head: float, neck: float)
+    #   look_at([head, neck]: float list[2])
     #       disable automatically tracking and force to look_at
     #       use (NaN, NaN) to enable tracking
-    #   
-    #   look_at(head: float, neck: float)
-    #       disable automatically tracking and force to look_at
-    #       use (NaN, NaN) to enable tracking
-    #   
     #
     # @public methods to get varants:
     #       METHODS             TYPE                DESCRIPTION
@@ -129,30 +124,10 @@ class Agent:
             "stop": self.stop,
         }
 
-        # for py_file in py_files:
-        #    print("found : " + py_file)
-        #    module_name = py_file.split('.')[-1] # also class name
-        #    eval_str = "self._state_machine[\"" + module_name + "\"] = " \
-        #                + py_file + "." + module_name
-        #    exec(eval_str) 
-
         rospy.loginfo("Agent instance initialization completed")
 
+
     def run(self):
-        # if(self._command == self._lst_command):
-        #     self._execute(self._command["command"], "run")
-        #     return
-        # if(self._command == self._lst_command):
-        #     self._execute(self._command["command"], "run")
-        #     return
-
-        # old_state_machine = self._lst_command["command"]
-        # new_state_machine = self._command["command"]
-        # self._execute(old_state_machine, "stop", new_state_machine)
-        # self._execute(new_state_machine, "start", 
-        #               self._command["data"], old_state_machine)
-        # self._execute(new_state_machine, "run")
-
         if ((not self.get_if_ball()) and (self._command["command"] == 'chase_ball' or \
                                           self._command["command"] == 'kick')):
             self._state_machine_runners['find_ball']()
@@ -161,43 +136,10 @@ class Agent:
         else:
             logging.debug(f"State machine '{self._command['command']}' not found.")
             self.stop()
-        # old_state_machine = self._lst_command["command"]
-        # new_state_machine = self._command["command"]
-        # self._execute(old_state_machine, "stop", new_state_machine)
-        # self._execute(new_state_machine, "start", 
-        #               self._command["data"], old_state_machine)
-        # self._execute(new_state_machine, "run")
-
-
-    # private: _execute: call state machines method
-    def _execute(self, statemachine, func_name, *args):
-        if(statemachine == "stop"):
-            return
-        eval_str = "self._statemachine[" + statemachine + "]." \
-                    + func_name + "("
-        for index, arg in enumerate(args):
-            if(index != 0):
-                eval_str += ","
-            eval_str += str(arg)
-        eval_str += ")"
-        logging.debug("run " + eval_str)
-        try:
-            eval(eval_str)
-        except Exception as  e:
-            pass
-
-
-    # private: _get_python_files: find all python file in a directory
-    @staticmethod
-    def _get_python_files(sub_dir):
-        py_files = []
-        for filename in os.listdir(sub_dir):
-            if filename.endswith('.py') and not filename.startswith("_"):
-                py_files.append(sub_dir[:-2] + "." + filename[:-3])
-        return py_files
 
 
     # The following are some simple encapsulations of interfaces
+    # The implementation of the apis may be change in the future
     def cmd_vel(self, vel_x: float, vel_y: float, vel_theta: float):
         self._action.cmd_vel(vel_x, vel_y, vel_theta)
         rospy.loginfo(f"Setting the robot's speed: linear velocity x={vel_x}, "
