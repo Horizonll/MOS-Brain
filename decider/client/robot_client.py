@@ -44,7 +44,7 @@ class RobotClient:
         while True:
             try:
                 robot_data = {
-                    "id": self.agent.get_config()["id"]
+                    "id": self.agent.get_config()["id"],
                     "data": {
                         "x": float(self.agent.get_self_pos()[0]),
                         "y": float(self.agent.get_self_pos()[1]),
