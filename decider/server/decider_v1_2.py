@@ -104,24 +104,6 @@ class Agent:
 
         self._init_state_machine()
 
-    def _init_command_publishers(self):
-        """
-        根据可用球员初始化球员指令发布器。
-
-        """
-        self.command_publishers = {}
-        for player in self.available_players:
-            if player.role == FORWARD_1:
-                self.command_publishers[player.uuid] = rospy.Publisher(f"/player_{player.uuid}/cmd", Twist, queue_size=10)
-            elif player.role == FORWARD_2:
-                self.command_publishers[player.uuid] = rospy.Publisher(f"/player_{player.uuid}/cmd", Twist, queue_size=10)
-            elif player.role == DEFENDER_1:
-                self.command_publishers[player.uuid] = rospy.Publisher(f"/player_{player.uuid}/cmd", Twist, queue_size=10)
-            elif player.role == GOALKEEPER:
-                self.command_publishers[player.uuid] = rospy.Publisher(f"/player_{player.uuid}/cmd", Twist, queue_size=10)
-            else:
-                raise ValueError("Invalid player role")
-
     def _init_state_machine(self):
         """
         初始化状态机。

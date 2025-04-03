@@ -30,7 +30,7 @@ class DribbleStateMachine:
                 "source": ["angle_adjust", "position_adjust"],
                 "dest": "forward",
                 "conditions": "good_position",
-                "after": "drrible_forward",
+                "after": "dribble_forward",
             },
             {
                 "trigger": "dribble",
@@ -208,8 +208,7 @@ class DribbleStateMachine:
         检查是否可以继续向前
         :return: True 表示可以，False 表示不可以
         """
-        result = self.agent.get_self_pos()[1] < 3000 and abs(self.agent.get_self_yaw() / math.pi * 180 - self.angle_to_goal_rad) < (
-                20 * math.pi / 180)
+        result = self.agent.get_self_pos()[1] < 3000 and abs(self.agent.get_self_yaw() / math.pi * 180 - self.angle_to_goal_rad) < (20 * math.pi / 180)
         print(f"[DRIBBLE FSM] Ok to forward: {'Yes' if result else 'No'}")
         return result
 

@@ -4,7 +4,7 @@
     "walk_vel_y": 0.05,
     "walk_vel_theta": 0.3,
     // networking
-    "server_ip": "192.168.9.100",
+    "server_ip": "192.168.9.105",
     "server_port": 8002,
     "auto_find_server_ip": false,
     "auto_find_server_ip_listen_port": 50000,

@@ -82,6 +82,8 @@ class Agent:
     def __init__(self):
         rospy.init_node("decider", log_level=rospy.DEBUG)
         rospy.loginfo("Initializing the Agent instance")
+        
+        self.if_local_test = False
 
         # Initializing public variables
         self._config = configuration.load_config()
@@ -102,6 +104,8 @@ class Agent:
         self._vision = interfaces.vision.Vision(self._config)
         # robot_client: provide functions to communicate with the server
         self._robot_client = RobotClient(self)
+        
+
 
         # Initialize state machines by importing all python files in 
         # sub_statemachines and create a dictionary from command to 

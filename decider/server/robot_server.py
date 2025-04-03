@@ -28,10 +28,10 @@ class RobotServer:
         # 广播端口
         self.udp_port = 8003
         # 启动服务器
-        logging.info(f"Robot server IP: {self.ip}")
+        logging.info(f"Robot server initialized")
 
         # 广播'thmos_hello'消息两次
-        self.broadcast({"message": "thmos_hello", "ip": self.ip})
+        self.broadcast('')
 
         
 
@@ -108,7 +108,7 @@ class RobotServer:
             # logging.info(f"Disconnected from {addr}")
 
     async def start_server(self):
-        server = await asyncio.start_server(self.handle_robot, self.ip, self.port)
+        server = await asyncio.start_server(self.handle_robot, '0.0.0.0', self.port)
         addr = server.sockets[0].getsockname()
         logging.info(f"Serving on {addr}")
         async with server:
