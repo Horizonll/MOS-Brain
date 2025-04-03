@@ -13,16 +13,6 @@ The robot playing on field is called 'client'
 Class ```Agent``` in file **decider.py** is the main class. In method ```__init__```, 
 an ```Agent``` instance loads configuration and initialize sub-instances of Action, 
 Vision and Network. Then, the main() functions call method ```run()``` continously.
-When ```run()``` is call, it receive command from server **asynchronously**. If there 
-is a new command, the Agent will calls the ```stop()``` method of the running statemachine 
-( if exists ), then calls ```start()``` from the up-coming statemachine once ( to load 
-arguments from server, if exists ). Otherwise, the Agent calls the ```run()``` method 
-of the current statemachine.
-
-If there's a new statemachine, Agent will try to load the python modules with the same name.
-Agent searches directory sub_statemachines and import the .py file with the same name, 
-then call its ```__init()__``` method.
-
 
 
 ##### configuration.py
@@ -47,6 +37,7 @@ from vision node. Some network related functions are in ```Network.py```.
 > not ```Action.py```. The reason is that the camera have to look at both the ball and 
 > the field to avoid mistracking, so external controlling of the neck and head will 
 > disturb the algorithm in ```Vision.py```.
+> But although not recommanded, there is a api to disable auto tracking. See apis below
 
 
 ##### directory: sub_statemachines/
@@ -58,9 +49,7 @@ these functions:
 |       method            |                     arguments                |              description                |
 | ----------------------- | -------------------------------------------- | --------------------------------------- |
 | ```__init__(agent)```   |              the instance of Agent           | Initialize your code here               |
-| ```start(args, prev)``` | a dictionary of args; previous statemachine  | Called when started your statemachine   |
 |    ```run()```          |                         None                 | Executing your statemachine             |
-|    ```stop(next)```     |          the name of next statemachine       | Called when your statemachine is stoped |
 
 
 You can call public method and read public variants of the instance ```agent``` given to you in 
@@ -68,3 +57,45 @@ You can call public method and read public variants of the instance ```agent``` 
 
 Please do not use methods started with a underline, cause their behaviour may change in
 the further updates. You should not access private variants directly either. 
+
+### APIs and Interfaces
+
+Every sub-statemachine should be placed under directory sub_statemachine.
+Add your class name to __init__.py.
+
+Your class have to provide a run() method, which MUST NOT CONTAIN ANY LOOPS.
+If there is, change it to a statemachine. 
+
+##### APIs from Agent
+
+The __init__ entry of your class should receive a Agent() object, which provides you
+all the apis you need.   
+  
+**cmd_vel(vel_x : float, vel_y : float, vel_theta : float)**
+Publish a velocity() command. Forward, left, anti-clockwise are the positives.
+
+
+**kick()**  
+Publish a kick() command. Notice that the action may not be complete in a slice of time,
+so please handle it.
+
+
+**look_at(head: float, neck: float)**  
+Disable automatically tracking and force to look_at some specific direction
+Use (NaN, NaN) to enable tracking  
+@param head: 上下角度，[0,1.5]，1.5下，0上
+@param neck: 左右角度，[-1.1,1.1]，-1.1右，1.1左
+
+
+**public methods to get varants:**  
+|        METHODS       |      TYPE        |        DESCRIPTION      |
+|:--------------------:|:----------------:|:-----------------------:|
+|get_self_pos()        |  numpy.array     |   self position in map  |
+|get_self_yaw()        |  angle           |   self angle in deg, [-180, 180)  |
+|get_ball_pos()        |  numpy.array     |   ball postiion from robot  |
+|get_ball_pos_in_vis() |  numpy.array     |   ball position in **vision**  |
+|get_ball_pos_in_map() |  numpy.array     |   ball position in global   |
+|get_if_ball()         |  bool            |   whether can find ball  |
+|get_ball_distance()   |  float           |   the distance to the ball  |
+|get_neck()            |  angle           |   the neck angle, left and right  |
+|get_head()            |  angle           |   the head angle, up and down  |
