@@ -88,7 +88,7 @@ python3 ./decider/test/tcp_host_test_reciever.py
     - config.json # 机器人配置文件，暂未使用
     - configuration.py # 机器人配置类，暂未使用
     - decider.py # **机器人决策主程序**
-    - receiver.py # 接收ROS消息的类
+    - receiver.py # 接收裁判盒
     - subscriber.py # ROS订阅者类
   - scripts # 存放启动脚本
     - run_robot_everything.sh # 机器人决策启动脚本

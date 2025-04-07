@@ -57,7 +57,7 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, configuration):
         print("Initialized joint goal publisher on 'motor_goals'.")
 
         # 初始化接收器
-        # self.receiver = Receiver(team=team, player=player, goal_keeper=goal_keeper, debug=rec_debug)
+        self.receiver = Receiver(team=team, player=player, goal_keeper=goal_keeper, debug=rec_debug)
         # print("Initialized Receiver with team={}, player={}, goal_keeper={}, debug={}".format(team, player, goal_keeper, rec_debug))
 
         # 初始化命令和状态
@@ -139,6 +139,8 @@ class Agent(Decision_Pos, Decision_Motion, Decision_Vision, configuration):
                     "info": self.info,
                     "timestamp": time.time(),
                     "ip": self.ip,
+                    "game_state": self.receiver.game_state,
+                    "kick_off": self.receiver.kick_off,
                 }
                 if not self.ifBall:
                     robot_data["ballx"] = robot_data["bally"] = None

@@ -126,6 +126,10 @@ ReturnData = Struct(
 
 class Receiver:
     def __init__(self, team, player, goal_keeper, debug):
+        """
+        game_state: 比赛状态
+        kick_off: 是否开球
+        """
         self.ip = "0.0.0.0"  # 本地ip
         self.listen_port = 3838  # 本地端口
         self.answer_port = 3939  # 服务器端口
@@ -137,6 +141,7 @@ class Receiver:
         self.opposite_team = 1 - team  # 对面球队编号
         self.player = player  # 球员序号（0-10，上场只有4个）
         self.game_state = None  # 比赛状态
+        self.kick_off = None  # 是否开球
         self.data = None  # 获取消息数据
         self.player_info = None  # 球员信息
         self.penalized_time = 0  # 罚时倒计时
@@ -184,7 +189,9 @@ class Receiver:
             self.opposite_team_color = self.data.teams[
                 self.opposite_team
             ].team_color  # 对面队员颜色
-
+            self.kick_off = (
+                True if self.data.kick_of_team == self.team else False
+            )  # 是否开球
         # 解释报错
         except AssertionError as ae:
             self.logger.error(ae.message)
@@ -209,6 +216,7 @@ class Receiver:
         print("-----------message-----------")
         # print(self.data)
         print(self.game_state)
+        print(self.kick_off)
         # print(self.penalized_time)
         # print(self.red_card)
         # print(self.player_info)

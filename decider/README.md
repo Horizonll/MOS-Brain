@@ -30,6 +30,7 @@ robot_data = {
     "bally": self.ball_y_in_map,
     "yaw": self.pos_yaw,
     "info": self.info,
+    "kick_off": self.receiver.kick_off,
 }
 ```
 
