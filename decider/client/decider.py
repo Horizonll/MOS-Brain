@@ -119,17 +119,19 @@ class Agent:
         self.find_ball_state_machine = sub_statemachines.FindBallStateMachine(self)
         self.kick_state_machine = sub_statemachines.KickStateMachine(self)
         self.go_back_to_field_state_machine = sub_statemachines.GoBackToFieldStateMachine(self)
+        self.dribble_state_machine = sub_statemachines.DribbleStateMachine(self)
+
 
         self._state_machine_runners = {
             "chase_ball": self.chase_ball_state_machine.run,
             "find_ball": self.find_ball_state_machine.run,
             "kick": self.kick_state_machine.run,
             "go_back_to_field": self.go_back_to_field_state_machine.run,
+            "dribble": self.dribble_state_machine.run,
             "stop": self.stop,
         }
 
         rospy.loginfo("Agent instance initialization completed")
-
 
     def run(self):
         if ((not self.get_if_ball()) and (self._command["command"] == 'chase_ball' or \
@@ -170,7 +172,23 @@ class Agent:
         return self._vision.self_yaw
 
     def get_ball_pos(self):
-        return self._vision.get_ball_pos()
+        if self.get_if_ball():
+            return self._vision.get_ball_pos()
+        else:
+            return [None, None]
+    
+    def get_ball_angle(self):
+        ball_pos = self.get_ball_pos()
+        ball_x = ball_pos[0]
+        ball_y = ball_pos[1]
+        if ball_pos is not None:
+            if ball_x == 0 and ball_y == 0:
+                return None
+            else:
+                angle_rad = - math.atan2(ball_x, ball_y)
+                return angle_rad
+        else:
+            return None
 
     def get_ball_pos_in_vis(self):
         return self._vision.get_ball_pos_in_vis()
@@ -189,7 +207,10 @@ class Agent:
             return False
 
     def get_ball_distance(self):
-        return self._vision.ball_distance
+        if self.get_if_ball():
+            return self._vision.ball_distance
+        else:
+            return 1e6
 
     def get_neck(self):
         return self._vision.neck

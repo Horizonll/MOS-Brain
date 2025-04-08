@@ -163,19 +163,19 @@ class KickStateMachine:
                 no_ball_count += 1
                 print(f"[LR ADJUST] Lost ball ({no_ball_count}/5)")
                 time.sleep(0.2)
-            elif self.agent.get_neck() > -0.05:
-                print(f"[LR ADJUST] Moving left (Ball(Neck) Angle: {self.agent.get_neck()})")
+            elif self.agent.get_ball_angle() > -0.05:
+                print(f"[LR ADJUST] Moving left (Ball(Neck) Angle: {self.agent.get_ball_angle()})")
                 self.agent.cmd_vel(-0.05, 0.6 * self._config.get("walk_vel_y", 0.05), 0)
-            elif self.agent.get_neck() < -0.15:
-                print(f"[LR ADJUST] Moving right (Ball(Neck) Angle: {self.agent.get_neck()})")
+            elif self.agent.get_ball_angle() < -0.15:
+                print(f"[LR ADJUST] Moving right (Ball(Neck) Angle: {self.agent.get_ball_angle()})")
                 self.agent.cmd_vel(-0.05, - 0.6 * self._config.get("walk_vel_y", 0.05), 0)
 
 
     def good_position_horizontally(self):
         """Check if left-right position is correct"""
-        result = -0.15 <= self.agent.get_neck() <= -0.05
+        result = -0.15 <= self.agent.get_ball_angle() <= -0.05
         print(
-            f"[LR CHECK] Ball(Neck) Angle: {self.agent.get_neck()} (OK? {'Yes' if result else 'No'})"
+            f"[LR CHECK] Ball(Neck) Angle: {self.agent.get_ball_angle()} (OK? {'Yes' if result else 'No'})"
         )
         return result
     
