@@ -1,5 +1,5 @@
-# gamebox.py
-#   @description:   Utilities to connect with the game box
+# receiver.py
+#   @description:   Utilities to connect with the game controller
 import socket
 import logging
 import threading
@@ -126,14 +126,14 @@ ReturnData = Struct(
 """
 
 
-class Gamebox:
-    def __init__(self, team, player, goal_keeper, debug):
+class Receiver:
+    def __init__(self, team, player, goal_keeper=False, debug=True):
         self.ip = "0.0.0.0"  # 本地ip
         self.listen_port = 3838  # 本地端口
         self.answer_port = 3939  # 服务器端口
 
         self.debug = debug
-
+        self.kick_off = False  # 是否开球
         self.team_input = team  # 来自初始化的team序号，用于改变上下半场team序号
         self.team = team  # 队伍序号（0或1）
         self.opposite_team = 1 - team  # 对面球队编号
@@ -178,6 +178,10 @@ class Gamebox:
             if not self.data.first_half:
                 self.team = 1 - self.team_input
                 self.opposite_team = 1 - self.team
+            self.kick_of_team = self.data.kick_of_team  # 开球队
+            self.kick_off = (
+                True if self.kick_of_team == self.team else False
+            )  # 是否开球
             self.player_info = self.data.teams[self.team].players[
                 self.player
             ]  # player信息

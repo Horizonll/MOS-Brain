@@ -35,7 +35,7 @@ import interfaces.vision
 
 # Network
 from robot_client import RobotClient
-
+from receiver import Receiver
 
 class Agent:
     # @public variants:
@@ -104,7 +104,7 @@ class Agent:
         self._vision = interfaces.vision.Vision(self._config)
         # robot_client: provide functions to communicate with the server
         self._robot_client = RobotClient(self)
-        
+        self.receiver = Receiver(self._config["team"], self._config["player"])
 
 
         # Initialize state machines by importing all python files in 
