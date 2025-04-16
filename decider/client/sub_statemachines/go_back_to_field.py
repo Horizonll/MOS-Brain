@@ -136,7 +136,7 @@ class GoBackToFieldStateMachine:
         print(f"[Go Back to Field] Arrived at target? {'Yes' if result else 'No'}")
         return result
 
-    def run(self):
+    def run(self, aim_x=0, aim_y=0, aim_yaw=0):
         """
         状态机的主运行函数，控制机器人返回场地的整个流程
         """

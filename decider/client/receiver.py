@@ -17,6 +17,7 @@ from construct import (
     Flag,
     Int16sl,
 )
+import rospy
 
 
 # 以下是 GameState
@@ -150,7 +151,7 @@ class Receiver:
         self.is_goalkeeper = goal_keeper  # 守门员
         self.peer = None  # 服务器（ip， 端口）
 
-        logging = logging.getLogger("game_controller")  # 创建logger
+        # logging = logging.getLogger("game_controller")  # 创建logger
 
         self.socket1 = socket.socket(
             socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP
