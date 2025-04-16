@@ -17,6 +17,7 @@ from construct import (
     Flag,
     Int16sl,
 )
+import rospy
 
 import rospy
 
