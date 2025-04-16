@@ -16,9 +16,16 @@ class KickStateMachine:
         self.transitions = [
             {
                 "trigger": "adjust_position",
-                "source": ["angle_adjust", "horizontal_adjust", "back_forth_adjust"],
+                "source": ["angle_adjust"],
                 "dest": "angle_adjust",
                 "conditions": "not_good_angle",
+                "after": "adjust_angle",
+            },
+{
+                "trigger": "adjust_position",
+                "source": ["horizontal_adjust", "back_forth_adjust"],
+                "dest": "angle_adjust",
+                "conditions": "really_not_good_angle",
                 "after": "adjust_angle",
             },
             {
@@ -29,7 +36,7 @@ class KickStateMachine:
             },
             {
                 "trigger": "adjust_position",
-                "source": ["horizontal_adjust", "back_forth_adjust"],
+                "source": ["horizontal_adjust"],
                 "dest": "horizontal_adjust",
                 "conditions": "not_good_position_horizontally",
                 "after": "adjust_horizontally",
@@ -142,6 +149,18 @@ class KickStateMachine:
         )
         return result
     
+    def really_not_good_angle(self):
+        """Check if angle is within acceptable range"""
+        target_angle_rad = math.atan((self.agent.get_self_pos()[0] - 0) / (4500 - self.agent.get_self_pos()[1]))
+        ang_tar = target_angle_rad * 180 / math.pi
+        ang_delta = ang_tar - self.agent.get_self_yaw()
+        result = abs(ang_delta) < 30
+
+        print(
+            f"[ANGLE CHECK] Angle delta: {abs(ang_delta):.2f}° (OK? {'Yes' if result else 'No'})"
+        )
+        return not result
+    
     def not_good_angle(self):
         """Check if angle is not within acceptable range"""
         return not self.good_angle()
@@ -173,7 +192,8 @@ class KickStateMachine:
 
     def good_position_horizontally(self):
         """Check if left-right position is correct"""
-        result = -0.15 <= self.agent.get_ball_angle() <= -0.05
+        ball_x = self.agent.get_ball_pos()[0]
+        result = 0 < ball_x < 30
         print(
             f"[LR CHECK] Ball(Neck) Angle: {self.agent.get_ball_angle()} (OK? {'Yes' if result else 'No'})"
         )
@@ -237,16 +257,18 @@ class KickStateMachine:
         """Adjust forward-backward position relative to ball"""
         print("\n[FB ADJUST] Starting forward adjustment...")
 
-        if not self.good_back_forth():
 
-            print(f"[FB ADJUST] Moving forward (Current Distance: {self.agent.get_ball_distance()})")
+        print(f"[FB ADJUST] Moving forward (Current Distance: {self.agent.get_ball_distance()})")
+        if self.agent.get_ball_distance() > 0.33:
             self.agent.cmd_vel(0.5 * self._config.get("walk_vel_x", 0.3), 0, 0)
+        elif self.agent.get_ball_distance() < 0.33:
+            self.agent.cmd_vel(-0.5 * self._config.get("walk_vel_x", 0.3), 0, 0)
 
         print("[FB ADJUST] Forward adjustment completed")
 
     def good_back_forth(self):
         """Check if forward position is correct"""
-        result = (self.agent.get_ball_distance() < 0.35)
+        result = (0.3 < self.agent.get_ball_distance() < 0.35)
         self.agent.ready_to_kick = result
         print(
             f"[FB CHECK] Ball Distance: {self.agent.get_ball_distance()} (OK? {'Yes' if result else 'No'})"

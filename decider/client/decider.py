@@ -104,7 +104,7 @@ class Agent:
         self._vision = interfaces.vision.Vision(self._config)
         # robot_client: provide functions to communicate with the server
         self._robot_client = RobotClient(self)
-        self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"])
+        # self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"])
 
 
         # Initialize state machines by importing all python files in 
@@ -202,7 +202,7 @@ class Agent:
 
     def get_if_close_to_ball(self):
         if self.get_if_ball():
-            return 0.1 <= self.get_ball_distance() <= 0.5
+            return 0.1 <= self.get_ball_distance() <= 0.4
         else:
             return False
 
