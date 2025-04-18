@@ -104,7 +104,7 @@ class Agent:
         self._vision = interfaces.vision.Vision(self._config)
         # robot_client: provide functions to communicate with the server
         self._robot_client = RobotClient(self)
-        # self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"])
+        self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"])
 
 
         # Initialize state machines by importing all python files in 
@@ -134,7 +134,11 @@ class Agent:
         rospy.loginfo("Agent instance initialization completed")
 
     def run(self):
-        if ((not self.get_if_ball()) and (self._command["command"] == 'chase_ball' or \
+        if self.receiver.game_state == 'STATE_SET':
+            self.stop()
+        elif self.receiver.game_state == 'STATE_READY':
+            self._state_machine_runners['go_back_to_field']()
+        elif ((not self.get_if_ball()) and (self._command["command"] == 'chase_ball' or \
                                           self._command["command"] == 'kick')):
             self._state_machine_runners['find_ball']()
         elif self._state_machine_runners.get(self._command["command"]):
