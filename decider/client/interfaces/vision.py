@@ -110,13 +110,13 @@ class Vision:
             self._head_fsm_id = 0
         elif(not self_lost and ball_lost):
             self._head_fsm_id = 1
-        elif(self_lost and not ball_lost):
-            self._head_fsm_id = 2
-        elif(self_lost and ball_lost):
-            if(self._head_fsm_id == 3):
-                self._head_fsm_id = 4
-            else:
-                self._head_fsm_id = 3
+        # elif(self_lost and not ball_lost):
+        #     self._head_fsm_id = 2
+        # elif(self_lost and ball_lost):
+        #     if(self._head_fsm_id == 3):
+        #         self._head_fsm_id = 4
+        #     else:
+        #         self._head_fsm_id = 3
 
         if(self._head_fsm_id == 0):
             self._head_fsm_track_ball()

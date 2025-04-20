@@ -42,7 +42,7 @@
             0.2
         ]
     ], // P, I, D of neck
-    "self_pos_accuracy_critical": 0.05, // when accuracy is lower than this, 
+    "self_pos_accuracy_critical": 0.0, // when accuracy is lower than this, 
     // self_pos is considered lost
     "ball_pos_accuracy_critical": 0.1, // when accuracy is lower than this, 
     // ball is considered lost
