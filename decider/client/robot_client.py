@@ -55,8 +55,8 @@ class RobotClient:
                     },
                     "info": self.agent._command["command"],
                     "timestamp": time.time(),
-                    # "game_state": self.agent.receiver.game_state,
-                    # "kick_off": self.agent.receiver.kick_off,
+                    "game_state": self.agent.receiver.game_state,
+                    "kick_off": self.agent.receiver.kick_off,
                 }
                 if not self.agent.get_if_ball():
                     robot_data["ballx"] = robot_data["bally"] = None
