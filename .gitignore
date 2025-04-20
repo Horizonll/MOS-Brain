@@ -3,3 +3,4 @@
 .env/
 config_override.json
 *.swp
+agent.log

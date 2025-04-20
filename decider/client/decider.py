@@ -134,12 +134,11 @@ class Agent:
         rospy.loginfo("Agent instance initialization completed")
 
     def run(self):
-        # if self.receiver.game_state == "ready" or self.receiver.game_state == "set":
-        #     self._action.cmd_vel(0, 0, 0)
-        #     self._action.stop()
-        #     return
-        # el
-        if ((not self.get_if_ball()) and (self._command["command"] == 'chase_ball' or \
+        if self.receiver.game_state == 'STATE_SET':
+            self.stop()
+        elif self.receiver.game_state == 'STATE_READY':
+            self._state_machine_runners['go_back_to_field']()
+        elif ((not self.get_if_ball()) and (self._command["command"] == 'chase_ball' or \
                                           self._command["command"] == 'kick')):
             self._state_machine_runners['find_ball']()
         elif self._state_machine_runners.get(self._command["command"]):

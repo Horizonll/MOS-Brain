@@ -56,13 +56,12 @@ class RobotServer:
                 data_received = await reader.read(1024)
                 if not data_received:
                     break
-                receive_time = time.time()
                 try:
                     robot_data = json.loads(data_received.decode("utf-8"))
-                    print(robot_data)
-                    send_time_str = robot_data.get('send_time')
-                    if send_time_str:
-                        send_time = float(send_time_str)
+                    logging.debug(
+                        f"Received data from robot {robot_id}:"
+                        f" {robot_data}"
+                    )
                     robot_id = robot_data["id"]
                     # logging.info(f"Received data from robot {robot_id}: {robot_data}")
                     # 更新机器人 IP 地址
@@ -84,7 +83,7 @@ class RobotServer:
                         self.agent.ifBall = True
                     else:
                         self.agent.ifBall = False
-                    
+
                     # # 构建响应消息
                     # response = {
                     #     "status": "received",
@@ -116,7 +115,7 @@ class RobotServer:
 
     async def monitor_robots(self):
         while True:
-            logging.info("\nRobot Status:")
+            logging.info("Robot Status:")
             current_time = time.time()  # 获取当前时间
 
             for robot_id, data in self.agent.robots_data.items():
@@ -125,7 +124,7 @@ class RobotServer:
                 last_seen = data['last_seen']
                 if last_seen is None:
                     # 如果 last_seen 为 None，说明还没有收到过该机器人的数据
-                    logging.info(f"Robot ID: {robot_id}, Last Seen: None, Status: {data['status']}")
+                    logging.debug(f"Robot ID: {robot_id}, Last Seen: None, Status: {data['status']}")
                     continue
                 # 将上次更新时间转换为时间戳
                 last_seen = datetime.fromisoformat(last_seen).timestamp()
@@ -135,7 +134,7 @@ class RobotServer:
                 if time_diff > 5:
                     data['status'] = 'disconnected'
 
-                logging.info(f"Robot ID: {robot_id}, Last Seen: {data['last_seen']}, "
+                logging.debug(f"Robot ID: {robot_id}, Last Seen: {data['last_seen']}, "
                             f"Status: {data['status']}")
 
             await asyncio.sleep(10)  # 每5秒检查一次
@@ -154,8 +153,9 @@ class RobotServer:
             except Exception as e:
                 logging.error(f"Failed to send data to robot {robot_id}: {e}")
         else:
-            logging.error(f"No IP address found for robot {robot_id}")
-            print(self.robot_ips)
+            # logging.error(f"No IP address found for robot {robot_id}")
+            # print(self.robot_ips)
+            pass
 
     def broadcast(self, data):
         broadcast_addr = ('192.168.99.255', self.udp_port)
