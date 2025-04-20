@@ -102,8 +102,10 @@ class Vision:
             return
         self._last_head_fsm_time = time.time()
 
-        self_lost = self._pos_accuracy < self._config["pos_accuracy_critical"]
-        ball_lost = self._ball_accuracy < self._config["ball_accuracy_searching"]
+        self_lost = self._self_pos_accuracy < \
+                self._config["self_pos_accuracy_critical"]
+        ball_lost = self._ball_pos_accuracy < \
+                self._config["ball_pos_accuracy_searching"]
         if(not self_lost and not ball_lost):
             self._head_fsm_id = 0
         elif(not self_lost and ball_lost):
@@ -221,7 +223,7 @@ class Vision:
                     (ball_row[1:3] - self._ball_pos_in_vis) * \
                     0.0001 / (time.time() - self._vision_last_frame_time)
             self._ball_pos_in_vis_I = self._ball_pos_in_vis_I * \
-                    self._config["looking_at_ball_integrated"] +  \
+                    self._config["ball_accuracy_integrated_factor"] +  \
                     ball_row[1:3] - np.array(self._config["vision_size"]) / 2; 
 
             self._ball_pos_in_vis           = ball_row[1:3]
@@ -246,5 +248,5 @@ class Vision:
         return self._ball_pos_in_map
 
     def get_if_ball(self):
-        return self._ball_pos_accuracy > self._config["ball_accuracy_critical"]
+        return self._ball_pos_accuracy > self._config["ball_pos_accuracy_critical"]
 

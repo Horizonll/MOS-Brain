@@ -3,6 +3,7 @@
     "walk_vel_x": 0.1,
     "walk_vel_y": 0.05,
     "walk_vel_theta": 0.3,
+
     // networking
     "server_ip": "192.168.9.105",
     "server_port": 8002,
@@ -10,6 +11,7 @@
     "auto_find_server_ip_listen_port": 50000,
     "auto_find_server_ip_token": "NjM5NWVkMSAgLQo=",
     "max_buffer_size": 1024,
+
     // vision
     "vision_size": [1280, 736 ], // the size of photos used by vision
     "predict_ball_pos": true,
@@ -22,7 +24,7 @@
         "2": 0, // robot
         "3": 5, // L-Intersection
         "4": 5, // T-Intersection
-        "5": 5, // X-Intersection
+        "5": 5 // X-Intersection
     },
     "ball_accuracy_integrated_factor": [0.1, 0.1], // integrated arguments
     "head_fsm_cycle_time": 0.1, // second
@@ -40,9 +42,9 @@
             0.2
         ]
     ], // P, I, D of neck
-    "pos_accuracy_critical": 0.0005, // when accuracy is lower than this, 
+    "self_pos_accuracy_critical": 0.05, // when accuracy is lower than this, 
     // self_pos is considered lost
-    "ball_accuracy_critical": 0.1, // when accuracy is lower than this, 
+    "ball_pos_accuracy_critical": 0.1, // when accuracy is lower than this, 
     // ball is considered lost
     "ball_pos_accuracy_searching": 0.5, // when we move head to search
     // the angle pairs for searching ball
@@ -64,7 +66,7 @@
         [0.7,  0],
         [0.7,  0.3], 
         [0.7,  0.5],
-        [0.7,  0.7]
+        [0.7,  0.7],
         [0.7,  0.5], 
         [0.7,  0.3],
         [0.7,  0],
@@ -92,5 +94,8 @@
             0,
             -4000
         ]
-    }
+    },
+
+    // sundry
+    "team": 1
 }
