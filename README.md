@@ -2,6 +2,12 @@
 
 The decision-rev of MOS-8.5.
 
+### Sync
+command:
+```sh
+rsync -av <path-on-your-computer>/MOS-Brain/ thmos@david:<path-on-robot>/MOS-Brain/ --delete
+```
+
 ### 快速开始
 
 1. 将机器人放置在场上(2600,500,90)处
