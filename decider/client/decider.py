@@ -102,9 +102,11 @@ class Agent:
         # vision: provide functions to get information from the robot, 
         # such as self position and ball position
         self._vision = interfaces.vision.Vision(self._config)
+
+        self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"])
+
         # robot_client: provide functions to communicate with the server
         self._robot_client = RobotClient(self)
-        self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"])
 
 
         # Initialize state machines by importing all python files in 
@@ -139,7 +141,8 @@ class Agent:
         elif self.receiver.game_state == 'STATE_READY':
             self._state_machine_runners['go_back_to_field']()
         elif ((not self.get_if_ball()) and (self._command["command"] == 'chase_ball' or \
-                                          self._command["command"] == 'kick')):
+                                          self._command["command"] == 'kick' or \
+                                            self._command["command"] == 'dribble')):
             self._state_machine_runners['find_ball']()
         elif self._state_machine_runners.get(self._command["command"]):
             self._state_machine_runners[self._command["command"]]()
