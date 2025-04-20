@@ -210,6 +210,8 @@ class Agent:
                 self.logger = logging.getLogger(self.__class__.__name__)
 
             # Log the command sending details
+            cmd = COMMANDS[cmd]
+
             cmd_str = cmd if isinstance(cmd, str) else cmd.get("name", str(cmd))
             self.logger.debug(f"[CMD] Sending command -> Player {player_id}: {cmd_str}")
 
