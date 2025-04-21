@@ -437,12 +437,12 @@ class DribbleStateMachine:
 
         if self.agent.get_ball_pos_in_map()[0] > 0:
             if self.agent.get_ball_pos_in_map()[0] > 1500:
-                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] - 1300) / (4500 - self.agent.get_ball_pos_in_map()[1]))
+                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] - 800) / (4500 - self.agent.get_ball_pos_in_map()[1]))
             else:
                 angle_ball_to_goal = 0.0
         else:
             if self.agent.get_ball_pos_in_map()[0] < -1500:
-                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] + 1300) / (4500 - self.agent.get_ball_pos_in_map()[1]))
+                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] + 800) / (4500 - self.agent.get_ball_pos_in_map()[1]))
             else:
                 angle_ball_to_goal = 0.0
 
