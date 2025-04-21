@@ -11,9 +11,10 @@
     "auto_find_server_ip_token": "NjM5NWVkMSAgLQo=",
     "max_buffer_size": 1024,
     // vision
-    "vision_size": [1280, 736 ], // the size of photos used by vision
-    "predict_ball_pos": true,
-    "predict_ball_pos_in_map": true,
+    "vision_size": [
+        1280,
+        736
+    ], // the size of photos used by vision
     "pos_accuracy_add": {
         // the score 'add' to the self_pos_accuracy
         // when these items appears in vision
@@ -22,12 +23,16 @@
         "2": 0, // robot
         "3": 5, // L-Intersection
         "4": 5, // T-Intersection
-        "5": 5, // X-Intersection
+        "5": 5 // X-Intersection
     },
-    "ball_accuracy_integrated_factor": [0.1, 0.1], // integrated arguments
-    "head_fsm_cycle_time": 0.1, // second
-    "search_ball_cycle_cnt": 2,
-    "relocating_ball_cycle_cnt": 2,
+    "predict_ball_pos": true,
+    "predict_ball_pos_in_map": true,
+    "move_head_time_gap": 0.1, // second
+    "move_head_stage_time_gap": 10000, // second
+    "looking_at_ball_integrated": [
+        0.1,
+        0.1
+    ], // integrated arguments
     "looking_at_ball_arguments": [
         [
             0.4,
@@ -44,33 +49,20 @@
     // self_pos is considered lost
     "ball_accuracy_critical": 0.1, // when accuracy is lower than this, 
     // ball is considered lost
-    "ball_pos_accuracy_searching": 0.5, // when we move head to search
-    // the angle pairs for searching ball
-    "search_ball_head_neck_angle": [
-        [0.1, 0],
-        [0.3, 0],
-        [0.5, 0],
-        [0.7, 0],
-        [0.9, 0],
-        [0.7, 0],
-        [0.5, 0],
-        [0.3, 0],
-        [0.1, 0]
+    "_ball_pos_accuracy_look_around": 0.5, // when accuracy is lower than this,
+    // camera is looking around
+    "search_ball_head_angle": [
+        0.1,
+        0.3,
+        0.5,
+        0.7,
+        0.9,
+        0.7,
+        0.5,
+        0.3,
+        0.1
     ],
-    "relocating_head_neck_angle": [
-        [0.7, -0.7], 
-        [0.7, -0.5],
-        [0.7, -0.3], 
-        [0.7,  0],
-        [0.7,  0.3], 
-        [0.7,  0.5],
-        [0.7,  0.7],
-        [0.7,  0.5], 
-        [0.7,  0.3],
-        [0.7,  0],
-        [0.7, -0.3], 
-        [0.7, -0.5]
-    ],
+    // camera is looking around
     "field_params": {
         "LF": [
             -1000,
