@@ -120,10 +120,8 @@ class Vision:
 
         if(self._head_fsm_id == 0):
             self._head_fsm_track_ball()
-        elif(self._head_fsm_id == 1 or self._head_fsm_id == 3):
+        else:
             self._head_fsm_search_ball()
-        elif(self._head_fsm_id == 2 or self._head_fsm_id == 4):
-            self._head_fsm_relocating()
 
 
     def _head_fsm_track_ball(self):
