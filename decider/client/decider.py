@@ -281,6 +281,8 @@ class Agent:
             float | None: Averaged ball angle in radians, returns None if no valid data
         """
         ball_pos_in_map = self.get_ball_pos_in_map_from_other_robots()
+        logging.debug(f"Ball position in map from other robots: {ball_pos_in_map}")
+        logging.debug(f"Self position: {self.get_self_pos()}")
         if ball_pos_in_map is not None:
             # Calculate angle in radians
             ball_pos_relative = ball_pos_in_map - np.array(self.get_self_pos())
@@ -288,6 +290,8 @@ class Agent:
             angle_relative = angle_rad - self.get_self_yaw() - np.pi / 2
             # Normalize angle to [-pi, pi)
             angle_relative = (angle_relative + np.pi) % (2 * np.pi) - np.pi
+
+            print(f"Ball angle from other robots: {angle_relative}")
 
             return angle_relative
         return None

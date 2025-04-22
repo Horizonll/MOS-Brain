@@ -117,11 +117,11 @@ class RobotClient:
                 if not data:
                     break
                 addr = writer.get_extra_info("peername")
-                rospy.logdebug(f"Received data from {addr}: {data}")
+                # rospy.logdebug(f"Received data from {addr}: {data}")
 
                 try:
                     received_data = json.loads(data.decode("utf-8"))
-                    rospy.logdebug(f"Parsed JSON data: {received_data}")
+                    # rospy.logdebug(f"Parsed JSON data: {received_data}")
 
                     # Here you can handle different commands specifically
                     if "command" in received_data:
