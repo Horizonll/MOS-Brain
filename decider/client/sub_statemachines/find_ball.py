@@ -27,7 +27,7 @@ class FindBallStateMachine:
             },
             {
                 "trigger": "step",
-                "source": "protecting",
+                "source": ["protecting", "rotating"],
                 "dest": "rotating",
                 "conditions": "protection_done",
                 "after": "start_rotation"
