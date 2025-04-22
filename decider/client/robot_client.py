@@ -52,6 +52,7 @@ class RobotClient:
                         "bally": float(self.agent.get_ball_pos_in_map()[1]),
                         "yaw": float(self.agent.get_self_yaw()),
                         "ball_distance": float(self.agent.get_ball_distance()),
+                        "ifBall": int(self.agent.get_if_ball()),
                     },
                     "info": self.agent._command["command"],
                     "timestamp": time.time(),
@@ -117,11 +118,11 @@ class RobotClient:
                 if not data:
                     break
                 addr = writer.get_extra_info("peername")
-                rospy.loginfo(f"Received data from {addr}: {data}")
+                # rospy.logdebug(f"Received data from {addr}: {data}")
 
                 try:
                     received_data = json.loads(data.decode("utf-8"))
-                    rospy.loginfo(f"Parsed JSON data: {received_data}")
+                    # rospy.logdebug(f"Parsed JSON data: {received_data}")
 
                     # Here you can handle different commands specifically
                     if "command" in received_data:

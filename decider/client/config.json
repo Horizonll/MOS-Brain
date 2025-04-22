@@ -28,10 +28,10 @@
     "ball_accuracy_integrated_factor": [0.1, 0.1], // integrated arguments
     "head_fsm_tick_time": 0.1, // seconds for one tick of head fsm
     "head_fsm_ball_pos_tick": 25, 
-    "head_fsm_self_pos_tick": 3,
+    "head_fsm_self_pos_tick": 0,
     "looking_at_ball_arguments": [[0.4,0.0,0.2], // P, I, D of head
         			  [0.4,0.0,0.2]], // P, I, D of neck
-    "self_pos_accuracy_critical": 10, // when accuracy is lower than this, 
+    "self_pos_accuracy_critical": 0, // when accuracy is lower than this, 
     // self_pos is considered lost
     "ball_pos_accuracy_critical": 0.1, // when accuracy is lower than this, 
     // ball is considered lost
@@ -67,7 +67,6 @@
         [0.7, -0.3], 
         [0.7, -0.5]
     ],
-    // camera is looking around
     "field_params": {
         "LF": [
             -1000,
@@ -94,3 +93,4 @@
     // sundry
     "team": 1
 }
+

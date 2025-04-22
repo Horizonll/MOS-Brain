@@ -95,7 +95,7 @@ class Agent:
         }
         self._lst_command = self._command
 
-        self._robots_data = []
+        self._robots_data = {}
         
         rospy.loginfo("Registering interfaces")
         # action: provide functions to control the robot, such as cmd_vel 
@@ -138,6 +138,7 @@ class Agent:
         rospy.loginfo("Agent instance initialization completed")
 
     def run(self):
+
         if self.receiver.game_state == 'STATE_SET':
             self.stop()
         elif self.receiver.game_state == 'STATE_READY':
@@ -158,7 +159,7 @@ class Agent:
     def cmd_vel(self, vel_x: float, vel_y: float, vel_theta: float):
         self._action.cmd_vel(vel_x, vel_y, vel_theta)
         rospy.loginfo(f"Setting the robot's speed: linear velocity x={vel_x}, "
-                + "y={vel_y}, angular velocity theta={vel_theta}")
+                + f"y={vel_y}, angular velocity theta={vel_theta}")
 
     def look_at(self, args):
         self._vision.look_at(args)
@@ -238,16 +239,21 @@ class Agent:
             np.ndarray | None: Averaged ball position in map coordinates (x, y), 
             returns None if no valid data
         """
+        print("Calculating ball position in map from other robots")
+
         valid_positions = []  # Stores valid (x,y) coordinates
 
         # Iterate through all robot data
-        for robot_id, robot_data in self.robots_data.items():
+        for robot_id, robot_data in self.get_robots_data().items():
+            print(f"Robot ID: {robot_id}, Data: {robot_data}")
+            # robot id 转换为 int
+            robot_id = int(robot_id)
             # Skip self and disconnected robots
             if robot_id == self.id or robot_data.get('status') != 'connected':
                 continue
 
             # Check ball detection status
-            if robot_data.get('ifBall', False):
+            if robot_data.get("data").get('ifBall', False):
                 # Extract coordinates
                 ballx = robot_data['data'].get('ballx')
                 bally = robot_data['data'].get('bally')
@@ -279,13 +285,20 @@ class Agent:
             float | None: Averaged ball angle in radians, returns None if no valid data
         """
         ball_pos_in_map = self.get_ball_pos_in_map_from_other_robots()
+        logging.debug(f"Ball position in map from other robots: {ball_pos_in_map}")
+        logging.debug(f"Self position: {self.get_self_pos()}")
         if ball_pos_in_map is not None:
             # Calculate angle in radians
             ball_pos_relative = ball_pos_in_map - np.array(self.get_self_pos())
-            angle_rad = -math.atan2(ball_pos_relative[0], ball_pos_relative[1])
-            angle_relative = angle_rad - self.get_self_yaw() - np.pi / 2
+            print(f"Ball position relative to self: {ball_pos_relative}")
+            angle_rad = math.atan2(ball_pos_relative[1], ball_pos_relative[0])
+            print(f"Ball angle in radians: {angle_rad}")
+            angle_relative = angle_rad - (self.get_self_yaw() / 180 * np.pi) - np.pi / 2
+            print(f"Ball angle relative to self: {angle_relative}")
             # Normalize angle to [-pi, pi)
-            angle_relative = (angle_relative + np.pi) % (2 * np.pi) - np.pi
+            angle_relative = (angle_relative + math.pi) % (2 * math.pi) - math.pi
+
+            print(f"Ball angle from other robots: {angle_relative}")
 
             return angle_relative
         return None
