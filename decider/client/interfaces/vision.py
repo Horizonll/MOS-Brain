@@ -139,7 +139,7 @@ class Vision:
         addn =  (self._ball_pos_in_vis[0] - width/2) / width * args[1][0] + \
                 (self._ball_pos_in_vis_I[0]) / width * args[1][1] + \
                 (self._ball_pos_in_vis_D[0]) / width * args[1][2];
-        addh =  (self._ball_pos_in_vis[1] - height*0.75) / height * args[0][0] + \
+        addh =  (self._ball_pos_in_vis[1] - height/2) / height * args[0][0] + \
                 (self._ball_pos_in_vis_I[1]) / height * args[0][1] + \
                 (self._ball_pos_in_vis_D[1]) / height * args[0][2];
         self.head += addh
