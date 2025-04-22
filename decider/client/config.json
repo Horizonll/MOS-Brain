@@ -31,7 +31,7 @@
     "head_fsm_self_pos_tick": 0,
     "looking_at_ball_arguments": [[0.4,0.0,0.2], // P, I, D of head
         			  [0.4,0.0,0.2]], // P, I, D of neck
-    "self_pos_accuracy_critical": 10, // when accuracy is lower than this, 
+    "self_pos_accuracy_critical": 0, // when accuracy is lower than this, 
     // self_pos is considered lost
     "ball_pos_accuracy_critical": 0.1, // when accuracy is lower than this, 
     // ball is considered lost

@@ -114,17 +114,17 @@ class Vision:
         ball_lost = self._ball_pos_accuracy < \
                 self._config["ball_pos_accuracy_searching"]
 
-        if(ball_pos_tick <= self._head_fsm_tick < ball_pos_tick + self_pos_tick and self_lost):
+        #if(ball_pos_tick <= self._head_fsm_tick < ball_pos_tick + self_pos_tick and self_lost):
             # this slice time is for self locating, if self pos is lost
             #print(" *Self locating time slice: ")
-            self._head_fsm_relocating()
-        else: # if self pos is accurate, use this time slice to track ball
-            if(ball_lost): 
+        #    self._head_fsm_relocating()
+        # else: # if self pos is accurate, use this time slice to track ball
+        if(ball_lost): 
             #    print(" ***Ball search time slice: ")
-                self._head_fsm_search_ball()
-            else:
+            self._head_fsm_search_ball()
+        else:
             #    print(" **Ball locating time slice: ")
-                self._head_fsm_track_ball()
+            self._head_fsm_track_ball()
 
 
     def _head_fsm_track_ball(self):
@@ -184,7 +184,7 @@ class Vision:
         head_goal.header = Header()
         head_goal.position = [head, neck]
         self._head_pub.publish(head_goal) 
-        self._head, self._neck = head, neck
+        # self._head, self._neck = head, neck
 
 
     def _position_callback(self, msg):
