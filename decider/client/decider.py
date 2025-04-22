@@ -238,10 +238,13 @@ class Agent:
             np.ndarray | None: Averaged ball position in map coordinates (x, y), 
             returns None if no valid data
         """
+        print("Calculating ball position in map from other robots")
+
         valid_positions = []  # Stores valid (x,y) coordinates
 
         # Iterate through all robot data
         for robot_id, robot_data in self.get_robots_data().items():
+            print(f"Robot ID: {robot_id}, Data: {robot_data}")
             # robot id 转换为 int
             robot_id = int(robot_id)
             # Skip self and disconnected robots
@@ -249,7 +252,7 @@ class Agent:
                 continue
 
             # Check ball detection status
-            if robot_data.get('ifBall', False):
+            if robot_data.get('ifBall', True):
                 # Extract coordinates
                 ballx = robot_data['data'].get('ballx')
                 bally = robot_data['data'].get('bally')

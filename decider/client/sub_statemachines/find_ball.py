@@ -114,10 +114,12 @@ class FindBallStateMachine:
         print("[FIND BALL FSM] Starting rotation...")
 
         if ball_angle_from_other_robots := self.agent.get_ball_angle_from_other_robots() is not None:
+            print(f"[FIND BALL FSM] Other robots see the ball at angle: {ball_angle_from_other_robots}")
             # 如果有其他机器人看到球，则朝向该角度旋转
             target_angle_rad = ball_angle_from_other_robots
             self.agent.cmd_vel(0, 0, - np.sign(target_angle_rad) * self._config.get("walk_vel_theta", 0.3))
         else:
+            print("[FIND BALL FSM] No other robots see the ball, rotating randomly...")
             # 如果没有其他机器人看到球，则随机旋转
             self.agent.cmd_vel(0, 0, self._config.get("walk_vel_theta", 0.3))
 
