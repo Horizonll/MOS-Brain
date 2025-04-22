@@ -13,7 +13,7 @@ import numpy as np
 import threading
 import logging
 import sub_statemachines
-import sub_statemachines
+from typing import Optional
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -94,6 +94,8 @@ class Agent:
             "timestamp": time.time(),
         }
         self._lst_command = self._command
+
+        self._robots_data = []
         
         rospy.loginfo("Registering interfaces")
         # action: provide functions to control the robot, such as cmd_vel 
@@ -102,9 +104,11 @@ class Agent:
         # vision: provide functions to get information from the robot, 
         # such as self position and ball position
         self._vision = interfaces.vision.Vision(self._config)
+
+        self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"])
+
         # robot_client: provide functions to communicate with the server
         self._robot_client = RobotClient(self)
-        self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"])
 
 
         # Initialize state machines by importing all python files in 
@@ -139,7 +143,8 @@ class Agent:
         elif self.receiver.game_state == 'STATE_READY':
             self._state_machine_runners['go_back_to_field']()
         elif ((not self.get_if_ball()) and (self._command["command"] == 'chase_ball' or \
-                                          self._command["command"] == 'kick')):
+                                          self._command["command"] == 'kick' or \
+                                            self._command["command"] == 'dribble')):
             self._state_machine_runners['find_ball']()
         elif self._state_machine_runners.get(self._command["command"]):
             self._state_machine_runners[self._command["command"]]()
@@ -166,6 +171,9 @@ class Agent:
         self._action.do_kick()
         rospy.loginfo("Executing the kicking action")
 
+    def get_robots_data(self):
+        return self._robots_data
+
     def get_command(self):
         return self._command
 
@@ -180,7 +188,7 @@ class Agent:
             return self._vision.get_ball_pos()
         else:
             return [None, None]
-    
+
     def get_ball_angle(self):
         ball_pos = self.get_ball_pos()
         ball_x = ball_pos[0]
@@ -221,7 +229,67 @@ class Agent:
 
     def get_head(self):
         return self._vision.head
+
+    def get_ball_pos_in_map_from_other_robots(self) -> Optional[np.ndarray]:
+        """
+        Calculate averaged ball position from connected robots with valid detections
+
+        Returns:
+            np.ndarray | None: Averaged ball position in map coordinates (x, y), 
+            returns None if no valid data
+        """
+        valid_positions = []  # Stores valid (x,y) coordinates
+
+        # Iterate through all robot data
+        for robot_id, robot_data in self.robots_data.items():
+            # Skip self and disconnected robots
+            if robot_id == self.id or robot_data.get('status') != 'connected':
+                continue
+
+            # Check ball detection status
+            if robot_data.get('ifBall', False):
+                # Extract coordinates
+                ballx = robot_data['data'].get('ballx')
+                bally = robot_data['data'].get('bally')
+
+                # Validate coordinate existence
+                if None not in (ballx, bally):
+                    try:
+                        # Convert to float array
+                        pos = np.array([float(ballx), float(bally)], dtype=np.float32)
+                        valid_positions.append(pos)
+                        logging.debug(f"Valid position from {robot_id}: {pos}")
+                    except (TypeError, ValueError) as e:
+                        logging.warning(f"Invalid coordinates from {robot_id}: {e}")
+
+        # Calculate simple average
+        if valid_positions:
+            avg_pos = np.mean(valid_positions, axis=0)
+            logging.debug(f"Fused position from {len(valid_positions)} robots: {avg_pos}")
+            return avg_pos
+
+        logging.info("No valid ball positions from peer robots")
+        return None
     
+    def get_ball_angle_from_other_robots(self) -> Optional[float]:
+        """
+        Calculate averaged ball angle from connected robots with valid detections
+
+        Returns:
+            float | None: Averaged ball angle in radians, returns None if no valid data
+        """
+        ball_pos_in_map = self.get_ball_pos_in_map_from_other_robots()
+        if ball_pos_in_map is not None:
+            # Calculate angle in radians
+            ball_pos_relative = ball_pos_in_map - np.array(self.get_self_pos())
+            angle_rad = -math.atan2(ball_pos_relative[0], ball_pos_relative[1])
+            angle_relative = angle_rad - self.get_self_yaw() - np.pi / 2
+            # Normalize angle to [-pi, pi)
+            angle_relative = (angle_relative + np.pi) % (2 * np.pi) - np.pi
+
+            return angle_relative
+        return None
+
     def get_config(self):
         return self._config
 

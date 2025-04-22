@@ -167,7 +167,7 @@ class Receiver:
 
         self.initialize()  # 初始化
 
-        self.t = threading.Thread(target=self.receive)  # 设置线程，持续接收信息
+        self.t = threading.Thread(target=self.receive, daemon=True)  # 设置线程，持续接收信息
         self.t.start()  # 开启线程
 
     def receive_once(self):
@@ -215,9 +215,9 @@ class Receiver:
                 self.debug_print()
 
     def debug_print(self):
-        print("-----------message-----------")
-        # print(self.data)
-        print(self.game_state)
+        # print("-----------message-----------")
+        # # print(self.data)
+        # print(self.game_state)
         # print(self.penalized_time)
         # print(self.red_card)
         # print(self.player_info)
@@ -226,6 +226,7 @@ class Receiver:
         # print(self.data.first_half)
         # print(self.team)
         # print(self.opposite_team)
+        pass
 
     def initialize(self):
         # 初始化
