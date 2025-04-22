@@ -21,7 +21,7 @@ COMMANDS_DATA = {
     "find_ball": {},
     "chase_ball": {},
     "kick": {},
-    "go_back_to_field": {'aim_x': 1000, 'aim_y': 2000},
+    "go_back_to_field": {'aim_x': 1000, 'aim_y': 2000, 'aim_yaw': 0},
     "exit": {},
 }
 
@@ -67,7 +67,7 @@ def send_command(cmd, server_ip, server_port):
 
 
 def main():
-    server_ip = "192.168.9.51"  # 默认服务器IP地址
+    server_ip = "192.168.9.52"  # 默认服务器IP地址
     server_port = 8002       # 默认服务器端口号
     
     print("Available commands:")

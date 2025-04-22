@@ -4,7 +4,7 @@ import time
 import random
 
 # 配置服务器地址和端口
-SERVER_HOST = '192.168.98.112'
+SERVER_HOST = '127.0.0.1'
 SERVER_PORT = 8001  # 需要与RobotServer端口一致
 
 # 角色到ID的映射

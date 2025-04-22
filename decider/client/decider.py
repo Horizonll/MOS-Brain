@@ -1,363 +1,327 @@
-# system packages
-import asyncio
+# decider.py
+#
+#   @description : The entry py file for decision on clients
+#
+
+import os
 import json
-import logging
 import math
-import signal
 import time
-import threading
-import socket
-import websockets
+import signal
+import asyncio
 import numpy as np
-from transitions import Machine
+import threading
+import logging
+import sub_statemachines
+from typing import Optional
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(filename)s:%(funcName)s(): %(message)s'
+)
 
 # ROS
 import rospy
-from geometry_msgs.msg import Twist
 from sensor_msgs.msg import JointState
+from geometry_msgs.msg import Twist
 
 # Submodules
-from subscriber import *
+import configuration
+from angle import angle
+
+# Interfaces with other components
+import interfaces.action
+import interfaces.vision
+
+# Network
+from robot_client import RobotClient
 from receiver import Receiver
-from configuration import *
 
-# Sub StateMachines
-from subStateMachines.can_not_find_ball import CanNotFindBallStateMachine
-from subStateMachines.chase_ball import ChaseBallStateMachine
-from subStateMachines.go_back_to_field import GoBackToFieldStateMachine
-from subStateMachines.kick import KickStateMachine
-from subStateMachines.find_ball import FindBallStateMachine
-from subStateMachines.dribble import DribbleStateMachine
+class Agent:
+    # @public variants:
+    #           NONE
+    #           NONE
+    #
+    # @public methods:
+    #   cmd_vel(vel_x : float, vel_y : float, vel_theta : float)
+    #   kick()
+    #   look_at([head, neck]: float list[2])
+    #       disable automatically tracking and force to look_at
+    #       use (NaN, NaN) to enable tracking
+    #
+    # @public methods to get varants:
+    #       METHODS             TYPE                DESCRIPTION
+    #   get_self_pos()          numpy.array     self position in map
+    #   get_self_yaw()          angle           self angle in deg, [-180, 180)
+    #   get_ball_pos()          numpy.array     ball postiion from robot
+    #   get_ball_pos_in_vis()   numpy.array     ball position in **vision**
+    #   get_ball_pos_in_map()   numpy.array     ball position in global 
+    #   get_if_ball()           bool            whether can find ball
+    #   get_ball_distance()     float           the distance to the ball
+    #   get_neck()              angle           the neck angle, left and right
+    #   get_head()              angle           the head angle, up and down
+    # 
+    # @private variants:
+    #   _config         dictionary: configurations such as vel, etc.
+    #   _command        dictionary: current recieved command
+    #   _lst_command    dictionary: last command
+    #   _info           dictionary: current running command str
+    #   _action         The interface to kick and walk
+    #   _vision         The interface to head, neck and camera
+    #   _state_machine  A dictionary of state machines
+    # 
+    # @private methods:
+    #   None
 
+    _command = {
+        "command": "None",
+        "args": {},
+        "timestamp": time.time(),
+    }
 
-class Agent(Decision_Pos, Decision_Motion, Decision_Vision, configuration):
-    def __init__(self, role="RF", team=1, player=0, goal_keeper=False, rec_debug=False):
-        print("Initializing Agent instance...")
+    def __init__(self):
+        rospy.init_node("decider", log_level=rospy.DEBUG)
+        rospy.loginfo("Initializing the Agent instance")
+        
+        self.if_local_test = False
 
-        # 初始化父类
-        Decision_Pos.__init__(self)
-        print("Initialized Decision_Pos.")
-        Decision_Motion.__init__(self)
-        print("Initialized Decision_Motion.")
-        Decision_Vision.__init__(self)
-        print("Initialized Decision_Vision.")
-
-        # 初始化ROS节点
-        rospy.init_node("decider")
-        print("Initialized ROS node 'decider'.")
-
-        # 设置ID
+        # Initializing public variables
+        self._config = configuration.load_config()
         self.id = 1
-        print(f"Set ID to: {self.id}")
-
-        # 初始化发布者
-        self.speed_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
-        print("Initialized speed publisher on '/cmd_vel'.")
-        self.joint_goal_publisher = rospy.Publisher("motor_goals", JointState, queue_size=1)
-        print("Initialized joint goal publisher on 'motor_goals'.")
-
-        # 初始化接收器
-        self.receiver = Receiver(team=team, player=player, goal_keeper=goal_keeper, debug=rec_debug)
-        # print("Initialized Receiver with team={}, player={}, goal_keeper={}, debug={}".format(team, player, goal_keeper, rec_debug))
-
-        # 初始化命令和状态
-        self.info = "stop"
-        print("Set initial info to 'stop'.")
-        self.command = {
+        self._command = {
             "command": "stop",
             "data": {},
-            "send_time": time.time(),
+            "timestamp": time.time(),
         }
-        print("Set initial command to 'stop':", self.command)
+        self._lst_command = self._command
 
-        self.ready_to_kick = False
-        print("Set ready_to_kick to False.")
-        self.t_no_ball = 0
-        print("Set t_no_ball to 0.")
-        self.is_going_back_to_field = False
-        print("Set is_going_back_to_field to False.")
-        self.go_back_to_field_dist = None
-        print("Set go_back_to_field_dist to None.")
-        self.go_back_to_field_dir = 0
-        print("Set go_back_to_field_dir to None.")
-        self.go_back_to_field_yaw_diff = None
-        print("Set go_back_to_field_yaw_diff to None.")
+        self._robots_data = {}
+        
+        rospy.loginfo("Registering interfaces")
+        # action: provide functions to control the robot, such as cmd_vel 
+        # and kick
+        self._action = interfaces.action.Action(self._config)
+        # vision: provide functions to get information from the robot, 
+        # such as self position and ball position
+        self._vision = interfaces.vision.Vision(self._config)
 
-        self.walk_theta_vel = 0.2
+        self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"])
 
-        self.kick_state_machine = KickStateMachine(self)
-        self.go_back_to_field_machine = GoBackToFieldStateMachine(self, 0, 4500, 500)
-        self.find_ball_state_machine = FindBallStateMachine(self)
-        self.chase_ball_state_machine = ChaseBallStateMachine(self)
-        self.dribble_state_machine = DribbleStateMachine(self)
+        # robot_client: provide functions to communicate with the server
+        self._robot_client = RobotClient(self)
 
-        # detect local ip
-        self.ip = self.detect_ip()
 
-        # 监听主机IP
-        print("Starting to listen for host IP...")
-        # self.listen_host_ip()
-        self.HOST_IP = "192.168.9.105"
-        print("Finished listening for host IP.")
+        # Initialize state machines by importing all python files in 
+        # sub_statemachines and create a dictionary from command to 
+        # statemachine.run
 
-        # 启动发送线程
-        send_thread = threading.Thread(target=self.send_loop)
-        send_thread.daemon = True
-        send_thread.start()
-        print("Started send loop thread.")
+        rospy.loginfo("Initializing sub-state machines")
+        # py_files = Agent._get_python_files("sub_statemachines/")
+        # print(py_files)
+        
+        self.chase_ball_state_machine = sub_statemachines.ChaseBallStateMachine(self)
+        self.find_ball_state_machine = sub_statemachines.FindBallStateMachine(self)
+        self.kick_state_machine = sub_statemachines.KickStateMachine(self)
+        self.go_back_to_field_state_machine = sub_statemachines.GoBackToFieldStateMachine(self)
+        self.dribble_state_machine = sub_statemachines.DribbleStateMachine(self)
 
-        # 启动TCP客户端线程
-        tcp_thread = threading.Thread(target=self.start_tcp_listener_loop)
-        tcp_thread.daemon = True
-        tcp_thread.start()
-        print("Started TCP client thread.")
 
-        # 注释掉的WebSocket客户端线程（如果需要可以取消注释）
-        # websocket_thread = threading.Thread(
-        #     target=lambda: asyncio.run(self.websocket_client())
-        # )
-        # websocket_thread.daemon = True
-        # websocket_thread.start()
-        # print("Started WebSocket client thread.")
+        self._state_machine_runners = {
+            "chase_ball": self.chase_ball_state_machine.run,
+            "find_ball": self.find_ball_state_machine.run,
+            "kick": self.kick_state_machine.run,
+            "go_back_to_field": self.go_back_to_field_state_machine.run,
+            "dribble": self.dribble_state_machine.run,
+            "stop": self.stop,
+        }
 
-        print("Agent instance initialization complete.")
+        rospy.loginfo("Agent instance initialization completed")
 
-    def send_loop(self):
-        while True:
-            try:
-                robot_data = {
-                    "id": self.id,
-                    "data": {
-                        "x": self.pos_x,
-                        "y": self.pos_y,
-                        "ballx": self.ball_x_in_map,
-                        "bally": self.ball_y_in_map,
-                        "yaw": self.pos_yaw,
-                        "ifBall": self.ifBall,
-                        "ball_distance": self.ball_distance,
-                    },
-                    "info": self.info,
-                    "timestamp": time.time(),
-                    "ip": self.ip,
-                    "game_state": self.receiver.game_state,
-                    "kick_off": self.receiver.kick_off,
-                }
-                if not self.ifBall:
-                    robot_data["ballx"] = robot_data["bally"] = None
-                self.send_robot_data(robot_data)
-                time.sleep(0.5)
-            except Exception as e:
-                print(f"Error in send: {e}")
+    def run(self):
 
-    def send_robot_data(self, robot_data):
-        try:
-            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client_socket.connect((self.HOST_IP, 8001))
-            client_socket.sendall(json.dumps(robot_data).encode("utf-8"))
-        except Exception as e:
-            print(f"Error in send_robot_data: {e}")
-        finally:
-            client_socket.close()
+        if self.receiver.game_state == 'STATE_SET':
+            self.stop()
+        elif self.receiver.game_state == 'STATE_READY':
+            self._state_machine_runners['go_back_to_field']()
+        elif ((not self.get_if_ball()) and (self._command["command"] == 'chase_ball' or \
+                                          self._command["command"] == 'kick' or \
+                                            self._command["command"] == 'dribble')):
+            self._state_machine_runners['find_ball']()
+        elif self._state_machine_runners.get(self._command["command"]):
+            self._state_machine_runners[self._command["command"]]()
+        else:
+            logging.debug(f"State machine '{self._command['command']}' not found.")
+            self.stop()
 
-    def detect_ip(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-        except Exception as e:
-            logging.error(f"Failed to detect IP address: {e}")
-            ip = "127.0.0.1"
-        finally:
-            s.close()
-        return ip
 
-    def start_tcp_listener_loop(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(self.tcp_listener())
-        except Exception as e:
-            print(f"Error in start_tcp_listener_loop: {e}")
-        finally:
-            loop.close()
+    # The following are some simple encapsulations of interfaces
+    # The implementation of the apis may be change in the future
+    def cmd_vel(self, vel_x: float, vel_y: float, vel_theta: float):
+        self._action.cmd_vel(vel_x, vel_y, vel_theta)
+        rospy.loginfo(f"Setting the robot's speed: linear velocity x={vel_x}, "
+                + f"y={vel_y}, angular velocity theta={vel_theta}")
 
-    async def tcp_listener(self):
-        """异步监听TCP命令消息"""
-        self.ip = self.detect_ip()
-        print(f"Detected IP address: {self.ip}")
-
-        # 创建一个异步服务器
-        server = await asyncio.start_server(self.handle_connection, self.ip, 8002)
-
-        addr = server.sockets[0].getsockname()
-        print(f"Listening for TCP command messages on {addr}...")
-
-        try:
-            async with server:
-                await server.serve_forever()
-        except KeyboardInterrupt:
-            print("\nInterrupted by user. Exiting...")
-        finally:
-            # 关闭服务器
-            server.close()
-            await server.wait_closed()
-            print("Server closed.")
-
-    async def handle_connection(self, reader, writer):
-        try:
-            while True:
-                data = await reader.read(1024)
-                if not data:
-                    break
-                addr = writer.get_extra_info("peername")
-                print(f"Received data from {addr}: {data}")
-
-                try:
-                    received_data = json.loads(data.decode("utf-8"))
-                    print(f"Parsed JSON data: {received_data}")
-
-                    # 这里可以根据具体的命令进行不同的处理
-                    if "command" in received_data:
-                        self.command = received_data
-                    else:
-                        print("Received message does not contain 'command' field.")
-                except json.JSONDecodeError as e:
-                    print(f"JSON decode error: {e}")
-        except Exception as e:
-            print(f"Error handling connection: {e}")
-        finally:
-            writer.close()
-            await writer.wait_closed()
-
-    def listen_host_ip(self):
-        """同步监听UDP广播消息并获取主机IP"""
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind(("0.0.0.0", 8003))  # 监听指定端口上的UDP广播
-
-        # 加入广播接收
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-
-        while True:
-            data, addr = sock.recvfrom(1024)
-            try:
-                received_data = json.loads(data.decode("utf-8"))
-                if "message" in received_data and received_data["message"] == "thmos_hello":
-                    # 假设广播消息中包含主机IP信息
-                    if "ip" in received_data:
-                        host_ip = received_data["ip"]
-                        self.HOST_IP = host_ip  # 更新Agent实例中的IP地址
-                        print(f"Updated IP to: {self.HOST_IP}")
-                        break
-                    else:
-                        print("Received 'thmos_hello' message but no 'host_ip' field found.")
-                else:
-                    print("Received message does not match expected format.")
-            except json.JSONDecodeError as e:
-                print(f"JSON decode error: {e}")
-            except KeyboardInterrupt:
-                print("\nInterrupted by user. Exiting...")
-
-    def loop(self):
-        # return self.receiver.game_state != "STATE_SET" and self.receiver.game_state != "STATE_READY"
-        return True
-
-    def speed_controller(self, x, y, theta):
-        move_cmd = Twist()
-        move_cmd.linear.x = x
-        move_cmd.linear.y = y
-        move_cmd.angular.z = theta
-        self.speed_pub.publish(move_cmd)
-
-    def update_go_back_to_field_status(self):
-        self.go_back_to_field_dist = np.sqrt((self.pos_x - self.aim_x) ** 2 + (self.pos_y - self.aim_y) ** 2)
-        self.go_back_to_field_dir = np.arctan2(-self.aim_x + self.pos_x, self.aim_y - self.pos_y)
-        self.go_back_to_field_yaw_diff = np.degrees(
-            np.arctan2(
-                np.sin(self.go_back_to_field_dir - self.pos_yaw * np.pi / 180),
-                np.cos(self.go_back_to_field_dir - self.pos_yaw * np.pi / 180),
-            )
-        )
-
+    def look_at(self, args):
+        self._vision.look_at(args)
+    
     def stop(self, sleep_time=0):
-        self.speed_controller(0, 0, 0)
+        self._action.cmd_vel(0, 0, 0)
         time.sleep(sleep_time)
 
     def kick(self):
-        print("kick")
-        self.kick_state_machine.run()
+        self._action.do_kick()
+        rospy.loginfo("Executing the kicking action")
 
-    def go_back_to_field(self):
-        print("go back to field")
-        self.head_set(0.05, 0)
-        # go_back_to_field_machine = GoBackToFieldStateMachine(self, aim_x, aim_y, min_dist)
-        self.go_back_to_field_machine.run()
+    def get_robots_data(self):
+        return self._robots_data
 
-    def find_ball(self):
-        print("find ball")
-        self.find_ball_state_machine.run()
+    def get_command(self):
+        return self._command
 
-    def chase_ball(self):
-        print("chase ball")
-        self.chase_ball_state_machine.run()
+    def get_self_pos(self):
+        return self._vision.self_pos
 
-    def dribble(self):
-        print("dribble")
-        self.dribble_state_machine.run()
+    def get_self_yaw(self):
+        return self._vision.self_yaw
 
-    def ball_in_sight(self):
-        if self.ifBall:
-            self.t_no_ball = time.time()
-        return self.ifBall
-
-    def close_to_ball(self):
-        if self.ifBall:
-            return 0.1 <= self.ball_distance <= 0.5
-        return math.sqrt((self.pos_x - self.ball_x_in_map) ** 2 + (self.pos_y - self.ball_y_in_map) ** 2) <= 100
-
-    def ready_to_kick(self):
-        return self.ready_to_kick
-
-    def run(self):
-        self.info = self.command["command"]
-        if self.command["command"] == "find_ball":
-            self.find_ball()
-        elif self.command["command"] == "chase_ball":
-            if not self.ball_in_sight():
-                self.find_ball()
-            else:
-                self.chase_ball()
-        elif self.command["command"] == "dribble":
-            self.dribble()
-        elif self.command["command"] == "stop":
-            self.stop(1)
-        elif self.command["command"] == "kick":
-            if not self.ball_in_sight():
-                self.find_ball()
-            else:
-                self.kick()
-        elif self.command["command"] == "go_back_to_field":
-            self.go_back_to_field()
+    def get_ball_pos(self):
+        if self.get_if_ball():
+            return self._vision.get_ball_pos()
         else:
-            print("Unknown command: ", self.command)
-            self.stop(1)
+            return [None, None]
+
+    def get_ball_angle(self):
+        ball_pos = self.get_ball_pos()
+        ball_x = ball_pos[0]
+        ball_y = ball_pos[1]
+        if ball_pos is not None and ball_x is not None and ball_y is not None:
+            if ball_x == 0 and ball_y == 0:
+                return None
+            else:
+                angle_rad = - math.atan2(ball_x, ball_y)
+                return angle_rad
+        else:
+            return None
+
+    def get_ball_pos_in_vis(self):
+        return self._vision.get_ball_pos_in_vis()
+
+    def get_ball_pos_in_map(self):
+        return self._vision.get_ball_pos_in_map()
+
+    def get_if_ball(self):
+        return self._vision.get_if_ball()
+
+
+    def get_if_close_to_ball(self):
+        if self.get_if_ball():
+            return 0.1 <= self.get_ball_distance() <= 0.4
+        else:
+            return False
+
+    def get_ball_distance(self):
+        if self.get_if_ball():
+            return self._vision.ball_distance
+        else:
+            return 1e6
+
+    def get_neck(self):
+        return self._vision.neck
+
+    def get_head(self):
+        return self._vision.head
+
+    def get_ball_pos_in_map_from_other_robots(self) -> Optional[np.ndarray]:
+        """
+        Calculate averaged ball position from connected robots with valid detections
+
+        Returns:
+            np.ndarray | None: Averaged ball position in map coordinates (x, y), 
+            returns None if no valid data
+        """
+        print("Calculating ball position in map from other robots")
+
+        valid_positions = []  # Stores valid (x,y) coordinates
+
+        # Iterate through all robot data
+        for robot_id, robot_data in self.get_robots_data().items():
+            print(f"Robot ID: {robot_id}, Data: {robot_data}")
+            # robot id 转换为 int
+            robot_id = int(robot_id)
+            # Skip self and disconnected robots
+            if robot_id == self.id or robot_data.get('status') != 'connected':
+                continue
+
+            # Check ball detection status
+            if robot_data.get("data").get('ifBall', False):
+                # Extract coordinates
+                ballx = robot_data['data'].get('ballx')
+                bally = robot_data['data'].get('bally')
+
+                # Validate coordinate existence
+                if None not in (ballx, bally):
+                    try:
+                        # Convert to float array
+                        pos = np.array([float(ballx), float(bally)], dtype=np.float32)
+                        valid_positions.append(pos)
+                        logging.debug(f"Valid position from {robot_id}: {pos}")
+                    except (TypeError, ValueError) as e:
+                        logging.warning(f"Invalid coordinates from {robot_id}: {e}")
+
+        # Calculate simple average
+        if valid_positions:
+            avg_pos = np.mean(valid_positions, axis=0)
+            logging.debug(f"Fused position from {len(valid_positions)} robots: {avg_pos}")
+            return avg_pos
+
+        logging.info("No valid ball positions from peer robots")
+        return None
+    
+    def get_ball_angle_from_other_robots(self) -> Optional[float]:
+        """
+        Calculate averaged ball angle from connected robots with valid detections
+
+        Returns:
+            float | None: Averaged ball angle in radians, returns None if no valid data
+        """
+        ball_pos_in_map = self.get_ball_pos_in_map_from_other_robots()
+        logging.debug(f"Ball position in map from other robots: {ball_pos_in_map}")
+        logging.debug(f"Self position: {self.get_self_pos()}")
+        if ball_pos_in_map is not None:
+            # Calculate angle in radians
+            ball_pos_relative = ball_pos_in_map - np.array(self.get_self_pos())
+            print(f"Ball position relative to self: {ball_pos_relative}")
+            angle_rad = math.atan2(ball_pos_relative[1], ball_pos_relative[0])
+            print(f"Ball angle in radians: {angle_rad}")
+            angle_relative = angle_rad - (self.get_self_yaw() / 180 * np.pi) - np.pi / 2
+            print(f"Ball angle relative to self: {angle_relative}")
+            # Normalize angle to [-pi, pi)
+            angle_relative = (angle_relative + math.pi) % (2 * math.pi) - math.pi
+
+            print(f"Ball angle from other robots: {angle_relative}")
+
+            return angle_relative
+        return None
+
+    def get_config(self):
+        return self._config
 
 
 def main():
+    rospy.loginfo("Decider started")
     agent = Agent()
+
     try:
-        # 注册信号处理器
         def sigint_handler(sig, frame):
-            print("\nExiting gracefully...")
-            # 这里可以添加清理代码（如关闭网络连接）
+            rospy.loginfo("User interrupted the program, exiting gracefully...")
             exit(0)
 
         signal.signal(signal.SIGINT, sigint_handler)
         while True:
             agent.run()
-            time.sleep(1)
+            time.sleep(0.1)
     except KeyboardInterrupt:
-        print("\nProgram interrupted by user")
+        rospy.loginfo("Program interrupted by the user")
         exit()
     finally:
         pass

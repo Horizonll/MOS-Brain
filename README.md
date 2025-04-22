@@ -2,80 +2,53 @@
 
 The decision-rev of MOS-8.5.
 
+### Sync
+command:
+```sh
+rsync -av <path-on-your-computer>/MOS-Brain/ thmos@david:<path-on-robot>/MOS-Brain/ --delete
+```
+
 ### 快速开始
 
-#### 1. 机器人
+1. 将机器人放置在场上(2600,500,90)处
+2. 启动nomachine连接机器人
+3. 为防止识别不到ZED相机，插拔相机一次
+4. 打开终端，运行`python3 ~/MOS-brain/decider/client/local_decider_tester.py`，该操作将启动roscore、视觉、步态、决策程序，需要将机器人平放或提起来防止受损。
+5. 等待步态和视觉程序启动
+6. 在终端中输入指令，机器人将执行相应动作。
+- chase_ball：追球，离得近时会停下
+- shoot：射门，离得近时再执行
+- go_back_to_field：回场，离得近时会停下，默认去(0,2000,0)，可以在local_decider_tester.py中修改
+- find_ball：逆时针转身找球
+- stop：停止，停止所有动作
 
-##### 快速启动脚本
+#### 现存问题
 
-首先将`./decider/client/decider.py`中的100行`HOST_IP`改为自己电脑或决策主机的ip地址。
+1. 杂物太多会导致不面朝球门时定位不准，进而导致go_back_to_field动作失败。
+2. 踢球不够精准高效
 
-启动机器人，会打开多个screen，分别启动roscore、视觉、步态、决策程序。
+### 逐模块启动
 
-```bash
-chmod +x ./decider/scripts/run_robot_everything.sh
-./decider/scripts/run_robot_everything.sh
+1. 将机器人放置在场上(2600,500,90)处
+2. 启动nomachine连接机器人
+3. 为防止识别不到ZED相机，插拔相机一次
+4. 打开终端
+5. 运行步态程序
 ```
-
-可以用`screen -R [name]`进入screen，用`ctrl+A`然后`ctrl+D`退出screen，screen名称分别如下：
-
-- vision：无报错，输出debug信息，表示视觉成功启动。
-
-- walk：无报错，表示步态启动成功。
-
-- decider：输出`serving on [ip]`表示机器人子机决策程序已经启动。
-
-##### 手动启动
-
-首先将`./decider/client/decider.py`中的100行`HOST_IP`改为自己电脑或决策主机的ip地址。
-
-假设vision、walk已经启动，则运行
-
-```bash
-python3 ./decider/client/decider.py
+roslaunch thmos_bringup mos_run.launch
 ```
-
-#### 2. 决策主机
-
-##### 快速启动脚本
-
-在自己电脑上
-
-windows运行  
-
-```bash
-./decider/scripts/run_decider_tester_on_windows.ps1
+6. 运行视觉程序
 ```
-
-Linux运行  
-
-```bash
-chmod +x ./decider/scripts/run_decider_tester_on_linux.sh
-
-./decider/scripts/run_decider_tester_on_linux.sh
-```  
-
- 启动决策主机，会打开2个终端窗口，分别启动接收从机实时状态、决策程序。
-
-可以按照提示向机器人发送指令。
-
-##### 手动启动
-
-在自己电脑上开启两个终端，分别运行
-
-```bash
-python3 ./decider/test/decider_tester.py
+cd ~/thmos_ws/src/thmos_code/vision/scripts && python3 vision_with_local.py
 ```
-
-(用于指令发送)
-
-和
-
-```bash
-python3 ./decider/test/tcp_host_test_reciever.py
+7. 在`client/config.json`中配置`"server_ip"`地址为你想要运行主机决策设备的ip
+8. 运行从机决策程序
 ```
-
-（用于接收从机实时状态）
+python3 /home/thmos/MOS-Brain/decider/client/decider.py
+```
+9. 运行主机决策程序
+- 测试时（手动发送指令）用`client/tester/tcp_host_test_reciever.py`接收心跳包，用`client/tester/decider_tester.py`发送指令。
+- 主机决策，运行`server_v1_2.py`
 
 ### 目录结构
 
@@ -88,12 +61,8 @@ python3 ./decider/test/tcp_host_test_reciever.py
     - config.json # 机器人配置文件，暂未使用
     - configuration.py # 机器人配置类，暂未使用
     - decider.py # **机器人决策主程序**
-    - receiver.py # 接收裁判盒
+    - receiver.py # 接收ROS消息的类
     - subscriber.py # ROS订阅者类
-  - scripts # 存放启动脚本
-    - run_robot_everything.sh # 机器人决策启动脚本
-    - run_decider_tester_on_linux.sh # 决策主机启动脚本
-    - run_decider_tester_on_windows.ps1 # 决策主机启动脚本
   - server # 存放决策主机代码，开发中
   - statemachine_readme # 决策主机状态机说明文档
   - test # 决策主机测试代码

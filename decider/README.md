@@ -14,9 +14,9 @@
 
 # config.py
 
-- walk_x_vel 行走前向速度
-- walk_y_vel 行走横向速度
-- walk_theta_vel 转向速度
+- walk_vel_x 行走前向速度
+- walk_vel_y 行走横向速度
+- walk_vel_theta 转向速度
 - 定位点,x,y
 
 # 机器人->主机

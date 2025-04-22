@@ -1,3 +1,5 @@
+# receiver.py
+#   @description:   Utilities to connect with the game controller
 import socket
 import logging
 import threading
@@ -15,6 +17,9 @@ from construct import (
     Flag,
     Int16sl,
 )
+import rospy
+
+import rospy
 
 
 # 以下是 GameState
@@ -125,17 +130,13 @@ ReturnData = Struct(
 
 
 class Receiver:
-    def __init__(self, team, player, goal_keeper, debug):
-        """
-        game_state: 比赛状态
-        kick_off: 是否开球
-        """
+    def __init__(self, team, player, goal_keeper=False, debug=True):
         self.ip = "0.0.0.0"  # 本地ip
         self.listen_port = 3838  # 本地端口
         self.answer_port = 3939  # 服务器端口
 
         self.debug = debug
-
+        self.kick_off = False  # 是否开球
         self.team_input = team  # 来自初始化的team序号，用于改变上下半场team序号
         self.team = team  # 队伍序号（0或1）
         self.opposite_team = 1 - team  # 对面球队编号
@@ -153,7 +154,7 @@ class Receiver:
         self.is_goalkeeper = goal_keeper  # 守门员
         self.peer = None  # 服务器（ip， 端口）
 
-        self.logger = logging.getLogger("game_controller")  # 创建logger
+        # logging = logging.getLogger("game_controller")  # 创建logger
 
         self.socket1 = socket.socket(
             socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP
@@ -165,9 +166,9 @@ class Receiver:
         self.socket1.bind(self.addr)  # 主机、端口绑定到socket上
         self.socket1.settimeout(2)  # 阻塞时间(2s收不到就警告timeout)
 
-        self.initialize()  # 初始化
+        # self.initialize()  # 初始化
 
-        self.t = threading.Thread(target=self.receive)  # 设置线程，持续接收信息
+        self.t = threading.Thread(target=self.receive, daemon=True)  # 设置线程，持续接收信息
         self.t.start()  # 开启线程
 
     def receive_once(self):
@@ -181,6 +182,10 @@ class Receiver:
             if not self.data.first_half:
                 self.team = 1 - self.team_input
                 self.opposite_team = 1 - self.team
+            self.kick_of_team = self.data.kick_of_team  # 开球队
+            self.kick_off = (
+                True if self.kick_of_team == self.team else False
+            )  # 是否开球
             self.player_info = self.data.teams[self.team].players[
                 self.player
             ]  # player信息
@@ -194,17 +199,19 @@ class Receiver:
             )  # 是否开球
         # 解释报错
         except AssertionError as ae:
-            self.logger.error(ae.message)
+            logging.error(ae.message)
         except socket.timeout:
             pass
-            self.logger.warning("Socket timeout")
+            rospy.logwarn("Socket timeout")
         except ConstError:
-            self.logger.warning("Parse Error: Probably using an old protocol!")
+            rospy.logwarn("Parse Error: Probably using an old protocol!")
         except Exception as e:
-            self.logger.exception(e)
+            logging.exception(e)
             pass
 
     def receive(self):
+        self.initialize()
+
         # 持续接收消息，单开线程
         while True:
             self.receive_once()
@@ -213,10 +220,9 @@ class Receiver:
                 self.debug_print()
 
     def debug_print(self):
-        print("-----------message-----------")
-        # print(self.data)
-        print(self.game_state)
-        print(self.kick_off)
+        # print("-----------message-----------")
+        # # print(self.data)
+        # print(self.game_state)
         # print(self.penalized_time)
         # print(self.red_card)
         # print(self.player_info)
@@ -225,6 +231,7 @@ class Receiver:
         # print(self.data.first_half)
         # print(self.team)
         # print(self.opposite_team)
+        pass
 
     def initialize(self):
         # 初始化
