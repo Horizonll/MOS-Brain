@@ -60,7 +60,7 @@ class RobotServer:
                 data = await reader.read(1024)
                 if not data:
                     break
-                
+
                 robot_id = self._process_incoming_data(data, robot_ip)
                 # await self._send_robot_status(writer)
                 
@@ -108,8 +108,6 @@ class RobotServer:
     def _cleanup_connection(self, writer, robot_id):
         """Handle connection cleanup"""
         writer.close()
-        if robot_id:
-            self.agent.robots_data[robot_id]['status'] = 'disconnected'
 
     async def start_server(self):
         """Start main TCP server"""
