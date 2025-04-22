@@ -5,6 +5,7 @@ from transitions import Machine
 from sensor_msgs.msg import JointState
 import time
 import rospy
+import numpy as np
 
 class FindBallStateMachine:
     def __init__(self, agent):
@@ -12,6 +13,7 @@ class FindBallStateMachine:
         self.agent = agent
         self._config = self.agent.get_config()
         self.rotate_start_time = 0  # 记录旋转开始时间
+        self.find_ball_angle_threshold_degrees = 10  # 球的角度阈值（度）
 
         # 定义状态和转换规则
         self.states = ["init", "protecting", "rotating", "found"]
@@ -24,35 +26,35 @@ class FindBallStateMachine:
                 "after": "set_protect_pose"
             },
             {
-                "trigger": "step", 
-                "source": "protecting", 
-                "dest": "rotating", 
-                "conditions": "protection_done", 
+                "trigger": "step",
+                "source": "protecting",
+                "dest": "rotating",
+                "conditions": "protection_done",
                 "after": "start_rotation"
             },
             {
-                "trigger": "step", 
-                "source": "rotating", 
+                "trigger": "step",
+                "source": "rotating",
                 "dest": "protecting",
-                "conditions": 
+                "conditions":
                 [
-                    "rotation_timeout", 
+                    "rotation_timeout",
                     "no_ball"
-                ], 
+                ],
                 "after": "stop_rotation"
             },
             {
-                "trigger": "step", 
-                "source": "*", 
-                "dest": "found", 
+                "trigger": "step",
+                "source": "*",
+                "dest": "found",
                 "conditions": "ball_in_sight",
-                "after": "stop_rotation"
+                "after": "face_to_ball"
             },
             {
-                "trigger": "step", 
-                "source": "found", 
+                "trigger": "step",
+                "source": "found",
                 "dest": "protecting",
-                "conditions": "no_ball", 
+                "conditions": "no_ball",
                 "after": "start_rotation"
             }
         ]
@@ -83,14 +85,14 @@ class FindBallStateMachine:
         # return result
         return True
 
-    def rotation_timeout(self, event=None): 
+    def rotation_timeout(self, event=None):
         """检查旋转是否超时（10秒）"""
         elapsed = time.time() - self.rotate_start_time
         result = elapsed >= 10
         print(f"[FIND BALL FSM] Rotation timeout: {'Yes' if result else f'No ({elapsed:.1f}s)'}")
         return result and self.state == "rotating"
 
-    def no_ball(self, event=None):  
+    def no_ball(self, event=None):
         """检查是否丢失球"""
         result = not self.ball_in_sight()
         print(f"[FIND BALL FSM] Ball lost: {'Yes' if result else 'No'}")
@@ -110,6 +112,15 @@ class FindBallStateMachine:
     def start_rotation(self, event=None):
         """开始旋转身体寻找球"""
         print("[FIND BALL FSM] Starting rotation...")
+
+        if ball_angle_from_other_robots := self.agent.get_ball_angle_from_other_robots() is not None:
+            # 如果有其他机器人看到球，则朝向该角度旋转
+            target_angle_rad = ball_angle_from_other_robots
+            self.agent.cmd_vel(0, 0, - np.sign(target_angle_rad) * self._config.get("walk_vel_theta", 0.3))
+        else:
+            # 如果没有其他机器人看到球，则随机旋转
+            self.agent.cmd_vel(0, 0, self._config.get("walk_vel_theta", 0.3))
+
         self.agent.cmd_vel(0, 0, self._config.get("walk_vel_theta", 0.3))
         self.rotate_start_time = time.time()  # 记录旋转开始时间
         print(f"[FIND BALL FSM] Rotating at {self._config.get('walk_vel_theta', 0.3)} rad/s")
@@ -120,6 +131,35 @@ class FindBallStateMachine:
         self.agent.stop(0.5)
         self.rotate_start_time = time.time()  # 重置旋转开始时间
         print("[FIND BALL FSM] Rotation stopped")
+
+    def face_to_ball(self, event=None):
+        """调整身体面向球"""
+        print("[FIND BALL FSM] Facing to ball...")
+
+        if not self.agent.get_if_ball():
+            print("[FIND BALL FSM] No ball in sight, cannot face to ball")
+            return
+
+        # 获取球的角度
+        target_angle_rad = self.agent.get_ball_angle()
+
+        find_ball_angle_threshold_rad = self.find_ball_angle_threshold_degrees * np.pi / 180.0
+
+        if abs(target_angle_rad) > find_ball_angle_threshold_rad:
+            print(
+                f"[CHASE BALL FSM] target_angle_rad ({target_angle_rad}) > {find_ball_angle_threshold_rad}. ball_distance: {self.agent.get_ball_distance()}. Rotating..."
+            )
+            self.agent.cmd_vel(
+                0, 0, np.sign(target_angle_rad) * self._config.get("walk_vel_theta", 0.3)
+            )
+        else:
+            print(
+                f"[FIND BALL FSM] target_angle_rad ({target_angle_rad}) < {find_ball_angle_threshold_rad}. Stopping rotation..."
+            )
+            self.agent.stop()
+
+        self.agent.look_at(self.agent.get_ball_position())
+        print("[FIND BALL FSM] Facing to ball completed")
 
     def run(self):
         """运行状态机"""

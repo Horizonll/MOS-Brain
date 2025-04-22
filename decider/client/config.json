@@ -14,8 +14,7 @@
 
     // vision
     "vision_size": [1280, 736 ], // the size of photos used by vision
-    "predict_ball_pos": true,
-    "predict_ball_pos_in_map": true,
+    "ball_confidence_factor": 5,
     "pos_accuracy_add": {
         // the score 'add' to the self_pos_accuracy
         // when these items appears in vision
@@ -27,32 +26,27 @@
         "5": 5 // X-Intersection
     },
     "ball_accuracy_integrated_factor": [0.1, 0.1], // integrated arguments
-    "head_fsm_cycle_time": 0.1, // second
-    "search_ball_cycle_cnt": 2,
-    "relocating_ball_cycle_cnt": 2,
-    "looking_at_ball_arguments": [
-        [
-            0.4,
-            0.0,
-            0.2
-        ], // P, I, D of head
-        [
-            0.4,
-            0.0,
-            0.2
-        ]
-    ], // P, I, D of neck
-    "self_pos_accuracy_critical": 0.0, // when accuracy is lower than this, 
+    "head_fsm_tick_time": 0.1, // seconds for one tick of head fsm
+    "head_fsm_ball_pos_tick": 25, 
+    "head_fsm_self_pos_tick": 3,
+    "looking_at_ball_arguments": [[0.4,0.0,0.2], // P, I, D of head
+        			  [0.4,0.0,0.2]], // P, I, D of neck
+    "self_pos_accuracy_critical": 10, // when accuracy is lower than this, 
     // self_pos is considered lost
     "ball_pos_accuracy_critical": 0.1, // when accuracy is lower than this, 
     // ball is considered lost
     "ball_pos_accuracy_searching": 0.5, // when we move head to search
     // the angle pairs for searching ball
+    "search_ball_phase_cycle_cnt": 2,
+    "relocate_phase_cycle_cnt": 2,
     "search_ball_head_neck_angle": [
         [0.1, 0],
         [0.3, 0],
         [0.5, 0],
         [0.7, 0],
+        [0.9, 0],
+        [1.1, 0],
+        [1.3, 0],
         [0.9, 0],
         [0.7, 0],
         [0.5, 0],
@@ -73,6 +67,7 @@
         [0.7, -0.3], 
         [0.7, -0.5]
     ],
+    // camera is looking around
     "field_params": {
         "LF": [
             -1000,

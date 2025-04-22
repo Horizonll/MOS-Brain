@@ -126,10 +126,14 @@ class RobotClient:
                     # Here you can handle different commands specifically
                     if "command" in received_data:
                         self.agent._command = received_data
+                    elif "robots_data" in received_data:
+                        self.agent._robots_data = received_data["robots_data"]
                     else:
-                        rospy.logwarn("Received message does not contain the 'command' field")
+                        rospy.logwarn("Received message does not contain 'command' or 'robots_data'")
                 except json.JSONDecodeError as e:
                     rospy.logerr(f"JSON decoding error: {e}")
+                except KeyError as e:
+                    rospy.logerr(f"Key error: {e}")
         except Exception as e:
             rospy.logerr(f"Error handling connection: {addr}:{e}")
         finally:
