@@ -137,9 +137,9 @@ class ShootBallStateMachine:
 
         if forward_1_distance < forward_2_distance:
             self.logger.info("执行策略: 前锋1追球，前锋2待命")
-            self.agent.publish_command(self.agent.roles_to_id["forward_2"], "stop")
+            self.agent.publish_command(self.agent.roles_to_id["forward_2"], "find_ball")
             self.agent.publish_command(self.agent.roles_to_id["forward_1"], "chase_ball")
         else:
             self.logger.info("执行策略: 前锋2追球，前锋1待命")
-            self.agent.publish_command(self.agent.roles_to_id["forward_1"], "stop")
+            self.agent.publish_command(self.agent.roles_to_id["forward_1"], "find_ball")
             self.agent.publish_command(self.agent.roles_to_id["forward_2"], "chase_ball")

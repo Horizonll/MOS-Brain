@@ -84,13 +84,11 @@ class RobotServer:
                     else:
                         self.agent.ifBall = False
 
-                    # # 构建响应消息
-                    # response = {
-                    #     "status": "received",
-                    #     "server_receive_time": receive_time,
-                    #     "server_send_time": time.time()  # 记录发送时间
-                    # }
-                    # writer.write(json.dumps(response).encode("utf-8"))
+                    # 构建响应消息
+                    response = {
+                        "robots": self.agent.robots_data
+                    }
+                    writer.write(json.dumps(response).encode("utf-8"))
                     await writer.drain()
                 except json.JSONDecodeError as e:
                     logging.error(f"JSON decode error: {e}")
