@@ -52,6 +52,7 @@ class RobotClient:
                         "bally": float(self.agent.get_ball_pos_in_map()[1]),
                         "yaw": float(self.agent.get_self_yaw()),
                         "ball_distance": float(self.agent.get_ball_distance()),
+                        "ifBall": int(self.agent.get_if_ball()),
                     },
                     "info": self.agent._command["command"],
                     "timestamp": time.time(),

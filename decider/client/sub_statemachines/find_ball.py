@@ -124,9 +124,8 @@ class FindBallStateMachine:
             # 如果没有其他机器人看到球，则随机旋转
             self.agent.cmd_vel(0, 0, self._config.get("walk_vel_theta", 0.3))
 
-        self.agent.cmd_vel(0, 0, self._config.get("walk_vel_theta", 0.3))
+
         self.rotate_start_time = time.time()  # 记录旋转开始时间
-        print(f"[FIND BALL FSM] Rotating at {self._config.get('walk_vel_theta', 0.3)} rad/s")
 
     def stop_rotation(self, event=None):
         """停止旋转"""
