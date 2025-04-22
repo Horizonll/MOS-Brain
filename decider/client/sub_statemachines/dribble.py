@@ -18,7 +18,7 @@ class DribbleStateMachine:
         self._config = self.agent.get_config()
         self.rotate_start_time = 0  # 记录旋转开始时间
         self.dribble_pos_adjust_angle_threshold_rad = 0.2
-        self.dribble_stop_angle_threshold_rad = 0.4
+        self.dribble_stop_angle_threshold_rad = 0.2
         self.states = ["forward", "pos_to_ball_adjust", "yaw_adjust", "horizontal_position_adjust"]
         self.transitions = [
             {
@@ -93,7 +93,7 @@ class DribbleStateMachine:
         self.machine = Machine(
             model=self,
             states=self.states,
-            initial="forward",
+            initial="pos_to_ball_adjust",
             transitions=self.transitions,
         )
         self.direction = True  # FIXME: True: right, False: left
@@ -111,7 +111,12 @@ class DribbleStateMachine:
 
         self.calculate_angle()
 
-        self.aim_yaw = self.agent.get_command().get('data').get('aim_yaw', 0)
+        # 计算目标角度
+        self.aim_yaw = self.agent.get_command().get('data').get('aim_yaw', None)
+
+        if self.aim_yaw is None:
+            self.aim_yaw = self.calc_angle_to_goal_degree()
+            print(f"[DRIBBLE FSM] Calculated aim_yaw: {self.aim_yaw:.2f}°")
 
         self.machine.model.trigger("dribble")
         print("[DRIBBLE FSM] Running...")
@@ -122,8 +127,9 @@ class DribbleStateMachine:
         向前带球
         """
         print("[DRIBBLE FSM] Moving forward...")
+
         vel_x = self._config.get("walk_vel_x", 0.3)
-        self.agent.cmd_vel(vel_x, 0, 0)
+        self.agent.cmd_vel(vel_x, 0, (self.agent.get_self_yaw()-self.aim_yaw)/30)
         print("[DRIBBLE FSM] Forward movement done")
 
     def stop_moving(self):
@@ -214,7 +220,6 @@ class DribbleStateMachine:
                 0.2
             )
 
-
     def adjust_ball_angle(self):
         """
         调整角度
@@ -292,7 +297,7 @@ class DribbleStateMachine:
             self.agent.cmd_vel(0, -0.08, 0.3)
         elif yaw_delta < -10:
             print(f"[DRIBBLE FSM] Rotating CW (Δ={yaw_delta:.2f}°)")
-            self.agent.cmd_vel(0, 0.08, -0.3)
+            self.agent.cmd_vel(0, 0.09, -0.3)
         else:
             print("[DRIBBLE FSM] Yaw angle is within acceptable range.")
 
@@ -389,7 +394,7 @@ class DribbleStateMachine:
         # neck_angle = self.agent.get_ball_angle()
         ball_x = self.agent.get_ball_pos()[0]
         ball_distance = self.agent.get_ball_distance()
-        ball_x_lost = abs(ball_x) > 100
+        ball_x_lost = abs(ball_x) > 80
         ball_distance_lost = ball_distance > 0.6
         result = ball_x_lost and not ball_distance_lost
         print(f"[DRIBBLE FSM] Lost ball x: {'Yes' if result else 'No'}")
@@ -432,12 +437,12 @@ class DribbleStateMachine:
 
         if self.agent.get_ball_pos_in_map()[0] > 0:
             if self.agent.get_ball_pos_in_map()[0] > 1500:
-                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] - 1300) / (4500 - self.agent.get_ball_pos_in_map()[1]))
+                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] - 0) / (4500 - self.agent.get_ball_pos_in_map()[1]))
             else:
                 angle_ball_to_goal = 0.0
         else:
             if self.agent.get_ball_pos_in_map()[0] < -1500:
-                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] + 1300) / (4500 - self.agent.get_ball_pos_in_map()[1]))
+                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] + 0) / (4500 - self.agent.get_ball_pos_in_map()[1]))
             else:
                 angle_ball_to_goal = 0.0
 
@@ -463,3 +468,20 @@ class DribbleStateMachine:
 
         self.agent.cmd_vel(vel_x, vel_y, vel_theta)
         print("[DRIBBLE FSM] Dribbling forward done")
+
+    def calc_angle_to_goal_degree(self):
+        """
+        计算朝球门的角度
+        """
+        if self.agent.get_self_pos()[0] > 0:
+            # if self.agent.get_self_pos()[0] > 1500:
+            angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] - 500) / (5000 - self.agent.get_self_pos()[1]))
+            # else:
+            #     angle_to_goal_rad = 0.0
+        else:
+            # if self.agent.get_self_pos()[0] < -1500:
+            angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] + 500) / (5000 - self.agent.get_self_pos()[1]))
+            # else:
+            #     angle_to_goal_rad = 0.0
+
+        return angle_to_goal_rad * 180 / math.pi

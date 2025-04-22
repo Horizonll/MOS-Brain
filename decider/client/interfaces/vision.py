@@ -53,10 +53,8 @@ class Vision:
     #   _position_callback(msg)             callback of /pos_in_map
     #   _soccer_real_callback(msg)          callback of /soccer_real_pos_in_map
     #   _vision_callback(target_matrix)     callback of /vision/obj_pos
-    #   _head_fsm_run()                     the main algorithm to move head
-    #   _head_fsm_track_ball()              staring at ball
-    #   _head_fsm_search_ball()             follow a angle list to search ball
-    #   _head_fsm_relocating()              follow a angle list to relocating
+    #   _track_ball()                        the main algorithm to move head
+    #   _track_ball_stage_looking_at_ball()  looing at ball algorithm
 
     def __init__(self, config): 
 
@@ -75,6 +73,7 @@ class Vision:
         self._search_ball_phase = 0
         self._relocate_phase = 0
         self.ball_distance = 6000
+        self._search_ball_phase = 0
 
         self.head = 0.75
         self.neck = 0
@@ -95,7 +94,7 @@ class Vision:
                                         queue_size = 1)
         
         self._head_set([self.head, self.neck])
-
+    
 
     def _head_fsm_run(self):
         if(time.time() - self._last_head_fsm_time < \
@@ -145,6 +144,29 @@ class Vision:
         self.head += addh
         self.neck -= addn
         self._head_set([self.head, self.neck])
+
+
+    def _track_ball_stage_head_up(self):
+        self._head_set([0.70, 0])
+
+
+    def _track_ball(self):
+        if(time.time() - self._last_track_ball_time < \
+                self._config["move_head_time_gap"]):
+            return
+        self._last_track_ball_time = time.time()
+
+        # change move head stage periodicly
+        if(time.time() - self._last_track_ball_stage_time > 
+           self._config["move_head_stage_time_gap"]):
+            self._track_ball_stage = (self._track_ball_stage + 1) % 2
+            self._last_track_ball_stage_time = time.time()
+        
+#        if(self._track_ball_stage % 2 == 0):
+        self._track_ball_stage_looking_at_ball()
+#        else:
+ #           self._track_ball_stage_head_up()
+            
     
 
     def _head_fsm_search_ball(self):
@@ -165,8 +187,7 @@ class Vision:
         self._relocate_phase += 1
         self._relocate_phase %= phase_count * k
         return 
-    
-
+   
 
     # _head_set(args: float[2]):
     #   设置头的角度，并记录角度信息并发布
@@ -179,6 +200,7 @@ class Vision:
             args[1] = self._force_look_at[1]
         head = np.clip(args[0], 0, 1.5)
         neck = np.clip(args[1], -1.1, 1.1)
+        self.head, self.neck = head, neck
         head_goal = JointState()
         head_goal.name = ["head", "neck"]
         head_goal.header = Header()
@@ -252,7 +274,7 @@ class Vision:
         
         self._vision_last_frame_time        = time.time()
         
-        self._head_fsm_run()
+        self._track_ball(); 
 
     def look_at(self, args):
         self._force_look_at = args
