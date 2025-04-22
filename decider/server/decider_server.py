@@ -90,7 +90,6 @@ class Agent:
         self._ball_pos = 1
         self._state = None
         self.ifBall = False
-        self.ready_to_kick = False
         self.t_no_ball = 0
         self.exit_flag = False
 
@@ -224,7 +223,7 @@ class Agent:
             }
 
             # Send the command asynchronously
-            asyncio.run(self.robot_server.send(player_id, cmd_data))
+            asyncio.run(self.robot_server.send_to_robot(player_id, cmd_data))
 
             # Log the performance metric
             latency = (time.time() - start_time) * 1000  # in milliseconds
