@@ -241,7 +241,8 @@ class Agent:
         valid_positions = []  # Stores valid (x,y) coordinates
 
         # Iterate through all robot data
-        for robot_id, robot_data in self.robots_data.items():
+        for robot_data in self.get_robots_data():
+            robot_id = robot_data.get('data', {}).get('id')
             # Skip self and disconnected robots
             if robot_id == self.id or robot_data.get('status') != 'connected':
                 continue

@@ -158,7 +158,6 @@ class FindBallStateMachine:
             )
             self.agent.stop()
 
-        self.agent.look_at(self.agent.get_ball_position())
         print("[FIND BALL FSM] Facing to ball completed")
 
     def run(self):
