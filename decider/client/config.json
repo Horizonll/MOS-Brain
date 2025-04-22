@@ -67,7 +67,6 @@
         [0.7, -0.3], 
         [0.7, -0.5]
     ],
-    // camera is looking around
     "field_params": {
         "LF": [
             -1000,
@@ -94,3 +93,4 @@
     // sundry
     "team": 1
 }
+

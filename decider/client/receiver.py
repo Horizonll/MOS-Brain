@@ -165,7 +165,7 @@ class Receiver:
         self.socket1.bind(self.addr)  # 主机、端口绑定到socket上
         self.socket1.settimeout(2)  # 阻塞时间(2s收不到就警告timeout)
 
-        self.initialize()  # 初始化
+        # self.initialize()  # 初始化
 
         self.t = threading.Thread(target=self.receive, daemon=True)  # 设置线程，持续接收信息
         self.t.start()  # 开启线程
@@ -207,6 +207,8 @@ class Receiver:
             pass
 
     def receive(self):
+        self.initialize()
+
         # 持续接收消息，单开线程
         while True:
             self.receive_once()
