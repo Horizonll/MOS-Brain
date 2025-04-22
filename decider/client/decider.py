@@ -292,7 +292,7 @@ class Agent:
             angle_rad = -math.atan2(ball_pos_relative[0], ball_pos_relative[1])
             angle_relative = angle_rad - self.get_self_yaw() - np.pi / 2
             # Normalize angle to [-pi, pi)
-            angle_relative = (angle_relative + np.pi) % (2 * np.pi) - np.pi
+            angle_relative = angle.normalize_angle(angle_relative * 180 / np.pi) * np.pi / 180
 
             print(f"Ball angle from other robots: {angle_relative}")
 
