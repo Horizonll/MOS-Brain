@@ -51,10 +51,10 @@ class Agent:
 
         # Create a mapping between roles and IDs
         self.roles_to_id = {
-            "forward_1": 3,
-            "forward_2": 4,
-            "defender_1": 1,
-            "goalkeeper": 2,
+            "forward_1": 1,
+            "forward_2": 2,
+            "defender_1": 3,
+            "goalkeeper": 4,
         }
 
         # Initialize robot states

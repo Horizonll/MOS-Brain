@@ -130,18 +130,27 @@ class RobotServer:
                     data['status'] = 'disconnected'
             
             logging.debug("Connection status updated")
+            # list all robots data
+            for robot_id, data in self.agent.robots_data.items():
+                logging.debug(f"Robot {robot_id}: {data}")
             await asyncio.sleep(5)
 
     async def send_to_robot(self, robot_id, data):
         """Send data to specific robot"""
         if robot_ip := self.robot_ips.get(robot_id):
             try:
-                reader, writer = await asyncio.open_connection(robot_ip, self.send_port)
+                # 设置超时时间为 2 秒，你可以按需调整
+                reader, writer = await asyncio.wait_for(
+                    asyncio.open_connection(robot_ip, self.send_port),
+                    timeout=0.5
+                )
                 writer.write(json.dumps(data).encode("utf-8"))
                 await writer.drain()
                 writer.close()
                 await writer.wait_closed()
                 logging.debug(f"Data sent to {robot_id}")
+            except asyncio.TimeoutError:
+                logging.error(f"Connection to {robot_id} timed out.")
             except Exception as e:
                 logging.error(f"Failed to send to {robot_id}: {e}")
         else:
