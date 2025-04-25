@@ -12,7 +12,7 @@ class ShootBallStateMachine:
         self.transitions = [
             {
                 "trigger": "run",
-                "source": "close_to_ball",
+                "source": ["close_to_ball", "have_ball"],
                 "dest": "have_ball",
                 "conditions": "ball_in_control",
                 "after": ["shoot", "log_transition"],  # 添加日志方法
@@ -117,6 +117,12 @@ class ShootBallStateMachine:
             self.agent.publish_command(closest_player_id, "dribble")
         else:
             self.logger.warning("射门失败: 未找到可用球员")
+
+        # 其它球员找球
+        for role, id in self.agent.roles_to_id.items():
+            if id != closest_player_id:
+                self.agent.publish_command(id, "find_ball")
+                self.logger.info(f"球员 {id} 寻找球")
 
     def go_for_possession(self):
         """争夺控球（添加策略说明）"""

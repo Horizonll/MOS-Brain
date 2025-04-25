@@ -52,9 +52,9 @@ class Agent:
         # Create a mapping between roles and IDs
         self.roles_to_id = {
             "forward_1": 3,
-            "forward_2": 2,
+            "forward_2": 4,
             "defender_1": 1,
-            "goalkeeper": 4,
+            "goalkeeper": 2,
         }
 
         # Initialize robot states
@@ -327,6 +327,7 @@ class Agent:
 
     def run_shoot_ball(self):
         self.shoot_ball_state_machine.run()
+        print("shoot ball state machine state: ", self.shoot_ball_state_machine.state)
 
     def run_old(self):
         while self.robots_data[1].get("status") == "disconnected":
@@ -425,14 +426,16 @@ class StateMachine:
                 "source": ["dribble", "shoot", "initial", "defend"],
                 "dest": "defend",
                 "conditions": "ball_in_backcourt",
-                "after": "run_defend_ball"
+                # "after": "run_defend_ball"
+                "after": "run_shoot_ball"
             },
             {
                 "trigger": "play",
                 "source": ["defend", "shoot", "initial", "dribble"],
                 "dest": "dribble",
                 "conditions": "ball_in_midcourt",
-                "after": "run_dribble_ball"
+                "after": "run_shoot_ball"
+                # "after": "run_dribble_ball"
             },
             {
                 "trigger": "play",
