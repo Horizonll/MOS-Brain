@@ -16,17 +16,15 @@ class RobotServer:
         self.agent = agent
         self.robot_ips = {}
         self.robots_data = self.agent.robots_data
-        self.send_port = 8002
-        self.udp_port = 8003
+        self.client_tcp_port = 8002
+        self.client_udp_port = 8003
         self.update_interval = 0.5  # Default interval for periodic updates
-        
+        self.discovery_interval = 1  # Interval for sending discovery broadcasts
+
         # Network initialization
         self._init_udp_socket()
-        self.ip = self._detect_ip()
-        
-        # Initial discovery broadcast
-        self._send_discovery()
-        
+        # self.ip = self._detect_ip()
+
         logging.info(f"Robot server initialized on port {self.port}")
 
     def _init_udp_socket(self):
@@ -44,17 +42,18 @@ class RobotServer:
             logging.error(f"IP detection failed: {e}")
             return '127.0.0.1'
 
-    def _send_discovery(self):
+    async def _send_discovery(self):
         """Send initial discovery broadcasts"""
-        for _ in range(2):
-            self.broadcast('')
+        while True:
+            self.broadcast('NjM5NWVkMSAgLQo')
+            await asyncio.sleep(self.discovery_interval)
 
     async def handle_robot_connection(self, reader, writer):
         """Handle incoming robot connections and data exchange"""
         addr = writer.get_extra_info('peername')
         robot_ip = addr[0]
         robot_id = None
-        
+
         try:
             while True:
                 data = await reader.read(1024)
@@ -63,7 +62,7 @@ class RobotServer:
 
                 robot_id = self._process_incoming_data(data, robot_ip)
                 # await self._send_robot_status(writer)
-                
+
         except Exception as e:
             logging.error(f"Connection error with {addr}: {e}")
             traceback.print_exc()
@@ -85,16 +84,16 @@ class RobotServer:
                     **robot_data.get('data', {})
                 }
             })
-            
+
             # Update ball detection status
             ball_data = robot_data.get('data', {}).get('ballx')
             self.agent.ifBall = ball_data is not None
             self.agent.ball_x = ball_data
-            
+
             # Store robot IP
             self.robot_ips[robot_id] = robot_ip
             return robot_id
-            
+
         except (json.JSONDecodeError, KeyError) as e:
             logging.error(f"Data processing error: {e}")
             return None
@@ -125,10 +124,10 @@ class RobotServer:
                 last_seen = data.get('last_seen')
                 if not last_seen:
                     continue
-                
+
                 if (current_time - datetime.fromisoformat(last_seen).timestamp()) > 5:
                     data['status'] = 'disconnected'
-            
+
             logging.debug("Connection status updated")
             # list all robots data
             for robot_id, data in self.agent.robots_data.items():
@@ -141,7 +140,7 @@ class RobotServer:
             try:
                 # 设置超时时间为 2 秒，你可以按需调整
                 reader, writer = await asyncio.wait_for(
-                    asyncio.open_connection(robot_ip, self.send_port),
+                    asyncio.open_connection(robot_ip, self.client_tcp_port),
                     timeout=0.5
                 )
                 writer.write(json.dumps(data).encode("utf-8"))
@@ -159,8 +158,8 @@ class RobotServer:
     def broadcast(self, data):
         """Broadcast data to all robots"""
         self.udp_socket.sendto(
-            json.dumps(data).encode("utf-8"), 
-            ('192.168.99.255', self.udp_port)
+            json.dumps(data).encode("utf-8"),
+            ('192.168.9.255', self.client_udp_port)
         )
         logging.debug(f"Broadcasted: {data}")
 
@@ -199,7 +198,8 @@ class RobotServer:
             await asyncio.gather(
                 self.start_server(),
                 self.monitor_connections(),
-                self.send_all_robots_data_loop()
+                self.send_all_robots_data_loop(),
+                self._send_discovery()
             )
         except asyncio.CancelledError:
             logging.info("Server shutdown requested")
@@ -226,3 +226,4 @@ if __name__ == "__main__":
         asyncio.run(robot_server.run())
     except KeyboardInterrupt:
         logging.info("Server stopped by user")
+    

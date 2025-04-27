@@ -82,12 +82,14 @@ class Agent:
     def __init__(self):
         rospy.init_node("decider", log_level=rospy.DEBUG)
         rospy.loginfo("Initializing the Agent instance")
-        
+
         self.if_local_test = False
 
         # Initializing public variables
         self._config = configuration.load_config()
-        self.id = 1
+        self.id = self._config["id"]
+        # last command time initialize to 1970-01-01 00:00:00
+        self._last_command_time = time.mktime(time.strptime("1970-01-01 00:00:00", "%Y-%m-%d %H:%M:%S"))
         self._command = {
             "command": "stop",
             "data": {},
@@ -138,20 +140,30 @@ class Agent:
         rospy.loginfo("Agent instance initialization completed")
 
     def run(self):
-
-        if self.receiver.game_state == 'STATE_SET':
+        # GameController command
+        if (self.receiver.game_state == 'STATE_SET'
+                or self.receiver.game_state == 'STATE_FINISHED'
+                or self.receiver.game_state == 'STATE_INITIAL'):
             self.stop()
         elif self.receiver.game_state == 'STATE_READY':
             self._state_machine_runners['go_back_to_field']()
-        elif ((not self.get_if_ball()) and (self._command["command"] == 'chase_ball' or \
-                                          self._command["command"] == 'kick' or \
-                                            self._command["command"] == 'dribble')):
-            self._state_machine_runners['find_ball']()
-        elif self._state_machine_runners.get(self._command["command"]):
-            self._state_machine_runners[self._command["command"]]()
-        else:
-            logging.debug(f"State machine '{self._command['command']}' not found.")
-            self.stop()
+        elif time.time() - self._last_command_time > 5: # if lost server command, run offline policy
+            if not self.get_if_ball():
+                self._state_machine_runners['find_ball']()
+            elif self.get_ball_distance() > 0.5:
+                self._state_machine_runners['chase_ball']()
+            else:
+                self._state_machine_runners['dribble']()
+        else: # run server command with lost ball policy
+            if ((not self.get_if_ball()) and (self._command["command"] == 'chase_ball' or \
+                                            self._command["command"] == 'kick' or \
+                                                self._command["command"] == 'dribble')):
+                self._state_machine_runners['find_ball']()
+            elif self._state_machine_runners.get(self._command["command"]):
+                self._state_machine_runners[self._command["command"]]()
+            else:
+                logging.debug(f"State machine '{self._command['command']}' not found.")
+                self.stop()
 
 
     # The following are some simple encapsulations of interfaces

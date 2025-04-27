@@ -92,3 +92,9 @@ python3 /home/thmos/MOS-Brain/decider/client/decider.py
 ### Controller / Server
 
 The code in dir server/ is run on server.  
+
+### 关于端口
+
+- server端tcp端口：8001
+- client端tcp端口：8002
+- client端udp端口：8003

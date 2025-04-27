@@ -58,8 +58,8 @@ def imu_callback2(msg):
 def main():
     rospy.init_node('imu_yaw_processor')
     # 根据实际IMU话题名称修改
-    # rospy.Subscriber('/imu', Imu, imu_callback)
-    rospy.Subscriber('/camera_imu', Imu, imu_callback2)
+    rospy.Subscriber('/imu', Imu, imu_callback)
+    # rospy.Subscriber('/camera_imu', Imu, imu_callback2)
     rospy.loginfo("Node started. Waiting for IMU data...")
     rospy.spin()
 
