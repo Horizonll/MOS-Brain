@@ -157,8 +157,12 @@ class RobotServer:
 
     def broadcast(self, data):
         """Broadcast data to all robots"""
+        if isinstance(data, str):
+            encoded_data = data.encode("utf-8")
+        else:
+            encoded_data = str(data).encode("utf-8")
         self.udp_socket.sendto(
-            json.dumps(data).encode("utf-8"),
+            encoded_data,
             ('192.168.9.255', self.client_udp_port)
         )
         logging.debug(f"Broadcasted: {data}")

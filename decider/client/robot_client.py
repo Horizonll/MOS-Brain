@@ -130,6 +130,7 @@ class RobotClient:
                         self.agent._last_command_time = time.time()
                     elif "robots_data" in received_data:
                         self.agent._robots_data = received_data["robots_data"]
+                        self.agent._last_command_time = time.time()
                     else:
                         rospy.logwarn("Received message does not contain 'command' or 'robots_data'")
                 except json.JSONDecodeError as e:
@@ -142,23 +143,33 @@ class RobotClient:
             writer.close()
             await writer.wait_closed()
 
-    # Synchronously listen for UDP broadcast messages and get the host IP
     def listen_host_ip(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.BROADCAST, 1)
-        sock.bind(("0.0.0.0", self.agent._config.get("auto_find_server_ip_listen_port")))
+        port = self.agent._config.get("auto_find_server_ip_listen_port")
+        expected_token = self.config.get("auto_find_server_ip_token")  # 假设config正确
 
-        while True:
-            data, addr = sock.recvfrom(1024)
-            try:
-                if data.decode("utf-8") == self.config["auto_find_server_ip_token"]:
-                    self.HOST_IP = addr[0]
-                    rospy.loginfo(f"Updated the host IP address to: {self.HOST_IP}")
-                    return self.HOST_IP
-                else:
-                    rospy.logwarn("Received message does not match the expected format")
-            except json.JSONDecodeError as e:
-                rospy.logerr(f"JSON decoding error: {e}")
-            except KeyboardInterrupt:
-                rospy.loginfo("User interrupted the program, exiting...")
-                break
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            sock.bind(("0.0.0.0", port))
+            
+            rospy.loginfo(f"Listening for UDP broadcast on port {port}...")
+            
+            while not rospy.is_shutdown():
+                try:
+                    data, addr = sock.recvfrom(1024)
+                    received_message = data.decode("utf-8").strip()
+
+
+                    
+                    if received_message == expected_token:
+                        self.HOST_IP = addr[0]
+                        rospy.loginfo(f"Host IP updated to: {self.HOST_IP}")
+                        return self.HOST_IP
+                    else:
+                        rospy.logwarn(f"Received unexpected message: {received_message}")
+                        rospy.logwarn(f"Expected token: {expected_token}")
+                        
+                except Exception as e:
+                    rospy.logerr(f"Error processing UDP message: {e}")
+        
+        rospy.loginfo("UDP listener stopped.")
+        return None

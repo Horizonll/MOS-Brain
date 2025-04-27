@@ -3,15 +3,13 @@
     "walk_vel_x": 0.1,
     "walk_vel_y": 0.05,
     "walk_vel_theta": 0.3,
-
     // networking
     "server_ip": "192.168.9.105",
     "server_port": 8002,
     "auto_find_server_ip": false,
-    "auto_find_server_ip_listen_port": 50000,
-    "auto_find_server_ip_token": "NjM5NWVkMSAgLQo=",
+    "auto_find_server_ip_listen_port": 8003,
+    "auto_find_server_ip_token": "NjM5NWVkMSAgLQo",
     "max_buffer_size": 1024,
-
     // vision
     "vision_size": [
         1280,
@@ -31,7 +29,7 @@
     "predict_ball_pos_in_map": true,
     "move_head_time_gap": 0.1, // second
     "move_head_stage_time_gap": 10000, // second
-    "ball_accuracy_integrated_factor": 0.1, 
+    "ball_accuracy_integrated_factor": 0.1,
     "looking_at_ball_integrated": [
         0.1,
         0.1
@@ -88,8 +86,6 @@
             -4000
         ]
     },
-
     // sundry
     "team": 1
 }
-

@@ -9,8 +9,8 @@ import numpy as np
 import math
 import logging
 import asyncio
-import keyboard
-
+import os
+import sys
 from robot_server import RobotServer
 from sub_statemachines import DefendBallStateMachine
 from sub_statemachines import DribbleBallStateMachine
@@ -92,6 +92,7 @@ class Agent:
         self.ifBall = False
         self.t_no_ball = 0
         self.exit_flag = False
+        self.keyboard_thread = None
 
         self._init_state_machine()
 
@@ -338,22 +339,49 @@ class Agent:
         self.state_machine.run_in_state1()
 
     def start_keyboard_listener(self):
-        """Start a separate thread to listen for keyboard events"""
-        def keyboard_monitor():
-            while True:
-                if keyboard.is_pressed('space'):
+        """启动跨平台键盘监听（不使用pynput）"""
+        def keyboard_thread():
+            while not self.exit_flag:
+                # 跨平台按键读取
+                if os.name == 'nt':  # Windows
+                    key = self._win_get_key()
+                else:               # Linux/macOS
+                    key = self._unix_get_key()
+                
+                if key == ' ':
                     self.toggle_run()
-                elif keyboard.is_pressed('q'):
+                elif key == 'q':
                     self.stop_playing()
                     self.exit_flag = True
-                    break
-                time.sleep(0.1)
 
-        self.keyboard_thread = threading.Thread(
-            target=keyboard_monitor,
-            daemon=True
-        )
+        self.keyboard_thread = threading.Thread(target=keyboard_thread, daemon=True)
         self.keyboard_thread.start()
+
+    def _win_get_key(self):
+        """Windows平台按键读取"""
+        import msvcrt
+        key = msvcrt.getch().decode('utf-8').lower()
+        # 仅处理目标按键，其他忽略
+        return key if key in (' ', 'q') else ''
+
+    def _unix_get_key(self):
+        """Unix平台按键读取"""
+        import termios
+        import tty
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setcbreak(fd)
+            key = sys.stdin.read(1).lower()
+            return key if key in (' ', 'q') else ''
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+    def stop_keyboard_listener(self):
+        """停止键盘监听（通过标志位自然终止）"""
+        self.exit_flag = True
+        if self.keyboard_thread and self.keyboard_thread.is_alive():
+            self.keyboard_thread.join()
 
     def is_playing(self):
         """Check if the system is currently running"""
@@ -385,7 +413,6 @@ class Agent:
         self.start_keyboard_listener()
         logging.info("System initialized (Press space to start, Q to exit)")
         try:
-            
             while True:
                 time.sleep(0.1)
                 if self.exit_flag:
@@ -406,6 +433,7 @@ class Agent:
             logging.info("\nProgram interrupted by user")
         finally:
             self.stop_playing()
+            self.stop_keyboard_listener()
             logging.info("System safely shut down")
 
 
@@ -426,16 +454,14 @@ class StateMachine:
                 "source": ["dribble", "shoot", "initial", "defend"],
                 "dest": "defend",
                 "conditions": "ball_in_backcourt",
-                # "after": "run_defend_ball"
-                "after": "run_shoot_ball"
+                "after": "run_defend_ball"
             },
             {
                 "trigger": "play",
                 "source": ["defend", "shoot", "initial", "dribble"],
                 "dest": "dribble",
                 "conditions": "ball_in_midcourt",
-                "after": "run_shoot_ball"
-                # "after": "run_dribble_ball"
+                "after": "run_dribble_ball"
             },
             {
                 "trigger": "play",
@@ -461,7 +487,7 @@ class StateMachine:
         self.machine = Machine(
             model=self.model,  # Use self.model here
             states=self.states,
-            initial="initial",  # Change to an existing state
+            initial="stop",  # 修正初始状态为有效状态
             transitions=self.transitions,
         )
         # self.thread = threading.Thread(target=self.run_in_state1)
@@ -473,4 +499,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main() 
