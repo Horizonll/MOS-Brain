@@ -24,8 +24,13 @@ def imu_callback(msg):
         yaw_rad = math.atan2(x_proj, y_proj)
         # 转换为角度（可选）
         yaw_deg = math.degrees(yaw_rad)
+
+        # 计算俯仰角（相对于xy平面）
+        pitch_rad = math.asin(-rotation_matrix[2, 0])
+        pitch_deg = math.degrees(pitch_rad)
+
         # 输出结果
-        rospy.loginfo("[1] %.2f radians, %.2f degrees", yaw_rad, yaw_deg)
+        rospy.loginfo("[1] Yaw: %.2f radians, %.2f degrees, Pitch: %.2f radians, %.2f degrees", yaw_rad, yaw_deg, pitch_rad, pitch_deg)
     except Exception as e:
         rospy.logerr("Error processing IMU data: %s", str(e))
 
@@ -49,9 +54,13 @@ def imu_callback2(msg):
         yaw_rad = math.atan2(x_proj, y_proj)
         # 转换为角度（可选）
         yaw_deg = math.degrees(yaw_rad)
+
+        # 计算俯仰角（相对于xy平面）
+        pitch_rad = math.asin(-rotation_matrix[2, 0])
+        pitch_deg = math.degrees(pitch_rad)
+
         # 输出结果
-        # rospy.loginfo("                                          [2] %.2f radians, %.2f degrees", yaw_rad, yaw_deg)
-        rospy.loginfo(f"x: {math.degrees(x_axis[0]):.5f}, y: {math.degrees(x_axis[1]):.5f}, z: {math.degrees(x_axis[2]):.5f}")
+        rospy.loginfo(f"[2] Yaw: {yaw_deg:.2f} degrees, Pitch: {pitch_deg:.2f} degrees")
     except Exception as e:
         rospy.logerr("Error processing IMU data: %s", str(e))
 

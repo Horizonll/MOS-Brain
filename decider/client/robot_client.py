@@ -127,6 +127,7 @@ class RobotClient:
                     # Here you can handle different commands specifically
                     if "command" in received_data:
                         self.agent._command = received_data
+                        self.agent._last_command_time = time.time()
                     elif "robots_data" in received_data:
                         self.agent._robots_data = received_data["robots_data"]
                     else:
@@ -145,13 +146,12 @@ class RobotClient:
     def listen_host_ip(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.BROADCAST, 1)
-        sock.bind(("", self.agent._config.get("auto_find_server_ip_listen_port")))
+        sock.bind(("0.0.0.0", self.agent._config.get("auto_find_server_ip_listen_port")))
 
         while True:
             data, addr = sock.recvfrom(1024)
             try:
-                if(data.decode("utf-8") == \
-                        self.config["auto_find_server_ip_token"]):
+                if data.decode("utf-8") == self.config["auto_find_server_ip_token"]:
                     self.HOST_IP = addr[0]
                     rospy.loginfo(f"Updated the host IP address to: {self.HOST_IP}")
                     return self.HOST_IP
