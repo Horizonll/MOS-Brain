@@ -31,7 +31,7 @@ def load_config():
 
     # Loading basic configs; which is mandatory
     try:
-        f_config = open("/home/thmos/MOS-Brain/decider/client/config.json", "r")
+        f_config = open("config.json", "r")
         json_str = f_config.read()
         json_str = _remove_comment(json_str)
         config = json.loads(json_str)
@@ -42,7 +42,7 @@ def load_config():
 
     # Loading override configs; this is not mandatory
     try:
-        f_override = open("/home/thmos/MOS-Brain/decider/client/config_override.json", "r")
+        f_override = open("config_override.json", "r")
         json_str = f_override.read()
         json_str = _remove_comment(json_str)
         override = json.loads(json_str)

@@ -87,7 +87,7 @@ class Vision:
         self._soccer_real_sub = rospy.Subscriber("/soccer_real_pos_in_map",  \
                                         Point, \
                                         self._soccer_real_callback)
-        self._head_pub = rospy.Publisher("/head_goals",  \
+        self._head_pub = rospy.Publisher("/user_head_command",  \
                                         JointState,  \
                                         queue_size = 1)
         
@@ -152,10 +152,9 @@ class Vision:
         head = np.clip(args[0], 0, 1.5)
         neck = np.clip(args[1], -1.1, 1.1)
         self.head, self.neck = head, neck
-        head_goal = JointState()
-        head_goal.name = ["head", "neck"]
-        head_goal.header = Header()
-        head_goal.position = [head, neck]
+        head_goal = Point()
+        head_goal.x = args["neck"]
+        head_goal.y = args["head"]
         self._head_pub.publish(head_goal) 
 
 

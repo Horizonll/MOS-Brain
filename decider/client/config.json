@@ -1,8 +1,8 @@
 {
     // velocities
-    "walk_vel_x": 0.1,
-    "walk_vel_y": 0.05,
-    "walk_vel_theta": 0.3,
+    "walk_vel_x": 0.5,
+    "walk_vel_y": 0.5,
+    "walk_vel_theta": 2.0,
 
     // networking
     "server_ip": "192.168.9.105",
