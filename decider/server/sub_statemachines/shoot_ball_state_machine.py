@@ -4,10 +4,11 @@ import logging
 
 class ShootBallStateMachine:
     def __init__(self, agent):
-        self.logger = logging.getLogger(__name__)  # 类级logger
+        self.logger = logging.getLogger(__name__)
         self.agent = agent
+        self._config = self.agent.get_config()  # 假设代理对象有获取配置的方法
+        self.read_params()  # 添加参数读取
 
-        # 初始化状态机
         self.states = ["have_no_ball", "close_to_ball", "have_ball"]
         self.transitions = [
             {
@@ -15,18 +16,18 @@ class ShootBallStateMachine:
                 "source": ["close_to_ball", "have_ball"],
                 "dest": "have_ball",
                 "conditions": "ball_in_control",
-                "after": ["shoot", "log_transition"],  # 添加日志方法
+                "after": ["shoot", "log_transition"],
             },
             {
                 "trigger": "run",
                 "source": "have_ball",
                 "dest": "close_to_ball",
                 "conditions": "dont_have_ball",
-                "after": ["go_for_possession_avoid_collsion", "log_transition"],  # 添加日志方法
+                "after": ["go_for_possession_avoid_collsion", "log_transition"],
             },
             {
                 "trigger": "run",
-                "source": ["have_no_ball"],
+                "source": ["have_no_ball", "close_to_ball"],
                 "dest": "close_to_ball",
                 "conditions": "close_to_ball",
                 "after": ["go_for_possession_avoid_collsion", "log_transition"],
@@ -45,107 +46,107 @@ class ShootBallStateMachine:
             states=self.states,
             initial="have_no_ball",
             transitions=self.transitions,
-            after_state_change=self.on_state_change,  # 添加全局状态变更回调
+            after_state_change=self.on_state_change,
         )
         self.logger.info("状态机初始化完成，初始状态: have_no_ball")
 
+    def read_params(self):
+        """从配置文件读取参数"""
+        shoot_config = self._config.get("shooting", {})
+        self.ball_in_control_threshold_m = shoot_config.get("ball_in_control_threshold_m", 0.4)
+        self.ball_out_of_control_threshold_m = shoot_config.get("ball_out_of_control_threshold_m", 0.8)
+        self.close_to_ball_threshold_m = shoot_config.get("close_to_ball_threshold_m", 0.8)
+
     def log_transition(self):
-        """记录状态迁移"""
         self.logger.debug(f"执行迁移后的动作，当前状态: {self.state}")
 
     def on_state_change(self, event=None):
-        """全局状态变更回调"""
         if event:
             self.logger.info(f"状态变更: {event.transition.source} -> {event.transition.dest}")
 
     def ball_in_control(self):
-        players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
-        forward_1_distance = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
-        forward_2_distance = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
-        result1 = (forward_1_distance < 0.4 or forward_2_distance < 0.4)
-
-        self.logger.debug(f"检查球权控制状态: {'已控球' if result1 else '未控球'}")
-        return result1
+        """检查是否控球（参数化距离阈值）"""
+        players_distance = self.agent.get_players_distance_to_ball_without_goalkeeper()
+        f1_dist = players_distance[self.agent.roles_to_id["forward_1"]]
+        f2_dist = players_distance[self.agent.roles_to_id["forward_2"]]
+        result = (f1_dist < self.ball_in_control_threshold_m) or (f2_dist < self.ball_in_control_threshold_m)
+        self.logger.debug(f"控球检查: 前锋1={f1_dist:.2f}m, 前锋2={f2_dist:.2f}m, 结果={result}")
+        return result
 
     def ball_out_of_control(self):
-        players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
-        forward_1_distance = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
-        forward_2_distance = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
-        result = (forward_1_distance > 0.8 and forward_2_distance > 0.8)
-        self.logger.debug(
-            f"检查球权丢失状态: 前锋1距离={forward_1_distance:.2f}, "
-            f"前锋2距离={forward_2_distance:.2f}, {'已丢失' if result else '仍保持'}"
-        )
+        """检查是否丢球（参数化距离阈值）"""
+        players_distance = self.agent.get_players_distance_to_ball_without_goalkeeper()
+        f1_dist = players_distance[self.agent.roles_to_id["forward_1"]]
+        f2_dist = players_distance[self.agent.roles_to_id["forward_2"]]
+        result = (f1_dist > self.ball_out_of_control_threshold_m) and (f2_dist > self.ball_out_of_control_threshold_m)
+        self.logger.debug(f"丢球检查: 前锋1={f1_dist:.2f}m, 前锋2={f2_dist:.2f}m, 结果={result}")
         return result
     
     def dont_have_ball(self):
-        self.logger.debug(f"检查球权状态: 丢球：{self.ball_out_of_control()} , 控球：{self.ball_in_control()}")
-        return not self.ball_in_control() and not self.ball_out_of_control()
+        """检查是否无球（非控球且非丢球中间状态）"""
+        control = self.ball_in_control()
+        out_of_control = self.ball_out_of_control()
+        result = not control and not out_of_control
+        self.logger.debug(f"无球状态检查: 控球={control}, 丢球={out_of_control}, 结果={result}")
+        return result
 
     def close_to_ball(self):
-        players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
-        forward_1_distance = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
-        forward_2_distance = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
-        result = (forward_1_distance < 0.8 or forward_2_distance < 0.8)
-        self.logger.debug(
-            f"检查近距离状态: 前锋1距离={forward_1_distance:.2f}, "
-            f"前锋2距离={forward_2_distance:.2f}, {'在范围内' if result else '未接近'}"
-        )
+        """检查是否接近球（参数化距离阈值）"""
+        players_distance = self.agent.get_players_distance_to_ball_without_goalkeeper()
+        f1_dist = players_distance[self.agent.roles_to_id["forward_1"]]
+        f2_dist = players_distance[self.agent.roles_to_id["forward_2"]]
+        result = (f1_dist < self.close_to_ball_threshold_m) or (f2_dist < self.close_to_ball_threshold_m)
+        self.logger.debug(f"接近球检查: 前锋1={f1_dist:.2f}m, 前锋2={f2_dist:.2f}m, 结果={result}")
         return result
 
     def shoot(self):
-        """射门动作（添加距离信息日志）"""
+        """射门动作（带参数化距离日志）"""
         players_distance = self.agent.get_players_distance_to_ball_without_goalkeeper()
-        min_distance = float('inf')
-        closest_player_id = None
+        distance_log = ", ".join([
+            f"{role}: {players_distance[id]:.2f}m" 
+            for role, id in self.agent.roles_to_id.items()
+        ])
+        self.logger.debug(f"球员距离球数据: {distance_log}")
+
+        closest_id = min(self.agent.roles_to_id.values(), key=lambda x: players_distance[x])
+        closest_dist = players_distance[closest_id]
         
-        # 记录所有球员距离
-        distance_log = ", ".join(
-            [f"{role}: {players_distance[id]:.2f}" 
-             for role, id in self.agent.roles_to_id.items()]
-        )
-        self.logger.debug(f"球员距离球门数据: {distance_log}")
-
-        # 寻找最近球员
+        self.logger.info(f"执行射门: 最近球员{closest_id}（距离{closest_dist:.2f}m）")
+        self.agent.publish_command(closest_id, "shoot")
+        
         for role, id in self.agent.roles_to_id.items():
-            if players_distance[id] < min_distance:
-                min_distance = players_distance[id]
-                closest_player_id = id
-
-        if closest_player_id is not None:
-            self.logger.info(f"执行射门: 球员 {closest_player_id} (距离={min_distance:.2f})")
-            self.agent.publish_command(closest_player_id, "dribble")
-        else:
-            self.logger.warning("射门失败: 未找到可用球员")
-
-        # 其它球员找球
-        for role, id in self.agent.roles_to_id.items():
-            if id != closest_player_id:
-                self.agent.publish_command(id, "find_ball")
-                self.logger.info(f"球员 {id} 寻找球")
+            if id != closest_id:
+                self.agent.publish_command(self.agent.roles_to_id[closest_to_goal], "chase_ball", {"chase_distance": 1})
+                self.logger.info(f"球员{id}执行支持任务")
 
     def go_for_possession(self):
-        """争夺控球（添加策略说明）"""
-        self.logger.info("执行双前锋追球策略")
+        """双前锋追球策略（参数化策略说明）"""
+        self.logger.info(f"执行追球策略（阈值:{self.ball_out_of_control_threshold_m}m）")
         self.agent.publish_command(self.agent.roles_to_id["forward_1"], "chase_ball")
         self.agent.publish_command(self.agent.roles_to_id["forward_2"], "chase_ball")
 
     def go_for_possession_avoid_collsion(self):
-        """防碰撞策略（添加选择逻辑说明）"""
-        players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()
-        forward_1_distance = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
-        forward_2_distance = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
-        
-        # 记录比较结果
-        self.logger.debug(
-            f"防撞策略: 前锋1距离={forward_1_distance:.2f} vs 前锋2距离={forward_2_distance:.2f}"
-        )
+        """防碰撞策略（带参数化距离比较）"""
+        players_distance = self.agent.get_players_distance_to_ball_without_goalkeeper()
+        f1_dist = players_distance[self.agent.roles_to_id["forward_1"]]
+        f2_dist = players_distance[self.agent.roles_to_id["forward_2"]]
+        self.logger.debug(f"防撞距离比较: 前锋1={f1_dist:.2f}m vs 前锋2={f2_dist:.2f}m")
 
-        if forward_1_distance < forward_2_distance:
-            self.logger.info("执行策略: 前锋1追球，前锋2待命")
-            self.agent.publish_command(self.agent.roles_to_id["forward_2"], "find_ball")
+        if f1_dist < f2_dist:
+            self.logger.info(f"启动单前锋追球（前锋1更近，阈值:{self.close_to_ball_threshold_m}m）")
             self.agent.publish_command(self.agent.roles_to_id["forward_1"], "chase_ball")
+            self.agent.publish_command(self.agent.roles_to_id["forward_2"], "find_ball")
         else:
-            self.logger.info("执行策略: 前锋2追球，前锋1待命")
-            self.agent.publish_command(self.agent.roles_to_id["forward_1"], "find_ball")
+            self.logger.info(f"启动单前锋追球（前锋2更近，阈值:{self.close_to_ball_threshold_m}m）")
             self.agent.publish_command(self.agent.roles_to_id["forward_2"], "chase_ball")
+            self.agent.publish_command(self.agent.roles_to_id["forward_1"], "find_ball")
+
+
+# 配置文件示例（JSON格式）
+"""
+"shooting": {
+    "ball_in_control_threshold_m": 0.4,        
+    "ball_out_of_control_threshold_m": 0.8,   
+    "close_to_ball_threshold_m": 0.8          
+}
+"""

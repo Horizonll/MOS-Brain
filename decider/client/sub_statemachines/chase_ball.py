@@ -48,7 +48,10 @@ class ChaseBallStateMachine:
 
     def close_to_ball(self):
         """Check if the agent is close to the ball (距离+角度检查)"""
-        distance_close = self.agent.get_if_close_to_ball()
+        if self.chase_distance is not None:
+            distance_close = self.chase_distance > self.agent.get_ball_distance()
+        else:
+            distance_close = self.agent.get_if_close_to_ball()
         angle_close = abs(self.agent.get_ball_angle()) < self.close_angle_threshold_rad
         result = distance_close and angle_close
         print(
@@ -72,6 +75,8 @@ class ChaseBallStateMachine:
             print("[CHASE BALL FSM] No ball in sight. Stopping.")
             self.stop_moving()
             return
+        
+        self.chase_distance = command.get("data", {}).get("chase_distance", None)
 
         print(f"\n[CHASE BALL FSM] Current state: {self.state}")
         print(f"[CHASE BALL FSM] Triggering 'chase_ball' transition")

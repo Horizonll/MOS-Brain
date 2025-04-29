@@ -1,3 +1,12 @@
 {
-    
+    "shooting": {
+        "ball_in_control_threshold_m": 0.4,        
+        "ball_out_of_control_threshold_m": 0.8,   
+        "close_to_ball_threshold_m": 0.8          
+    },
+    "defending": {
+        "ball_in_control_threshold_m": 0.4,
+        "ball_out_of_control_threshold": 0.8,
+        "close_to_ball_threshold": 0.8
+    }
 }
