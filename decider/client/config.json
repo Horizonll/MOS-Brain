@@ -124,7 +124,7 @@
         "good_yaw_threshold_degree": 10,
         "walk_vel_x": 0.3,
         "walk_vel_theta": 0.3,
-        "arrive_trust_time": 5
+        "arrive_trust_time": 20
     },
     "chase": {
         "close_angle_threshold_rad": 0.1,        
