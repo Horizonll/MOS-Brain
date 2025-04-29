@@ -48,11 +48,11 @@ class RobotClient:
                     "data": {
                         "x": float(self.agent.get_self_pos()[0]),
                         "y": float(self.agent.get_self_pos()[1]),
-                        "ballx": float(self.agent.get_ball_pos_in_map()[0]),
+                        "ballx": float(self.agent.get_ball_pos_in_map()[0]), # TODO: 确定单位
                         "bally": float(self.agent.get_ball_pos_in_map()[1]),
                         "yaw": float(self.agent.get_self_yaw()),
                         "ball_distance": float(self.agent.get_ball_distance()),
-                        "ifBall": int(self.agent.get_if_ball()),
+                        "if_ball": bool(self.agent.get_if_ball()),
                     },
                     "info": self.agent._command["command"],
                     "timestamp": time.time(),

@@ -89,7 +89,7 @@ class Agent:
 
         self._ball_pos = 1
         self._state = None
-        self.ifBall = False
+
         self.t_no_ball = 0
         self.exit_flag = False
         self.keyboard_thread = None
@@ -311,14 +311,21 @@ class Agent:
     def ball_pos(self):
         return self._ball_pos
 
-    def if_ball_in_sight(self):
+    @property
+    def get_if_ball(self):
         """
         Determine if the ball is in control.
+        只要有一个机器人有球，则认为有球，否则没有球
 
         Returns:
             bool: True if the ball is in control, False otherwise
         """
-        return self.ifBall
+        for robot_id, data in self.robots_data.items():
+            if data["status"] == "connected":
+                ball_data = data.get("data", {}).get("if_ball")
+                if ball_data:
+                    return True
+        return False
 
     def run_defend_ball(self):
         self.defend_ball_state_machine.run()
@@ -410,10 +417,12 @@ class Agent:
 
     def run(self):
         """Main loop with keyboard control and state detection"""
-        self.start_keyboard_listener()
+
         logging.info("System initialized (Press space to start, Q to exit)")
         try:
+            self.start_keyboard_listener()
             while True:
+
                 time.sleep(0.1)
                 if self.exit_flag:
                     break

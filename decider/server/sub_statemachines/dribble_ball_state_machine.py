@@ -38,7 +38,7 @@ class DribbleBallStateMachine:
         )
 
     def ball_in_control(self):
-        return self.agent.if_ball_in_sight()
+        return self.agent.get_if_ball()
 
     def ball_out_of_control(self):
         players_distance_to_ball = self.agent.get_players_distance_to_ball_without_goalkeeper()

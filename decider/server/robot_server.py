@@ -87,8 +87,9 @@ class RobotServer:
 
             # Update ball detection status
             ball_data = robot_data.get('data', {}).get('ballx')
-            self.agent.ifBall = ball_data is not None
+            # self.agent.if_ball = ball_data is not None
             self.agent.ball_x = ball_data
+            print(f"Robot {robot_id} data: {robot_data}")
 
             # Store robot IP
             self.robot_ips[robot_id] = robot_ip
@@ -221,8 +222,8 @@ if __name__ == "__main__":
                 'status': 'disconnected',
                 'data': {}
             })
-            self.ifBall = False
-            self.ball_x = None
+            # self.if_ball = False
+            # self.ball_x = None
 
     robot_server = RobotServer(BaseAgent())
 
