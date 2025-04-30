@@ -48,7 +48,6 @@ class Agent:
         # rospy.init_node("decider")
 
         # Get parameters TODO: Determine parameters
-        self.read_config()
 
         # Create a mapping between roles and IDs
         self.roles_to_id = {
@@ -112,14 +111,14 @@ class Agent:
         """
         # Read the local JSON configuration file
         try:
-            with open("/home/thmos/MOS-Brain/decider/server/config.json", "r") as f:
-                self._config = json.load(f)
+            with open("config.json", "r") as f:
+                config = json.load(f)
 
-            # # Check if automatic player detection is enabled
-            # self.auto_detect_players = config.get("auto_detect_players", False)
+            # Check if automatic player detection is enabled
+            self.auto_detect_players = config.get("auto_detect_players", False)
 
-            # # Check if static IP is used
-            # self.use_static_ip = config.get("use_static_ip", False)
+            # Check if static IP is used
+            self.use_static_ip = config.get("use_static_ip", False)
         except FileNotFoundError:
             logging.error("Configuration file not found.")
 
@@ -197,7 +196,7 @@ class Agent:
         temp_roles_to_id[player_role_1], temp_roles_to_id[player_role_2] = self.roles_to_id[player_role_2], self.roles_to_id[player_role_1]
         self.roles_to_id = temp_roles_to_id
 
-    def publish_command(self, player_id, cmd, data={}):
+    def publish_command(self, player_id, cmd):
         """
         Publish a command (enhanced with logging).
 
@@ -220,7 +219,7 @@ class Agent:
             start_time = time.time()
             cmd_data = {
                 "command": cmd,
-                "data": data,
+                "data": {},
                 "send_time": start_time,
             }
 
@@ -262,7 +261,7 @@ class Agent:
 
         TODO: Determine the condition for the ball to be in the backcourt
         """
-        if self.ball_pos[1] < -1000:
+        if self.ball_x > 10:
             return True
         return False
 
@@ -275,7 +274,7 @@ class Agent:
 
         TODO: Determine the condition for the ball to be in the midcourt
         """
-        if self.ball_pos[1] > -1000 and self.ball_pos[1] < 1000:
+        if 5 < self.ball_x <= 10:
             return True
         return False
 
@@ -288,7 +287,7 @@ class Agent:
 
         TODO: Determine the condition for the ball to be in the frontcourt
         """
-        if self.ball_pos[1] > 1000:
+        if self.ball_x <= 5:
             return True
         return False
 
@@ -310,28 +309,7 @@ class Agent:
 
     @property
     def ball_pos(self):
-        """
-        Get the ball position.
-
-        Returns:
-            tuple: The ball position (x, y)
-        """
-        # 计算所有有球机器人球的位置的平均值
-        ball_x = 0
-        ball_y = 0
-        count = 0
-        for robot_id, data in self.robots_data.items():
-            if data["status"] == "connected" and data.get("data", {}).get("if_ball"):
-                ball_x = data.get("data", {}).get("ballx", 0) + ball_x
-                ball_y = data.get("data", {}).get("bally", 0) + ball_y
-                count += 1
-        if count > 0:
-            ball_x /= count
-            ball_y /= count
-        else:
-            ball_x = 0
-            ball_y = 0
-        return (ball_x, ball_y)
+        return self._ball_pos
 
     @property
     def get_if_ball(self):
@@ -442,7 +420,7 @@ class Agent:
 
         logging.info("System initialized (Press space to start, Q to exit)")
         try:
-            self.start_keyboard_listener()
+            # self.start_keyboard_listener()
             while True:
 
                 time.sleep(0.1)
@@ -492,7 +470,7 @@ class StateMachine:
                 "source": ["defend", "shoot", "initial", "dribble"],
                 "dest": "dribble",
                 "conditions": "ball_in_midcourt",
-                "after": "run_shoot_ball"
+                "after": "run_dribble_ball"
             },
             {
                 "trigger": "play",

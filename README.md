@@ -2,6 +2,65 @@
 
 The decision-rev of MOS-8.5.
 
+### 北京赛调试及启动指南
+
+#### 硬件准备
+
+1. 确认电池有电，电压大于等于16.5V，否则需要充电，充电器操作方法问李老师
+   
+2. 电池紧贴泡沫板安装牢固，拧紧舱盖，电池线从机器人底部走
+   
+3. 电池接口用魔术贴固定在背箱侧面，防止运动时脱落，切勿放在箱内导致短路
+
+4. 启动时确认肩部关节位置正常没有过度旋转
+
+#### 一键启动
+
+#### 调试启动流程
+
+1. 启动roscore，保证所有topic注册在一个core中
+
+```sh
+roscore
+```
+
+2. 检查电机开关，启动步态程序
+
+```sh
+roslaunch thmos_bringup mos_run.launch
+```
+
+- 如果带有电机序号的错误提示，先检查电机线是否松动，如果没有问题，尝试重启步态程序，再不行联系本体同学。
+- 不带电机序号的错误提示，大概率IMU没接好，检查IMU线是否牢固，是否亮灯
+
+3. 启动视觉程序
+
+插拔ZED一次，将机器人放置到入场点，根据入场位置调整三个参数
+  
+```sh
+cd ~/thmos_ws/src/thmos_code/vision/scripts && python3 vision_with_local.py 3300 1000 90
+```
+
+启动后，一定检查IMU是否发生明显漂移（0.1degrees/s以上），如果有漂移就插拔IMU重启步态
+
+- 正常情况下帧率为10，如果大于10问题大概率是ZED没连上，先尝试插拔，插拔解决不了换线
+- 帧率小于10可能是debug没关或内存泄漏，联系睿泽解决
+- 检查当前定位命令：`rostopic echo /pos_in_map`，如果没有数据，检查IMU和ZED是否正常工作
+
+4. 启动决策程序
+
+启动子机决策，注意在`client/config_override.json`中配置team和id
+
+```sh
+cd ~/MOS-Brain/decider/client && python3 decider.py
+```
+
+如果在该机器人上运行多机决策，运行
+
+```sh
+cd ~/MOS-Brain/decider/server && python3 decider_server.py
+```
+
 ### Sync
 command:
 ```sh

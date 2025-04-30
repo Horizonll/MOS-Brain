@@ -1,6 +1,3 @@
-# kick.py
-# State machine for robot kicking behavior
-
 import math
 import time
 from transitions import Machine
@@ -11,6 +8,8 @@ class KickStateMachine:
         """Initialize the kick state machine with an agent"""
         self.agent = agent
         self._config = self.agent.get_config()
+        self.read_params()  # 初始化参数
+        
         # Define states and transitions
         self.states = ["angle_adjust", "horizontal_adjust", "back_forth_adjust", "finished"]
         self.transitions = [
@@ -21,7 +20,7 @@ class KickStateMachine:
                 "conditions": "not_good_angle",
                 "after": "adjust_angle",
             },
-{
+            {
                 "trigger": "adjust_position",
                 "source": ["horizontal_adjust", "back_forth_adjust"],
                 "dest": "angle_adjust",
@@ -81,9 +80,9 @@ class KickStateMachine:
     def run(self):
         """Main execution loop for the state machine"""
         print("[KICK FSM] Starting kick sequence...")
-        print(f"[KICK FSM] ifBall: {self.agent.get_if_ball()} state: {self.state}")
+        print(f"[KICK FSM] if_ball: {self.agent.get_if_ball()} state: {self.state}")
         self.agent.look_at([None, None])
-        if (self.agent.get_ball_distance() > 0.8) and (self.state != "finished"):
+        if (self.agent.get_ball_distance() > self.lost_ball_distance_threshold_m) and (self.state != "finished"):
             print("[KICK FSM] Ball is too far. Stopping robot.")
             self.agent.stop()
             return
@@ -101,7 +100,6 @@ class KickStateMachine:
         ):
             print("\n[KICK FSM] Positioning complete! Executing kick...")
             self.agent.cmd_vel(0, 0, 0)
-            # self.agent.head_set(head=0.1, neck=0)
             time.sleep(1)
             self.agent.kick()
             time.sleep(2)
@@ -117,32 +115,28 @@ class KickStateMachine:
     def adjust_angle(self):
         """Adjust robot's angle relative to goal"""
         print("[ANGLE ADJUST] Starting angle adjustment...")
-        # self.agent.head_set(0.7, 0)
-
-        # Calculate target angle using ball position
-
-        #
-        target_angle_rad = math.atan((self.agent.get_self_pos()[0] - 0) / (4500 - self.agent.get_self_pos()[1]))
-        ang_tar = target_angle_rad * 180 / math.pi
+        
+        target_angle_rad = math.atan2(self.agent.get_self_pos()[0], 4500 - self.agent.get_self_pos()[1])
+        ang_tar = math.degrees(target_angle_rad)
         ang_delta = ang_tar - self.agent.get_self_yaw()
 
         print(
             f"[ANGLE ADJUST] Target angle: {ang_tar:.2f}°, Current yaw: {self.agent.get_self_yaw():.2f}°, Delta: {ang_delta:.2f}°"
         )
 
-        if ang_delta > 10:
-            print(f"[ANGLE ADJUST] Rotating CCW (Δ={ang_delta:.2f})")
-            self.agent.cmd_vel(0, -0.05, 0.3)
-        elif ang_delta < -10:
-            print(f"[ANGLE ADJUST] Rotating CW (Δ={ang_delta:.2f})")
-            self.agent.cmd_vel(0, 0.05, -0.3)
+        if ang_delta > self.good_angle_threshold_degree:
+            print(f"[ANGLE ADJUST] Rotating CCW (Δ={ang_delta:.2f}°)")
+            self.agent.cmd_vel(0, -self.rotate_vel_y, self.rotate_vel_theta)
+        elif ang_delta < -self.good_angle_threshold_degree:
+            print(f"[ANGLE ADJUST] Rotating CW (Δ={ang_delta:.2f}°)")
+            self.agent.cmd_vel(0, self.rotate_vel_y, -self.rotate_vel_theta)
 
     def good_angle(self):
         """Check if angle is within acceptable range"""
-        target_angle_rad = math.atan((self.agent.get_self_pos()[0] - 0) / (4500 - self.agent.get_self_pos()[1]))
-        ang_tar = target_angle_rad * 180 / math.pi
+        target_angle_rad = math.atan2(self.agent.get_self_pos()[0], 4500 - self.agent.get_self_pos()[1])
+        ang_tar = math.degrees(target_angle_rad)
         ang_delta = ang_tar - self.agent.get_self_yaw()
-        result = abs(ang_delta) < 10
+        result = abs(ang_delta) < self.good_angle_threshold_degree
 
         print(
             f"[ANGLE CHECK] Angle delta: {abs(ang_delta):.2f}° (OK? {'Yes' if result else 'No'})"
@@ -150,52 +144,45 @@ class KickStateMachine:
         return result
     
     def really_not_good_angle(self):
-        """Check if angle is within acceptable range"""
-        target_angle_rad = math.atan((self.agent.get_self_pos()[0] - 0) / (4500 - self.agent.get_self_pos()[1]))
-        ang_tar = target_angle_rad * 180 / math.pi
+        """Check if angle is outside large acceptable range"""
+        target_angle_rad = math.atan2(self.agent.get_self_pos()[0], 4500 - self.agent.get_self_pos()[1])
+        ang_tar = math.degrees(target_angle_rad)
         ang_delta = ang_tar - self.agent.get_self_yaw()
-        result = abs(ang_delta) < 30
+        result = abs(ang_delta) >= self.really_bad_angle_threshold_degree
 
         print(
-            f"[ANGLE CHECK] Angle delta: {abs(ang_delta):.2f}° (OK? {'Yes' if result else 'No'})"
+            f"[ANGLE CHECK] Large angle delta: {abs(ang_delta):.2f}° (Bad? {'Yes' if result else 'No'})"
         )
-        return not result
+        return result
     
     def not_good_angle(self):
         """Check if angle is not within acceptable range"""
         return not self.good_angle()
     
     def not_finished(self):
-        """Check if angle is not within acceptable range"""
-        return (not self.good_angle()) or not self.good_back_forth()
+        """Check if positioning is not finished"""
+        return not (self.good_angle() and self.good_back_forth())
 
     def adjust_horizontally(self):
         """Adjust left-right position relative to ball"""
         print("\n[LR ADJUST] Starting lateral adjustment...")
-        # self.agent.head_set(head=0.9, neck=0)
-
-        no_ball_count = 0
-
+        
         if not self.good_position_horizontally():
-
-            if not self.agent.get_if_ball():
-                no_ball_count += 1
-                print(f"[LR ADJUST] Lost ball ({no_ball_count}/5)")
-                time.sleep(0.2)
-            elif self.agent.get_ball_angle() > -0.05:
-                print(f"[LR ADJUST] Moving left (Ball(Neck) Angle: {self.agent.get_ball_angle()})")
-                self.agent.cmd_vel(-0.05, 0.6 * self._config.get("walk_vel_y", 0.05), 0)
-            elif self.agent.get_ball_angle() < -0.15:
-                print(f"[LR ADJUST] Moving right (Ball(Neck) Angle: {self.agent.get_ball_angle()})")
-                self.agent.cmd_vel(-0.05, - 0.6 * self._config.get("walk_vel_y", 0.05), 0)
-
+            ball_angle = self.agent.get_ball_angle()
+            if ball_angle > self.horizontal_adjust_threshold_rad:
+                print(f"[LR ADJUST] Moving left (Ball Angle: {math.degrees(ball_angle):.2f}°)")
+                self.agent.cmd_vel(self.horizontal_adjust_forward_vel, self.lateral_vel, self.rotate_vel_theta)
+            elif ball_angle < -self.horizontal_adjust_threshold_rad:
+                print(f"[LR ADJUST] Moving right (Ball Angle: {math.degrees(ball_angle):.2f}°)")
+                self.agent.cmd_vel(self.horizontal_adjust_forward_vel, -self.lateral_vel, -self.rotate_vel_theta)
 
     def good_position_horizontally(self):
         """Check if left-right position is correct"""
         ball_x = self.agent.get_ball_pos()[0]
-        result = 0 < ball_x < 30
+        result = abs(ball_x) < self.horizontal_position_threshold_mm
+
         print(
-            f"[LR CHECK] Ball(Neck) Angle: {self.agent.get_ball_angle()} (OK? {'Yes' if result else 'No'})"
+            f"[LR CHECK] Ball X offset: {ball_x:.2f}mm (OK? {'Yes' if result else 'No'})"
         )
         return result
     
@@ -203,77 +190,65 @@ class KickStateMachine:
         """Check if left-right position is not correct"""
         return not self.good_position_horizontally()
     
-    # def adjust_horizontally(self):
-    #     """Adjust left-right position relative to ball"""
-    #     print("\n[LR ADJUST] Starting lateral adjustment...")
-    #     # self.agent.head_set(head=0.9, neck=0)
-    #     self.agent.stop(1)
-
-    #     no_ball_count = 0
-    #     t0 = time.time()
-    #     print("[LR ADJUST] Scanning for ball...")
-
-    #     # while self.agent.loop() and (self.agent.get_ball_pos_in_vis()[0] < 600 or self.agent.get_ball_pos_in_vis()[0] == 0):
-    #     while self.agent.get_ball_pos_in_vis()[0] < 600 or self.agent.get_ball_pos_in_vis()[0] == 0:
-    #         if time.time() - t0 > 10 or no_ball_count > 5:
-    #             print("[LR ADJUST] Timeout or lost ball during adjustment!")
-    #             return
-
-    #         if not self.agent.get_if_ball():
-    #             no_ball_count += 1
-    #             print(f"[LR ADJUST] Lost ball ({no_ball_count}/5)")
-    #             time.sleep(0.7)
-    #             continue
-
-    #         print(f"[LR ADJUST] Moving right (Current X: {self.agent.get_ball_pos_in_vis()[0]})")
-    #         self.agent.cmd_vel(0, 0.6 * self._config.get("walk_vel_y", 0.05), 0)
-
-    #     while self.agent.loop() and (self.agent.get_ball_pos_in_vis()[0] > 660 or self.agent.get_ball_pos_in_vis()[0] == 0):
-    #         if time.time() - t0 > 10 or no_ball_count > 5:
-    #             print("[LR ADJUST] Timeout or lost ball during adjustment!")
-    #             return
-
-    #         if not self.agent.get_if_ball():
-    #             no_ball_count += 1
-    #             print(f"[LR ADJUST] Lost ball ({no_ball_count}/5)")
-    #             time.sleep(0.7)
-    #             continue
-
-    #         print(f"[LR ADJUST] Moving left (Current X: {self.agent.get_ball_pos_in_vis()[0]})")
-    #         self.agent.cmd_vel(0, -0.6 * self._config.get("walk_vel_y", 0.05), 0)
-
-    #     self.agent.stop(0.5)
-    #     print("[LR ADJUST] Lateral adjustment completed")
-
-    # def good_position_horizontally(self):
-    #     """Check if left-right position is correct"""
-    #     result = 600 <= self.agent.get_ball_pos_in_vis()[0] <= 660
-    #     print(
-    #         f"[LR CHECK] Ball X: {self.agent.get_ball_pos_in_vis()[0]} (OK? {'Yes' if result else 'No'})"
-    #     )
-    #     return result
-
     def adjust_back_forth(self):
         """Adjust forward-backward position relative to ball"""
         print("\n[FB ADJUST] Starting forward adjustment...")
-
-
-        print(f"[FB ADJUST] Moving forward (Current Distance: {self.agent.get_ball_distance()})")
-        if self.agent.get_ball_distance() > 0.33:
-            self.agent.cmd_vel(0.5 * self._config.get("walk_vel_x", 0.3), 0, 0)
-        elif self.agent.get_ball_distance() < 0.33:
-            self.agent.cmd_vel(-0.5 * self._config.get("walk_vel_x", 0.3), 0, 0)
-
-        print("[FB ADJUST] Forward adjustment completed")
+        ball_distance = self.agent.get_ball_distance()
+        
+        if ball_distance > self.max_kick_distance_m:
+            print(f"[FB ADJUST] Moving forward (Distance: {ball_distance:.2f}m)")
+            self.agent.cmd_vel(self.forward_vel, 0, 0)
+        elif ball_distance < self.min_kick_distance_m:
+            print(f"[FB ADJUST] Moving backward (Distance: {ball_distance:.2f}m)")
+            self.agent.cmd_vel(-self.forward_vel, 0, 0)
 
     def good_back_forth(self):
         """Check if forward position is correct"""
-        result = (0.3 < self.agent.get_ball_distance() < 0.35)
+        ball_distance = self.agent.get_ball_distance()
+        result = (self.min_kick_distance_m < ball_distance < self.max_kick_distance_m)
+
         print(
-            f"[FB CHECK] Ball Distance: {self.agent.get_ball_distance()} (OK? {'Yes' if result else 'No'})"
+            f"[FB CHECK] Ball Distance: {ball_distance:.2f}m (OK? {'Yes' if result else 'No'})"
         )
         return result
     
     def not_good_back_forth(self):
         """Check if forward position is not correct"""
         return not self.good_back_forth()
+
+    def read_params(self):
+        """读取配置参数"""
+        dribble_config = self._config.get("kick", {})
+        self.good_angle_threshold_degree = dribble_config.get("good_angle_threshold_degree", 10)
+        self.really_bad_angle_threshold_degree = dribble_config.get("really_bad_angle_threshold_degree", 30)
+        self.horizontal_position_threshold_mm = dribble_config.get("horizontal_position_threshold_mm", 30)
+        self.horizontal_adjust_threshold_rad = math.radians(dribble_config.get("horizontal_adjust_threshold_degree", 5))
+        
+        self.min_kick_distance_m = dribble_config.get("min_kick_distance_m", 0.3)
+        self.max_kick_distance_m = dribble_config.get("max_kick_distance_m", 0.35)
+        self.lost_ball_distance_threshold_m = dribble_config.get("lost_ball_distance_threshold_m", 0.8)
+        
+        self.forward_vel = dribble_config.get("forward_vel", 0.3)
+        self.lateral_vel = dribble_config.get("lateral_vel", 0.05)
+        self.rotate_vel_theta = dribble_config.get("rotate_vel_theta", 0.3)
+        self.horizontal_adjust_forward_vel = dribble_config.get("horizontal_adjust_forward_vel", 0.05)
+        self.rotate_vel_y = dribble_config.get("rotate_vel_y", 0.05)
+
+
+    # 配置文件（JSON格式）
+    """
+    "kick": {
+        "good_angle_threshold_degree": 10,
+        "really_bad_angle_threshold_degree": 30,
+        "horizontal_position_threshold_mm": 30,
+        "horizontal_adjust_threshold_degree": 5,
+        "min_kick_distance_m": 0.3,
+        "max_kick_distance_m": 0.35,
+        "lost_ball_distance_threshold_m": 0.8,
+        "forward_vel": 0.3,
+        "lateral_vel": 0.05,
+        "rotate_vel_theta": 0.3,
+        "horizontal_adjust_forward_vel": 0.05,
+        "rotate_vel_y": 0.05
+    }
+    """

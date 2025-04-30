@@ -265,7 +265,7 @@ class Agent:
                 continue
 
             # Check ball detection status
-            if robot_data.get("data").get('ifBall', False):
+            if robot_data.get("data").get('if_ball', False):
                 # Extract coordinates
                 ballx = robot_data['data'].get('ballx')
                 bally = robot_data['data'].get('bally')
