@@ -125,10 +125,10 @@
         "adjust_angle_to_goal_vel_theta": 0.3,
         "min_ball_distance_m": 0.30,
         "max_ball_distance_m": 0.55,
-        "good_horizontal_position_to_ball_threshold_mm": 50,
+        "good_horizontal_position_to_ball_threshold_mm": 70,
         "lost_angle_to_target_threshold_degree": 35,
         "lost_ball_x_threshold_mm": 120,
-        "lost_ball_distance_threshold_m": 0.6
+        "lost_ball_distance_threshold_m": 2.0
     },
     "find_ball": {
         "angle_threshold_degrees": 10,

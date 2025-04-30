@@ -36,7 +36,7 @@ class DribbleStateMachine:
             },
             {
                 "trigger": "dribble",
-                "source": ["yaw_adjust", "horizontal_position_adjust"],
+                "source": ["forward", "yaw_adjust", "horizontal_position_adjust"],
                 "dest": "pos_to_ball_adjust",
                 "conditions": ["lost_ball"],
             },
@@ -353,7 +353,7 @@ class DribbleStateMachine:
         :return: True 表示丢球，False 表示未丢球
         """
         # neck_angle = self.agent.get_ball_angle()
-        yaw_angle = self.agent.get_self_yaw()
+        yaw_angle = self.aim_yaw - self.agent.get_self_yaw()
         yaw_angle_lost = abs(yaw_angle) > self.lost_angle_to_target_threshold_degree # 45
         result = yaw_angle_lost
         print(f"[DRIBBLE FSM] Lost ball yaw: {'Yes' if result else 'No'}")
