@@ -27,13 +27,8 @@
     },
     "predict_ball_pos": true,
     "predict_ball_pos_in_map": true,
-<<<<<<< HEAD
     "move_head_time_gap": 0.1, // second
     "move_head_phase_time_gap": 0.3, // second
-=======
-    "move_head_time_gap": 0.3, // second
-    "move_head_stage_time_gap": 10000, // second
->>>>>>> refs/remotes/origin/main
     "ball_accuracy_integrated_factor": 0.1,
     "looking_at_ball_integrated": [
         0.1,
