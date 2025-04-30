@@ -8,25 +8,23 @@ import rospy
 
 class RobotClient:
     def __init__(self, agent):
-
         self.agent = agent
         self.config = self.agent._config
-        self.HOST_IP = self.get_host_ip()
-        print("Host ip = " + self.HOST_IP)
-        rospy.loginfo("Host ip = " + self.HOST_IP)
+        # 设置默认的 HOST_IP
+        self.HOST_IP = self.config.get('server_ip', '127.0.0.1')
+        print("Default Host ip = " + self.HOST_IP)
+        rospy.loginfo("Default Host ip = " + self.HOST_IP)
 
         # Start network-related threads
         self.start_network_threads()
 
-    def get_host_ip(self):
-        if self.config['auto_find_server_ip'] is True:
-            rospy.loginfo("Starting to listen for UDP broadcasts to get the host IP address")
-            return self.listen_host_ip()
-        else:
-            rospy.loginfo("Using the host IP address from the configuration file")
-            return self.config.get('server_ip')
-
     def start_network_threads(self):
+        # 启动监听服务器 IP 的线程
+        listen_ip_thread = threading.Thread(target=self.listen_server_ip_loop)
+        listen_ip_thread.daemon = True
+        listen_ip_thread.start()
+        rospy.loginfo("Started the server IP listening thread")
+
         # Start the sending thread
         send_thread = threading.Thread(target=self.send_loop)
         send_thread.daemon = True
@@ -40,6 +38,23 @@ class RobotClient:
         tcp_thread.start()
         rospy.loginfo("Started the TCP client thread")
 
+    def listen_server_ip_loop(self):
+        while not rospy.is_shutdown():
+            if self.config['auto_find_server_ip']:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    new_ip = loop.run_until_complete(self.listen_host_ip())
+                    if new_ip:
+                        self.HOST_IP = new_ip
+                        print("Host ip updated to = " + self.HOST_IP)
+                        rospy.loginfo("Host ip updated to = " + self.HOST_IP)
+                except Exception as e:
+                    rospy.logerr(f"Error listening for server IP: {e}")
+                finally:
+                    loop.close()
+            time.sleep(1)  # 每秒检查一次
+
     def send_loop(self):
         while True:
             try:
@@ -48,7 +63,7 @@ class RobotClient:
                     "data": {
                         "x": float(self.agent.get_self_pos()[0]),
                         "y": float(self.agent.get_self_pos()[1]),
-                        "ballx": float(self.agent.get_ball_pos_in_map()[0]), # TODO: 确定单位
+                        "ballx": float(self.agent.get_ball_pos_in_map()[0]),
                         "bally": float(self.agent.get_ball_pos_in_map()[1]),
                         "yaw": float(self.agent.get_self_yaw()),
                         "ball_distance": float(self.agent.get_ball_distance()),
@@ -56,8 +71,6 @@ class RobotClient:
                     },
                     "info": self.agent._command["command"],
                     "timestamp": time.time(),
-#                    "game_state": self.agent.receiver.game_state,
-#                    "kick_off": self.agent.receiver.kick_off,
                 }
                 if not self.agent.get_if_ball():
                     robot_data["ballx"] = robot_data["bally"] = None
@@ -70,12 +83,11 @@ class RobotClient:
     def send_robot_data(self, robot_data):
         try:
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            if self.agent.if_local_test == True:
+            if self.agent.if_local_test:
                 client_socket.connect(('127.0.0.1', 8001))
             else:
                 client_socket.connect((self.HOST_IP, 8001))
             client_socket.sendall(json.dumps(robot_data).encode("utf-8"))
-            # rospy.loginfo("Successfully sent robot data")
         except Exception as e:
             rospy.logerr(f"Error sending robot data: {e}")
         finally:
@@ -92,21 +104,16 @@ class RobotClient:
             loop.close()
 
     async def tcp_listener(self):
-        """Asynchronously listen for TCP command messages"""
-        # Create an asynchronous server
-        server = await asyncio.start_server(self.handle_connection, 
-                                "0.0.0.0", self.agent._config.get("server_port"))
-
+        server = await asyncio.start_server(self.handle_connection,
+                                            "0.0.0.0", self.agent._config.get("server_port"))
         addr = server.sockets[0].getsockname()
         rospy.loginfo(f"Started listening for TCP command messages at address: {addr}")
-
         try:
             async with server:
                 await server.serve_forever()
         except KeyboardInterrupt:
             rospy.loginfo("User interrupted the program, exiting...")
         finally:
-            # Close the server
             server.close()
             await server.wait_closed()
             rospy.loginfo("Server has been closed")
@@ -118,13 +125,8 @@ class RobotClient:
                 if not data:
                     break
                 addr = writer.get_extra_info("peername")
-                # rospy.logdebug(f"Received data from {addr}: {data}")
-
                 try:
                     received_data = json.loads(data.decode("utf-8"))
-                    # rospy.logdebug(f"Parsed JSON data: {received_data}")
-
-                    # Here you can handle different commands specifically
                     if "command" in received_data:
                         self.agent._command = received_data
                         self.agent._last_command_time = time.time()
@@ -143,33 +145,39 @@ class RobotClient:
             writer.close()
             await writer.wait_closed()
 
-    def listen_host_ip(self):
+    async def listen_host_ip(self):
         port = self.agent._config.get("auto_find_server_ip_listen_port")
-        expected_token = self.config.get("auto_find_server_ip_token")  # 假设config正确
-
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-            sock.bind(("0.0.0.0", port))
-            
-            rospy.loginfo(f"Listening for UDP broadcast on port {port}...")
-            
+        expected_token = self.config.get("auto_find_server_ip_token")
+        loop = asyncio.get_running_loop()
+        transport, protocol = await loop.create_datagram_endpoint(
+            lambda: UDPProtocol(self, expected_token),
+            local_addr=('0.0.0.0', port)
+        )
+        rospy.loginfo(f"Listening for UDP broadcast on port {port}...")
+        try:
             while not rospy.is_shutdown():
-                try:
-                    data, addr = sock.recvfrom(1024)
-                    received_message = data.decode("utf-8").strip()
-
-
-                    
-                    if received_message == expected_token:
-                        self.HOST_IP = addr[0]
-                        rospy.loginfo(f"Host IP updated to: {self.HOST_IP}")
-                        return self.HOST_IP
-                    else:
-                        rospy.logwarn(f"Received unexpected message: {received_message}")
-                        rospy.logwarn(f"Expected token: {expected_token}")
-                        
-                except Exception as e:
-                    rospy.logerr(f"Error processing UDP message: {e}")
-        
+                if hasattr(self, 'found_ip') and self.found_ip:
+                    break
+                await asyncio.sleep(0.1)
+        except asyncio.CancelledError:
+            pass
+        finally:
+            transport.close()
         rospy.loginfo("UDP listener stopped.")
-        return None
+        return getattr(self, 'found_ip', None)
+
+
+class UDPProtocol(asyncio.DatagramProtocol):
+    def __init__(self, client, expected_token):
+        self.client = client
+        self.expected_token = expected_token
+
+    def datagram_received(self, data, addr):
+        received_message = data.decode("utf-8").strip()
+        if received_message == self.expected_token:
+            self.client.found_ip = addr[0]
+            rospy.loginfo(f"Host IP found: {self.client.found_ip}")
+        else:
+            rospy.logwarn(f"Received unexpected message: {received_message}")
+            rospy.logwarn(f"Expected token: {self.expected_token}")
+    
