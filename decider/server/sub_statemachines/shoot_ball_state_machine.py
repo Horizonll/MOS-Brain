@@ -135,11 +135,11 @@ class ShootBallStateMachine:
         if f1_dist < f2_dist:
             self.logger.info(f"启动单前锋追球（前锋1更近，阈值:{self.close_to_ball_threshold_m}m）")
             self.agent.publish_command(self.agent.roles_to_id["forward_1"], "chase_ball")
-            self.agent.publish_command(self.agent.roles_to_id["forward_2"], "find_ball")
+            self.agent.publish_command(self.agent.roles_to_id["forward_2"], "chase_ball", {"chase_distance": 1.5})
         else:
             self.logger.info(f"启动单前锋追球（前锋2更近，阈值:{self.close_to_ball_threshold_m}m）")
             self.agent.publish_command(self.agent.roles_to_id["forward_2"], "chase_ball")
-            self.agent.publish_command(self.agent.roles_to_id["forward_1"], "find_ball")
+            self.agent.publish_command(self.agent.roles_to_id["forward_1"], "chase_ball", {"chase_distance": 1.5})
 
 
 # 配置文件示例（JSON格式）
