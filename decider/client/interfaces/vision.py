@@ -97,8 +97,8 @@ class Vision:
     def _track_ball_stage_looking_at_ball(self):
         if(self._ball_pos_accuracy < self._config["_ball_pos_accuracy_look_around"]):
             phase_count = len(self._config["search_ball_head_angle"])
-            self.head = self._config["search_ball_head_angle"][self._search_ball_phase]
-            self.neck = 0
+            self.head = self._config["search_ball_head_angle"][self._search_ball_phase][0]
+            self.neck = self._config["search_ball_head_angle"][self._search_ball_phase][1]
             self._head_set([self.head, self.neck])
             self._search_ball_phase += 1
             self._search_ball_phase %= phase_count

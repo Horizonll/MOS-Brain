@@ -27,7 +27,7 @@
     },
     "predict_ball_pos": true,
     "predict_ball_pos_in_map": true,
-    "move_head_time_gap": 0.1, // second
+    "move_head_time_gap": 0.3, // second
     "move_head_stage_time_gap": 10000, // second
     "ball_accuracy_integrated_factor": 0.1,
     "looking_at_ball_integrated": [
@@ -53,15 +53,20 @@
     "_ball_pos_accuracy_look_around": 0.5, // when accuracy is lower than this,
     // camera is looking around
     "search_ball_head_angle": [
-        0.1,
-        0.3,
-        0.5,
-        0.7,
-        0.9,
-        0.7,
-        0.5,
-        0.3,
-        0.1
+        [0.1, 0],
+        [0.1, 0.9],
+        [0.9, 0.9],
+        [0.9, 0],
+        [0.9, -0.9],
+        [0.1, -0.9]
+        //0.3,
+        //0.5,
+        //0.7,
+        //0.9,
+        //0.7,
+        //0.5,
+        //0.3,
+        //0.1
     ],
     // camera is looking around
     "field_params": {
@@ -146,4 +151,3 @@
         "rotate_vel_y": 0.05
     }
 }
->>>>>>> refs/remotes/origin/main
