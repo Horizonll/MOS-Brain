@@ -16,7 +16,7 @@ class DribbleStateMachine:
         """
         self.agent = agent
         self._config = self.agent.get_config()
-
+        self.read_params()  # 新增参数读取方法
 
         self.states = ["forward", "pos_to_ball_adjust", "yaw_adjust", "horizontal_position_adjust"]
         self.transitions = [
@@ -94,6 +94,7 @@ class DribbleStateMachine:
             states=self.states,
             initial="pos_to_ball_adjust",
             transitions=self.transitions,
+            after_state_change=self.print_state,
         )
         self.direction = True  # FIXME: True: right, False: left
         print(f"[DRIBBLE FSM] Initialized. Starting state: {self.state}")
@@ -119,6 +120,12 @@ class DribbleStateMachine:
 
         self.machine.model.trigger("dribble")
         print("[DRIBBLE FSM] Running...")
+        print(f"[DRIBBLE FSM] Current state: {self.state}")
+
+    def print_state(self):
+        """
+        打印当前状态
+        """
         print(f"[DRIBBLE FSM] Current state: {self.state}")
 
     def forward(self):
@@ -153,7 +160,7 @@ class DribbleStateMachine:
                 f"[DRIBBLE FSM] target_angle_rad ({target_angle_rad}) <= {self.angle_to_ball_adjust_threshold_rad}. ball_distance: {ball_distance}. Moving forward..."
             )
             self.agent.cmd_vel(
-                -self.forward_vel,
+                -self.backward_vel,
                 0,
                 0,
             )
@@ -392,23 +399,23 @@ class DribbleStateMachine:
 
         if self.agent.get_self_pos()[0] > 0:
             if self.agent.get_self_pos()[0] > self.goal_center_bias_mm:
-                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_mm) / (4500 - self.agent.get_self_pos()[1]))
+                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_mm) / (5000 - self.agent.get_self_pos()[1]))
             else:
                 angle_to_goal_rad = 0.0
         else:
             if self.agent.get_self_pos()[0] < -self.goal_center_bias_mm:
-                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_mm) / (4500 - self.agent.get_self_pos()[1]))
+                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_mm) / (5000 - self.agent.get_self_pos()[1]))
             else:
                 angle_to_goal_rad = 0.0
 
         if self.agent.get_ball_pos_in_map()[0] > 0:
             if self.agent.get_ball_pos_in_map()[0] > self.goal_center_bias_mm:
-                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] - self.goal_center_bias_mm) / (4500 - self.agent.get_ball_pos_in_map()[1]))
+                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] - self.goal_center_bias_mm) / (5000 - self.agent.get_ball_pos_in_map()[1]))
             else:
                 angle_ball_to_goal = 0.0
         else:
             if self.agent.get_ball_pos_in_map()[0] < -self.goal_center_bias_mm:
-                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] + self.goal_center_bias_mm) / (4500 - self.agent.get_ball_pos_in_map()[1]))
+                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] + self.goal_center_bias_mm) / (5000 - self.agent.get_ball_pos_in_map()[1]))
             else:
                 angle_ball_to_goal = 0.0
 
@@ -454,53 +461,54 @@ class DribbleStateMachine:
     
     def read_params(self):
 
-        self.angle_to_ball_adjust_threshold_rad = self._config.get("dribble").get(
+        self.angle_to_ball_adjust_threshold_rad = self._config.get("dribble", {}).get(
             "angle_to_ball_adjust_threshold_degree", 15
         ) * math.pi / 180
-        self.good_angle_to_goal_threshold_degree = self._config.get("dribble").get(
+        self.good_angle_to_goal_threshold_degree = self._config.get("dribble", {}).get(
             "good_angle_to_goal_threshold_degree", 10
         )
-        self.goal_center_bias_mm = self._config.get("dribble").get("goal_center_bias_mm", 0)
+        self.goal_center_bias_mm = self._config.get("dribble", {}).get("goal_center_bias_mm", 0)
         
         self.dribble_stop_angle_threshold_rad = 0.2
-        self.min_ball_distance_m = self._config.get("dribble").get(
+        self.min_ball_distance_m = self._config.get("dribble", {}).get(
             "min_ball_distance_m", 0.35
         )
-        self.max_ball_distance_m = self._config.get("dribble").get(
+        self.max_ball_distance_m = self._config.get("dribble", {}).get(
             "max_ball_distance_m", 0.55
         )
 
-        self.good_horizontal_position_to_ball_threshold_mm = self._config.get("dribble").get(
+        self.good_horizontal_position_to_ball_threshold_mm = self._config.get("dribble", {}).get(
             "good_horizontal_position_to_ball_threshold_mm", 50
         )
 
-        self.lost_angle_to_target_threshold_degree = self._config.get("dribble").get(
+        self.lost_angle_to_target_threshold_degree = self._config.get("dribble", {}).get(
             "lost_angle_to_target_threshold_degree", 20
         )
 
-        self.lost_ball_x_threshold_mm = self._config.get("dribble").get(
+        self.lost_ball_x_threshold_mm = self._config.get("dribble", {}).get(
             "lost_ball_x_threshold_mm", 80
         )
 
-        self.lost_ball_distance_threshold_m = self._config.get("dribble").get(
+        self.lost_ball_distance_threshold_m = self._config.get("dribble", {}).get(
             "lost_ball_distance_threshold_m", 0.6
         )
 
-        self.forward_vel = self._config.get("dribble").get("walk_vel_x", 0.1)
-        self.horizontal_adjust_vel_y = self._config.get("dribble").get("horizontal_adjust_vel_y", 0.03)
-        self.horizontal_adjust_vel_theta = self._config.get("dribble").get("horizontal_adjust_vel_theta", 0.2)
-        self.rotate_vel_theta = self._config.get("dribble").get("rotate_vel_theta", 0.3)
-        self.adjust_angle_to_goal_vel_y = self._config.get("dribble").get("adjust_angle_to_goal_vel_y", 0.08)
-        self.adjust_angle_to_goal_vel_theta = self._config.get("dribble").get("adjust_angle_to_goal_vel_theta", 0.3)
+        self.forward_vel = self._config.get("dribble", {}).get("walk_vel_x", 0.1)
+        self.backward_vel = self._config.get("dribble", {}).get("back_vel", 0.05)
+        self.horizontal_adjust_vel_y = self._config.get("dribble", {}).get("horizontal_adjust_vel_y", 0.03)
+        self.horizontal_adjust_vel_theta = self._config.get("dribble", {}).get("horizontal_adjust_vel_theta", 0.2)
+        self.rotate_vel_theta = self._config.get("dribble", {}).get("rotate_vel_theta", 0.3)
+        self.adjust_angle_to_goal_vel_y = self._config.get("dribble", {}).get("adjust_angle_to_goal_vel_y", 0.08)
+        self.adjust_angle_to_goal_vel_theta = self._config.get("dribble", {}).get("adjust_angle_to_goal_vel_theta", 0.3)
     
     # def good_angle(self):
     #     """
     #     检查角度是否合适
     #     :return: True 表示角度合适，False 表示角度不合适
     #     """
-    #     rad1 = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_mm) / (4500 - self.agent.get_self_pos()[1]))  # FIXME:球门左侧
+    #     rad1 = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_mm) / (5000 - self.agent.get_self_pos()[1]))  # FIXME:球门左侧
     #     ang_tar1 = rad1 * 180 / math.pi
-    #     rad2 = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_mm) / (4500 - self.agent.get_self_pos()[1]))  # FIXME:球门右侧
+    #     rad2 = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_mm) / (5000 - self.agent.get_self_pos()[1]))  # FIXME:球门右侧
     #     ang_tar2 = rad2 * 180 / math.pi
     #     result = ang_tar1 < self.agent.get_self_yaw() < ang_tar2
     #     if not result:

@@ -140,29 +140,33 @@ class Agent:
         rospy.loginfo("Agent instance initialization completed")
 
     def run(self):
-        # GameController command
-        if (self.receiver.game_state == 'STATE_SET'
-                or self.receiver.game_state == 'STATE_FINISHED'
-                or self.receiver.game_state == 'STATE_INITIAL'):
+        state = self.receiver.game_state
+        if state in ['STATE_SET', 'STATE_FINISHED', 'STATE_INITIAL']:
+            rospy.loginfo(f"Stopping: Game state is {state}")
             self.stop()
-        elif self.receiver.game_state == 'STATE_READY':
+        elif state == 'STATE_READY':
+            rospy.loginfo("Running: go_back_to_field (STATE_READY)")
             self._state_machine_runners['go_back_to_field']()
-        elif time.time() - self._last_command_time > 5: # if lost server command, run offline policy
+        elif time.time() - self._last_command_time > 5:
             if not self.get_if_ball():
+                rospy.loginfo("Running: find_ball (lost command, no ball)")
                 self._state_machine_runners['find_ball']()
-            elif self.get_ball_distance() > 0.5:
+            elif self.get_ball_distance() > 0.6:
+                rospy.loginfo("Running: chase_ball (lost command, far ball)")
                 self._state_machine_runners['chase_ball']()
             else:
+                rospy.loginfo("Running: dribble (lost command, close ball)")
                 self._state_machine_runners['dribble']()
-        else: # run server command with lost ball policy
-            if ((not self.get_if_ball()) and (self._command["command"] == 'chase_ball' or \
-                                            self._command["command"] == 'kick' or \
-                                                self._command["command"] == 'dribble')):
+        else:
+            cmd = self._command["command"]
+            if not self.get_if_ball() and cmd in ['chase_ball', 'kick', 'dribble']:
+                rospy.loginfo(f"Running: find_ball (server cmd {cmd}, no ball)")
                 self._state_machine_runners['find_ball']()
-            elif self._state_machine_runners.get(self._command["command"]):
-                self._state_machine_runners[self._command["command"]]()
+            elif cmd in self._state_machine_runners:
+                rospy.loginfo(f"Running: {cmd} (server command)")
+                self._state_machine_runners[cmd]()
             else:
-                logging.debug(f"State machine '{self._command['command']}' not found.")
+                rospy.loginfo(f"Error: State machine {cmd} not found. Stopping.")
                 self.stop()
 
 
