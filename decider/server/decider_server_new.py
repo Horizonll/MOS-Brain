@@ -54,9 +54,9 @@ class Agent:
 
         # Create a mapping between roles and IDs
         self.roles_to_id = {
-            "forward_1": 3,
+            "forward_1": 1,
             "forward_2": 2,
-            "defender_1": 1,
+            "defender_1": 3,
             "goalkeeper": 4,
         }
 
@@ -124,12 +124,6 @@ class Agent:
             # self.use_static_ip = config.get("use_static_ip", False)
         except FileNotFoundError:
             logging.error("Configuration file not found.")
-
-    def get_config(self):
-        """
-        Get the configuration file.
-        """
-        return self._config
 
     def update(self, robot_id, robots_data):
         """
