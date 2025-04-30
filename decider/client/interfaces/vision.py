@@ -45,7 +45,7 @@ class Vision:
     #   _head_pub               the handler of /head_goals
     #   _last_track_ball_time    last timestamp running _track_ball()
     #   _track_ball_stage        the stage ( FSMID ) of _track_ball()
-    #   _last_track_ball_stage_time      timestamp for changing stage periodicly
+    #   _last_track_ball_phase_time      timestamp for changing phase periodicly
     #
     # @private methods
     #   _head_set(args: float[2])           set head and neck angle
@@ -68,8 +68,7 @@ class Vision:
         self._self_pos_accuracy = 0
         self._ball_pos_accuracy = 0
         self._last_track_ball_time = -99999999
-        self._last_track_ball_stage_time = 0
-        self._track_ball_stage = 0
+        self._last_track_ball_phase_time = time.time()
         self.ball_distance = 6000
         self._search_ball_phase = 0
 
@@ -97,11 +96,14 @@ class Vision:
     def _track_ball_stage_looking_at_ball(self):
         if(self._ball_pos_accuracy < self._config["_ball_pos_accuracy_look_around"]):
             phase_count = len(self._config["search_ball_head_angle"])
-            self.head = self._config["search_ball_head_angle"][self._search_ball_phase]
-            self.neck = 0
+            self.head = self._config["search_ball_head_angle"][self._search_ball_phase][0]
+            self.neck = self._config["search_ball_head_angle"][self._search_ball_phase][1]
             self._head_set([self.head, self.neck])
-            self._search_ball_phase += 1
-            self._search_ball_phase %= phase_count
+            if(time.time() - self._last_track_ball_phase_time > 
+                    self._config["move_head_phase_time_gap"]):
+                self._last_track_ball_phase_time = time.time()
+                self._search_ball_phase += 1
+                self._search_ball_phase %= phase_count
             return
         args = self._config["looking_at_ball_arguments"]
         width = self._config["vision_size"][0]
@@ -127,16 +129,7 @@ class Vision:
             return
         self._last_track_ball_time = time.time()
 
-        # change move head stage periodicly
-        if(time.time() - self._last_track_ball_stage_time > 
-           self._config["move_head_stage_time_gap"]):
-            self._track_ball_stage = (self._track_ball_stage + 1) % 2
-            self._last_track_ball_stage_time = time.time()
-        
-#        if(self._track_ball_stage % 2 == 0):
         self._track_ball_stage_looking_at_ball()
-#        else:
- #           self._track_ball_stage_head_up()
             
     
 
