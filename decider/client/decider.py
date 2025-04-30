@@ -107,7 +107,7 @@ class Agent:
         # such as self position and ball position
         self._vision = interfaces.vision.Vision(self._config)
 
-        self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"])
+        self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"]-1)
 
         # robot_client: provide functions to communicate with the server
         self._robot_client = RobotClient(self)
