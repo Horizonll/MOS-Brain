@@ -112,11 +112,11 @@ class ShootBallStateMachine:
         closest_dist = players_distance[closest_id]
         
         self.logger.info(f"执行射门: 最近球员{closest_id}（距离{closest_dist:.2f}m）")
-        self.agent.publish_command(closest_id, "shoot")
+        self.agent.publish_command(closest_id, "dribble")
         
         for role, id in self.agent.roles_to_id.items():
             if id != closest_id:
-                self.agent.publish_command(self.agent.roles_to_id[closest_to_goal], "chase_ball", {"chase_distance": 1})
+                self.agent.publish_command(id, "chase_ball", {"chase_distance": 1})
                 self.logger.info(f"球员{id}执行支持任务")
 
     def go_for_possession(self):

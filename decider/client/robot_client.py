@@ -156,15 +156,15 @@ class RobotClient:
         rospy.loginfo(f"Listening for UDP broadcast on port {port}...")
         try:
             while not rospy.is_shutdown():
-                if hasattr(self, 'found_ip') and self.found_ip:
-                    break
+                # if hasattr(self, 'HOST_IP') and self.HOST_IP:
+                #     break
                 await asyncio.sleep(0.1)
         except asyncio.CancelledError:
             pass
         finally:
             transport.close()
         rospy.loginfo("UDP listener stopped.")
-        return getattr(self, 'found_ip', None)
+        return getattr(self, 'HOST_IP', None)
 
 
 class UDPProtocol(asyncio.DatagramProtocol):
@@ -175,8 +175,8 @@ class UDPProtocol(asyncio.DatagramProtocol):
     def datagram_received(self, data, addr):
         received_message = data.decode("utf-8").strip()
         if received_message == self.expected_token:
-            self.client.found_ip = addr[0]
-            rospy.loginfo(f"Host IP found: {self.client.found_ip}")
+            self.client.HOST_IP = addr[0]
+            rospy.loginfo(f"Host IP found: {self.client.HOST_IP}")
         else:
             rospy.logwarn(f"Received unexpected message: {received_message}")
             rospy.logwarn(f"Expected token: {self.expected_token}")
