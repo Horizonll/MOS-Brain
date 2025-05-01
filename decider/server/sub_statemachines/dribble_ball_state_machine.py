@@ -90,6 +90,8 @@ class DribbleBallStateMachine:
         forward_1_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_1"]]
         forward_2_distance_to_ball = players_distance_to_ball[self.agent.roles_to_id["forward_2"]]
         if forward_1_distance_to_ball < forward_2_distance_to_ball:
+            self.agent.publish_command(self.agent.roles_to_id["forward_1"], "chase_ball")
             self.agent.publish_command(self.agent.roles_to_id["forward_2"], "stop")
         else:
+            self.agent.publish_command(self.agent.roles_to_id["forward_2"], "chase_ball")
             self.agent.publish_command(self.agent.roles_to_id["forward_1"], "stop")

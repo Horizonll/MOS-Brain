@@ -52,6 +52,8 @@ class ChaseBallStateMachine:
             distance_close = self.chase_distance > self.agent.get_ball_distance()
         else:
             distance_close = self.agent.get_if_close_to_ball()
+        if self.agent.get_ball_angle() is None:
+            return False
         angle_close = abs(self.agent.get_ball_angle()) < self.close_angle_threshold_rad
         result = distance_close and angle_close
         print(

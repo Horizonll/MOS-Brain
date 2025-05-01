@@ -116,29 +116,29 @@
         "angle_to_ball_adjust_threshold_degree": 11.46,
         "good_angle_to_goal_adjust_threshold_degree": 10,
         "goal_center_bias_mm": 800,
-        "walk_vel_x": 0.1,
+        "walk_vel_x": 0.15,
         "back_vel": 0.05,
-        "horizontal_adjust_vel_y": 0.03,
-        "horizontal_adjust_vel_theta": 0.2,
+        "horizontal_adjust_vel_y": 0.05,
+        "horizontal_adjust_vel_theta": 0.5,
         "rotate_vel_theta": 0.3,
         "adjust_angle_to_goal_vel_y": 0.08,
         "adjust_angle_to_goal_vel_theta": 0.3,
         "min_ball_distance_m": 0.0,
         "max_ball_distance_m": 0.55,
-        "good_horizontal_position_to_ball_threshold_mm": 70,
+        "good_horizontal_position_to_ball_threshold_mm": 170,
         "lost_angle_to_target_threshold_degree": 35,
-        "lost_ball_x_threshold_mm": 120,
+        "lost_ball_x_threshold_mm": 250,
         "lost_ball_distance_threshold_m": 2.0
     },
     "find_ball": {
         "angle_threshold_degrees": 10,
-        "rotation_vel_theta": 0.3,
+        "rotation_vel_theta": 0.5,
         "rotation_timeout_seconds": 10,
         "protection_pose_duration": 0.5
     },
     "go_back_to_field": {
-        "aim_x": 1000,
-        "aim_y": 1000,
+        "aim_x": 0,
+        "aim_y": -1000,
         "aim_yaw": 0,
         "min_dist": 300,
         "coarse_yaw_threshold_degree": 30,
@@ -151,7 +151,7 @@
     },
     "chase": {
         "close_angle_threshold_rad": 0.1,
-        "walk_vel_x": 0.1,
+        "walk_vel_x": 0.15,
         "walk_vel_theta": 0.4
     },
     "kick": {
