@@ -116,14 +116,22 @@ class ShootBallStateMachine:
         
         for role, id in self.agent.roles_to_id.items():
             if id != closest_id:
-                self.agent.publish_command(id, "chase_ball", {"chase_distance": 1})
+                self.agent.publish_command(id, "chase_ball", {"chase_distance": 1.2})
                 self.logger.info(f"球员{id}执行支持任务")
+
+        if closest_id != self.agent.roles_to_id["defender_1"]:
+            self.agent.publish_command(self.agent.roles_to_id["defender_1"], "go_back_to_field")
+        if closest_id != self.agent.roles_to_id["defender_2"]:
+            self.agent.publish_command(self.agent.roles_to_id["defender_2"], "go_back_to_field")
+
 
     def go_for_possession(self):
         """双前锋追球策略（参数化策略说明）"""
         self.logger.info(f"执行追球策略（阈值:{self.ball_out_of_control_threshold_m}m）")
         self.agent.publish_command(self.agent.roles_to_id["forward_1"], "chase_ball")
         self.agent.publish_command(self.agent.roles_to_id["forward_2"], "chase_ball")
+        self.agent.publish_command(self.agent.roles_to_id["defender_1"], "stop")
+        self.agent.publish_command(self.agent.roles_to_id["defender_2"], "stop")
 
     def go_for_possession_avoid_collsion(self):
         """防碰撞策略（带参数化距离比较）"""
@@ -135,12 +143,14 @@ class ShootBallStateMachine:
         if f1_dist < f2_dist:
             self.logger.info(f"启动单前锋追球（前锋1更近，阈值:{self.close_to_ball_threshold_m}m）")
             self.agent.publish_command(self.agent.roles_to_id["forward_1"], "chase_ball")
-            self.agent.publish_command(self.agent.roles_to_id["forward_2"], "chase_ball", {"chase_distance": 1.5})
+            self.agent.publish_command(self.agent.roles_to_id["forward_2"], "chase_ball", {"chase_distance": 1.2})
         else:
             self.logger.info(f"启动单前锋追球（前锋2更近，阈值:{self.close_to_ball_threshold_m}m）")
             self.agent.publish_command(self.agent.roles_to_id["forward_2"], "chase_ball")
-            self.agent.publish_command(self.agent.roles_to_id["forward_1"], "chase_ball", {"chase_distance": 1.5})
+            self.agent.publish_command(self.agent.roles_to_id["forward_1"], "chase_ball", {"chase_distance": 1.2})
 
+        self.agent.publish_command(self.agent.roles_to_id["defender_1"], "stop")
+        self.agent.publish_command(self.agent.roles_to_id["defender_2"], "stop")
 
 # 配置文件示例（JSON格式）
 """

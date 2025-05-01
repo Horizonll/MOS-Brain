@@ -15,6 +15,7 @@ from robot_server import RobotServer
 from sub_statemachines import DefendBallStateMachine
 from sub_statemachines import DribbleBallStateMachine
 from sub_statemachines import ShootBallStateMachine
+from sub_statemachines import AttackStateMachine
 
 # Define command constants
 COMMANDS = {
@@ -52,13 +53,20 @@ class Agent:
         # Get parameters TODO: Determine parameters
         self.read_config()
 
+        self.read_params()
+
         # Create a mapping between roles and IDs
         self.roles_to_id = {
-            "forward_1": 3,
-            "forward_2": 2,
+            "forward_1": 2,
+            "forward_2": 4,
             "defender_1": 1,
+            "defender_2": 3,
             "goalkeeper": 4,
         }
+
+        if self.get_config().get("roles_to_id", None) is not None:
+            self.roles_to_id = self.get_config().get("roles_to_id")
+            self.logger.info(f"get roles_to_id from config: {self.roles_to_id}")
 
         # Initialize robot states
         self.robots_data = defaultdict(
@@ -107,6 +115,7 @@ class Agent:
         self.defend_ball_state_machine = DefendBallStateMachine(self)
         self.dribble_ball_state_machine = DribbleBallStateMachine(self)
         self.shoot_ball_state_machine = ShootBallStateMachine(self)
+        self.attack_state_machine = AttackStateMachine(self)
 
     def read_config(self):
         """
@@ -114,7 +123,7 @@ class Agent:
         """
         # Read the local JSON configuration file
         try:
-            with open("/home/thmos/MOS-Brain/decider/server/config.json", "r") as f:
+            with open("E:\Files\TH-MOS\code\MOS-Brain\decider\server\config.json", "r") as f:
                 self._config = json.load(f)
 
             # # Check if automatic player detection is enabled
@@ -130,6 +139,11 @@ class Agent:
         Get the configuration file.
         """
         return self._config
+    
+    def read_params(self):
+        self.backfield_machine = self.get_config().get("backfield_machine", "run_attack")
+        self.midfield_machine = self.get_config().get("midfield_machine", "run_attack")
+        self.frontfield_machine = self.get_config().get("frontfield_machine", "run_attack")
 
     def update(self, robot_id, robots_data):
         """
@@ -140,6 +154,37 @@ class Agent:
     # TODO: Implement this method
     def ball_pos_callback(self, msg):
         pass
+
+    def get_players_positions_without_goalkeeper(self):
+        """
+        获取除守门员外所有球员的位置（x, y 坐标），位置不可用则返回 None
+        
+        Returns:
+            dict: 角色到位置的映射，格式为 {role: (x, y) 或 None}
+        """
+        positions = {}
+        goalkeeper_role = "goalkeeper"  # 守门员角色名
+        
+        # 遍历所有角色，排除守门员
+        for role, robot_id in self.roles_to_id.items():
+            if role == goalkeeper_role:
+                continue
+            
+            robot_data = self.robots_data.get(robot_id, {})
+            data = robot_data.get("data", {})  # 获取机器人状态数据
+            
+            # 提取 x 和 y 坐标（注意可能为 None）
+            x = data.get("x")
+            y = data.get("y")
+            
+            # 如果坐标存在则存入元组，否则存入 None
+            positions[role] = (x, y) if (x is not None and y is not None) else (0, -5000)
+
+            # 如果未连接，位置为(0, 0)
+            if robot_data.get("status") != "connected":
+                positions[role] = (0, -5000)
+        
+        return positions
 
     def get_players_distance_to_ball(self):
         """
@@ -163,6 +208,10 @@ class Agent:
                 distance = BIG_NUMBER
             else:
                 distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
+                distance = data.get('ball_distance', BIG_NUMBER)
+            
+            if data.get("status") != "connected":
+                distance = BIG_NUMBER
 
             players_distance[robot_id] = distance
 
@@ -183,9 +232,10 @@ class Agent:
                     distance = BIG_NUMBER
                 else:
                     distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
-
-                if player_pos[0] is not None:
                     distance = data.get('ball_distance', BIG_NUMBER)
+
+                if robot_data.get("status") != "connected":
+                    distance = BIG_NUMBER
 
                 players_distance[robot_id] = distance
             else:
@@ -353,6 +403,10 @@ class Agent:
         self.shoot_ball_state_machine.run()
         self.logger.info("Shooting the ball")
 
+    def run_attack(self):
+        self.attack_state_machine.run()
+        self.logger.info("Attacking")
+
     def run_old(self):
         while self.robots_data[1].get("status") == "disconnected":
             logging.info("Waiting for connection")
@@ -439,7 +493,7 @@ class Agent:
             self.start_keyboard_listener()
             while True:
 
-                time.sleep(0.1)
+                time.sleep(self.get_config().get("control_interval_s", 1))
                 if self.exit_flag:
                     break
 
@@ -479,21 +533,21 @@ class StateMachine:
                 "source": ["dribble", "shoot", "initial", "defend"],
                 "dest": "defend",
                 "conditions": "ball_in_backcourt",
-                "after": "run_defend_ball"
+                "after": self.backfield_machine
             },
             {
                 "trigger": "play",
                 "source": ["defend", "shoot", "initial", "dribble"],
                 "dest": "dribble",
                 "conditions": "ball_in_midcourt",
-                "after": "run_shoot_ball"
+                "after": self.midfield_machine
             },
             {
                 "trigger": "play",
                 "source": ["defend", "dribble", "initial", "shoot"],
                 "dest": "shoot",
                 "conditions": "ball_in_frontcourt",
-                "after": "run_shoot_ball"
+                "after": self.frontfield_machine
             },
             # initial can only be transitioned from stop
             {

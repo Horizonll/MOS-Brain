@@ -10,6 +10,8 @@ class FindBallStateMachine:
         self.agent = agent
         self._config = self.agent.get_config()
         self.read_params()  # 读取配置参数
+
+        self.last_rotaion = 1
         
         self.rotate_start_time = 0  # 记录旋转开始时间
         
@@ -82,6 +84,7 @@ class FindBallStateMachine:
             "protection_pose_duration", 0.5
         )
 
+
     # ------------------------- 状态检查条件 -------------------------
     def ball_in_sight(self, event=None):  
         """检查是否看到球"""
@@ -123,7 +126,11 @@ class FindBallStateMachine:
         if ball_angle_from_other_robots is not None:
             print(f"[FIND BALL FSM] Other robots see the ball at angle: {ball_angle_from_other_robots}")
             target_angle_rad = ball_angle_from_other_robots
-            rotate_vel = np.sign(target_angle_rad) * self.rotation_vel_theta
+            if abs(target_angle_rad) < 0.7:
+                rotate_vel = self.last_rotaion * self.rotation_vel_theta
+            else:
+                rotate_vel = np.sign(target_angle_rad) * self.rotation_vel_theta
+                self.last_rotaion = np.sign(target_angle_rad)
         else:
             print("[FIND BALL FSM] No other robots see the ball, rotating randomly...")
             rotate_vel = self.rotation_vel_theta  # 可配置为随机方向或固定方向
