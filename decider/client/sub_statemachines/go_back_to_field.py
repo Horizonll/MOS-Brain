@@ -200,7 +200,7 @@ class GoBackToFieldStateMachine:
         # 中等角度调整（精细阈值范围内）
         if self.fine_yaw_end_threshold_degree < abs(self.go_back_to_field_yaw_diff) <= self.fine_yaw_start_threshold_degree:
             print(f"[Go Back to Field] Medium yaw error ({self.go_back_to_field_yaw_diff:.1f}°), rotating {'' if sgn>0 else 'right'} slowly...")
-            self.agent.cmd_vel(0, 0, sgn * (self.walk_vel_theta * 0.6))  # 较慢的旋转速度
+            self.agent.cmd_vel(0, 0, sgn * (self.walk_vel_theta))  # 较慢的旋转速度
             self.last_rotate = sgn
             time.sleep(0.2)
 
@@ -216,7 +216,7 @@ class GoBackToFieldStateMachine:
         elif abs(aim_yaw_diff) > self.good_yaw_threshold_degree:  # 小角度精细调整
             sgn = 1 if aim_yaw_diff > 0 else -1
             print(f"[Go Back to Field] Final yaw adjustment ({aim_yaw_diff:.1f}°)...")
-            self.agent.cmd_vel(0, 0, sgn * (self.walk_vel_theta * 0.3))  # 最慢旋转速度
+            self.agent.cmd_vel(0, 0, sgn * (self.walk_vel_theta))  # 最慢旋转速度
             self.aim_yaw_last_rotate = sgn
         else:  # 达到良好状态
             self.agent.cmd_vel(0, 0, 0)

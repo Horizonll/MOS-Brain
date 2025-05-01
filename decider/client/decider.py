@@ -146,7 +146,7 @@ class Agent:
             rospy.loginfo(f"Stopping: Player is penalized for {penalized_time} seconds")
             self.stop()
             return
-        elif state in ['STATE_SET', 'STATE_FINISHED', 'STATE_INITIAL']:
+        elif state in ['STATE_SET', 'STATE_FINISHED', 'STATE_INITIAL', None]:
             rospy.loginfo(f"Stopping: Game state is {state}")
             self.stop()
         elif state == 'STATE_READY':

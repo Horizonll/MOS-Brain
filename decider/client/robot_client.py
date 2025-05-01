@@ -121,7 +121,7 @@ class RobotClient:
     async def handle_connection(self, reader, writer):
         try:
             while True:
-                data = await reader.read(1024)
+                data = await reader.read(2048)
                 if not data:
                     break
                 addr = writer.get_extra_info("peername")
@@ -137,7 +137,10 @@ class RobotClient:
                         rospy.logwarn("Received message does not contain 'command' or 'robots_data'")
                 except json.JSONDecodeError as e:
                     rospy.logerr(f"JSON decoding error: {e}")
-                except KeyError as e:
+                except
+                
+                
+                 KeyError as e:
                     rospy.logerr(f"Key error: {e}")
         except Exception as e:
             rospy.logerr(f"Error handling connection: {addr}:{e}")

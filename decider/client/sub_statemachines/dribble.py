@@ -36,7 +36,7 @@ class DribbleStateMachine:
             },
             {
                 "trigger": "dribble",
-                "source": ["forward", "yaw_adjust", "horizontal_position_adjust"],
+                "source": ["yaw_adjust", "horizontal_position_adjust"],
                 "dest": "pos_to_ball_adjust",
                 "conditions": ["lost_ball"],
             },
@@ -155,16 +155,7 @@ class DribbleStateMachine:
         target_angle_rad = self.agent.get_ball_angle()
         ball_distance = self.agent.get_ball_distance()
 
-        if ball_distance < self.min_ball_distance_m:
-            print(
-                f"[DRIBBLE FSM] target_angle_rad ({target_angle_rad}) <= {self.angle_to_ball_adjust_threshold_rad}. ball_distance: {ball_distance}. Moving forward..."
-            )
-            self.agent.cmd_vel(
-                -self.backward_vel,
-                0,
-                0,
-            )
-        elif abs(target_angle_rad) > self.angle_to_ball_adjust_threshold_rad:
+        if abs(target_angle_rad) > self.angle_to_ball_adjust_threshold_rad:
             print(
                 f"[DRIBBLE FSM] target_angle_rad ({target_angle_rad}) > {self.angle_to_ball_adjust_threshold_rad}. ball_distance: {ball_distance}. Rotating..."
             )
@@ -366,10 +357,8 @@ class DribbleStateMachine:
         """
         # neck_angle = self.agent.get_ball_angle()
         ball_x = self.agent.get_ball_pos()[0]
-        ball_distance = self.agent.get_ball_distance()
         ball_x_lost = abs(ball_x) > self.lost_ball_x_threshold_mm # 80
-        ball_distance_lost = ball_distance > self.lost_ball_distance_threshold_m # 0.6
-        result = ball_x_lost and not ball_distance_lost
+        result = ball_x_lost
         print(f"[DRIBBLE FSM] Lost ball x: {'Yes' if result else 'No'}")
         return result
 
