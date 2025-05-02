@@ -146,7 +146,7 @@ class Agent:
     def run(self):
         state = self.receiver.game_state
         penalized_time = self.receiver.penalized_time
-        if state is not "STATE_PLAYING": 
+        if state != "STATE_PLAYING": 
             self._last_play_time = time.time()
         if penalized_time > 0:
             rospy.loginfo(f"Stopping: Player is penalized for {penalized_time} seconds")
