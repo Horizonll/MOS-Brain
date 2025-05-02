@@ -142,7 +142,7 @@ class Vision:
             args[0] = self._force_look_at[0]
         if(not self._force_look_at[1] is None):
             args[1] = self._force_look_at[1]
-        head = np.clip(args[0], 0, 1.5)
+        head = np.clip(args[0], 0, 0.9)
         neck = np.clip(args[1], -1.1, 1.1)
         self.head, self.neck = head, neck
         head_goal = JointState()
@@ -170,7 +170,7 @@ class Vision:
         self._vision_last_frame_time = time.time()
         # accuracy *= exp^ -dt
         self._self_pos_accuracy *= math.exp(-diff_time)
-        self._ball_pos_accuracy *= math.exp(-diff_time)
+        self._ball_pos_accuracy *= math.exp(-diff_time * 5)
 
         # target_matrix shape： 
         #   N * [class, x_center, y_center, confidence, distance, x, y, z]
@@ -205,7 +205,10 @@ class Vision:
             self._ball_pos_in_vis           = ball_row[1:3]
             self.ball_distance              = ball_row[4]
             self._ball_pos                  = ball_row[5:8]
-            self._ball_pos_accuracy        += ball_confidence
+            self._ball_pos_accuracy        += ball_confidence * 100
+            print("fuck add ---------> " + str(ball_confidence))
+        
+        print("fucking= " + str(self._ball_pos_accuracy))
         
         self._vision_last_frame_time        = time.time()
         
