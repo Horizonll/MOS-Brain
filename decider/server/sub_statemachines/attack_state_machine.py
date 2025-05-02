@@ -86,7 +86,7 @@ class AttackStateMachine:
 
         self.logger.info(f"[AttackStateMachine] 执行射门: 最近球员{closest_id}（距离{closest_dist:.2f}m）")
         if self.agent.robots_data[closest_id]["data"]["bally"] is not None:
-            if self.agent.robots_data[closest_id]["data"]["bally"] > 2000 or self.agent.robots_data[closest_id]["data"]["bally"] < 0:
+            if self.agent.robots_data[closest_id]["data"]["bally"] > 0 or self.agent.robots_data[closest_id]["data"]["bally"] < 0:
                 self.agent.publish_command(closest_id, "shoot")
             else:
                 self.agent.publish_command(closest_id, "dribble")
