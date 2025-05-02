@@ -11,6 +11,8 @@
     "auto_find_server_ip_token": "NjM5NWVkMSAgLQo",
     "max_buffer_size": 1024,
     "offline_time": 5, // seconds
+    "start_wait_time": 3,
+    "start_walk_into_field_time": 5,
     // vision
     "vision_size": [
         1280,

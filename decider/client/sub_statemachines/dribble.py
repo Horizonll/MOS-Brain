@@ -115,7 +115,10 @@ class DribbleStateMachine:
         self.aim_yaw = self.agent.get_command().get('data').get('aim_yaw', None)
 
         if self.aim_yaw is None:
-            self.aim_yaw = self.calc_angle_to_goal_degree()
+            if self.agent.get_self_pos()[1] > 4000:
+                self.aim_yaw = 0.0
+            else:
+                self.aim_yaw = self.calc_angle_to_goal_degree()
             print(f"[DRIBBLE FSM] Calculated aim_yaw: {self.aim_yaw:.2f}°")
 
         self.machine.model.trigger("dribble")

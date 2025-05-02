@@ -118,7 +118,10 @@ class KickStateMachine:
         """Adjust robot's angle relative to goal"""
         print("[ANGLE ADJUST] Starting angle adjustment...")
         
-        target_angle_rad = math.atan2(self.agent.get_self_pos()[0], 4500 - self.agent.get_self_pos()[1])
+        if self.agent.get_self_pos()[1] > 4000:
+            target_angle_rad = 0.0
+        else:
+            target_angle_rad = math.atan2(self.agent.get_self_pos()[0], 5000 - self.agent.get_self_pos()[1])
         ang_tar = math.degrees(target_angle_rad)
         ang_delta = ang_tar - self.agent.get_self_yaw()
 
@@ -135,7 +138,10 @@ class KickStateMachine:
 
     def good_angle(self):
         """Check if angle is within acceptable range"""
-        target_angle_rad = math.atan2(self.agent.get_self_pos()[0], 4500 - self.agent.get_self_pos()[1])
+        if self.agent.get_self_pos()[1] > 4000:
+            target_angle_rad = 0.0
+        else:
+            target_angle_rad = math.atan2(self.agent.get_self_pos()[0], 5000 - self.agent.get_self_pos()[1])
         ang_tar = math.degrees(target_angle_rad)
         ang_delta = ang_tar - self.agent.get_self_yaw()
         result = abs(ang_delta) < self.good_angle_threshold_degree
@@ -147,7 +153,10 @@ class KickStateMachine:
     
     def really_not_good_angle(self):
         """Check if angle is outside large acceptable range"""
-        target_angle_rad = math.atan2(self.agent.get_self_pos()[0], 4500 - self.agent.get_self_pos()[1])
+        if self.agent.get_self_pos()[1] > 4000:
+            target_angle_rad = 0.0
+        else:
+            target_angle_rad = math.atan2(self.agent.get_self_pos()[0], 5000 - self.agent.get_self_pos()[1])
         ang_tar = math.degrees(target_angle_rad)
         ang_delta = ang_tar - self.agent.get_self_yaw()
         result = abs(ang_delta) >= self.really_bad_angle_threshold_degree
