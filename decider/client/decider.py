@@ -88,6 +88,7 @@ class Agent:
         # Initializing public variables
         self._config = configuration.load_config()
         self.id = self._config["id"]
+        self.read_params()
         # last command time initialize to 1970-01-01 00:00:00
         self._last_command_time = time.mktime(time.strptime("1970-01-01 00:00:00", "%Y-%m-%d %H:%M:%S"))
         self._command = {
