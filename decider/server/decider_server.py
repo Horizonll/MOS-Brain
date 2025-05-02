@@ -197,6 +197,8 @@ class Agent:
         BIG_NUMBER = 1e6  # A large value used when the position is unavailable
 
         for robot_id, data in self.robots_data.items():
+
+            data = data.get("data", {})
             player_pos = [data.get('x'), data.get('y')]
             ball_pos = [data.get('ballx'), data.get('bally')]
 
