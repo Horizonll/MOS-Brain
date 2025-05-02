@@ -123,7 +123,7 @@ class Agent:
         """
         # Read the local JSON configuration file
         try:
-            with open("E:\Files\TH-MOS\code\MOS-Brain\decider\server\config.json", "r") as f:
+            with open("/home/thmos/MOS-Brain/decider/server/config.json", "r") as f:
                 self._config = json.load(f)
 
             # # Check if automatic player detection is enabled
@@ -533,21 +533,21 @@ class StateMachine:
                 "source": ["dribble", "shoot", "initial", "defend"],
                 "dest": "defend",
                 "conditions": "ball_in_backcourt",
-                "after": self.backfield_machine
+                "after": self.model.backfield_machine
             },
             {
                 "trigger": "play",
                 "source": ["defend", "shoot", "initial", "dribble"],
                 "dest": "dribble",
                 "conditions": "ball_in_midcourt",
-                "after": self.midfield_machine
+                "after": self.model.midfield_machine
             },
             {
                 "trigger": "play",
                 "source": ["defend", "dribble", "initial", "shoot"],
                 "dest": "shoot",
                 "conditions": "ball_in_frontcourt",
-                "after": self.frontfield_machine
+                "after": self.model.frontfield_machine
             },
             # initial can only be transitioned from stop
             {

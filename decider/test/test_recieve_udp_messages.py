@@ -7,7 +7,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 # 绑定到所有可用的接口上的指定端口（例如：9999）
-port = 8004
+port = 8003
 sock.bind(('', port))
 
 # 加入广播接收

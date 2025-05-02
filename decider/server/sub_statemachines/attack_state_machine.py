@@ -86,7 +86,7 @@ class AttackStateMachine:
 
         self.logger.info(f"[AttackStateMachine] 执行射门: 最近球员{closest_id}（距离{closest_dist:.2f}m）")
         if self.agent.robots_data[closest_id]["data"]["bally"] is not None:
-            if self.agent.robots_data[closest_id]["data"]["bally"] > 1000:
+            if self.agent.robots_data[closest_id]["data"]["bally"] > 2000 or self.agent.robots_data[closest_id]["data"]["bally"] < 0:
                 self.agent.publish_command(closest_id, "shoot")
             else:
                 self.agent.publish_command(closest_id, "dribble")
@@ -94,14 +94,15 @@ class AttackStateMachine:
             self.agent.publish_command(closest_id, "dribble")
 
         for id in range(1, 6):
-            if id != closest_id:
+            if id != closest_id and self.agent.roles_to_id["goalkeeper"] != id:
                 self.agent.publish_command(id, "chase_ball", {"chase_distance": self.no_control_chase_distance})
                 self.logger.info(f"[AttackStateMachine] 球员{id}执行支持任务")
 
     def go_for_possession(self):
         self.logger.info(f"[AttackStateMachine] 执行追球策略（阈值:{self.ball_out_of_control_threshold_m}m）")
         for id in range(1, 6):
-            self.agent.publish_command(id, "chase_ball")
+            if self.agent.roles_to_id["goalkeeper"] != id:
+                self.agent.publish_command(id, "chase_ball")
 
     def go_for_possession_avoid_collsion(self):
         players_distance = self.agent.get_players_distance_to_ball_without_goalkeeper()
@@ -109,7 +110,7 @@ class AttackStateMachine:
         closest_id = sorted_players[0][0]
         self.agent.publish_command(closest_id, "chase_ball")
         for id in range(1, 6):
-            if id not in [closest_id]:
+            if id not in [closest_id] and self.agent.roles_to_id["goalkeeper"] != id:
                 self.agent.publish_command(id, "chase_ball", {"chase_distance": self.no_control_chase_distance})
         self.logger.info("[AttackStateMachine] 执行防碰撞追球策略")
     

@@ -164,7 +164,7 @@ class RobotServer:
             encoded_data = str(data).encode("utf-8")
         self.udp_socket.sendto(
             encoded_data,
-            (self.agent.get_config.get("broadcast_address", "192.168.9.255"), self.client_udp_port)
+            (self.agent.get_config().get("broadcast_address", "192.168.9.255"), self.client_udp_port)
         )
         logging.debug(f"Broadcasted: {data}")
 
