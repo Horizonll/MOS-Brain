@@ -206,9 +206,7 @@ class Vision:
             self.ball_distance              = ball_row[4]
             self._ball_pos                  = ball_row[5:8]
             self._ball_pos_accuracy        += ball_confidence * 100
-            print("fuck add ---------> " + str(ball_confidence))
         
-        print("fucking= " + str(self._ball_pos_accuracy))
         
         self._vision_last_frame_time        = time.time()
         
