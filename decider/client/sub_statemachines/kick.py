@@ -18,20 +18,21 @@ class KickStateMachine:
                 "source": ["angle_adjust"],
                 "dest": "angle_adjust",
                 "conditions": "not_good_angle",
-                "after": "adjust_angle",
+                "after": ["adjust_angle"]
             },
             {
                 "trigger": "adjust_position",
                 "source": ["horizontal_adjust", "back_forth_adjust"],
                 "dest": "angle_adjust",
                 "conditions": "really_not_good_angle",
-                "after": "adjust_angle",
+                "after": ["stop", "adjust_angle"],
             },
             {
                 "trigger": "adjust_position",
                 "source": "angle_adjust",
                 "dest": "horizontal_adjust",
                 "conditions": "good_angle",
+                "after": "stop"
             },
             {
                 "trigger": "adjust_position",
@@ -45,6 +46,7 @@ class KickStateMachine:
                 "source": "horizontal_adjust",
                 "dest": "back_forth_adjust",
                 "conditions": "good_position_horizontally",
+                "after": "stop"
             },
             {
                 "trigger": "adjust_position",
@@ -109,7 +111,7 @@ class KickStateMachine:
     def stop(self):
         """Stop the robot's movement"""
         print("[KICK FSM] Stopping robot...")
-        self.agent.stop()
+        self.agent.stop(1)
         print("[KICK FSM] Robot stopped.")
 
     def adjust_angle(self):
@@ -171,10 +173,10 @@ class KickStateMachine:
             ball_angle = self.agent.get_ball_angle()
             if ball_angle > self.horizontal_adjust_threshold_rad:
                 print(f"[LR ADJUST] Moving left (Ball Angle: {math.degrees(ball_angle):.2f}°)")
-                self.agent.cmd_vel(self.horizontal_adjust_forward_vel, self.lateral_vel, self.rotate_vel_theta)
+                self.agent.cmd_vel(0, self.horizontal_adjust_forward_vel, 0)
             elif ball_angle < -self.horizontal_adjust_threshold_rad:
                 print(f"[LR ADJUST] Moving right (Ball Angle: {math.degrees(ball_angle):.2f}°)")
-                self.agent.cmd_vel(self.horizontal_adjust_forward_vel, -self.lateral_vel, -self.rotate_vel_theta)
+                self.agent.cmd_vel(0, -self.horizontal_adjust_forward_vel, 0)
 
     def good_position_horizontally(self):
         """Check if left-right position is correct"""
@@ -200,7 +202,7 @@ class KickStateMachine:
             self.agent.cmd_vel(self.forward_vel, 0, 0)
         elif ball_distance < self.min_kick_distance_m:
             print(f"[FB ADJUST] Moving backward (Distance: {ball_distance:.2f}m)")
-            self.agent.cmd_vel(-self.forward_vel, 0, 0)
+            self.agent.cmd_vel(-self.lateral_vel, 0, 0)
 
     def good_back_forth(self):
         """Check if forward position is correct"""

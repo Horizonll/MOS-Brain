@@ -137,10 +137,7 @@ class RobotClient:
                         rospy.logwarn("Received message does not contain 'command' or 'robots_data'")
                 except json.JSONDecodeError as e:
                     rospy.logerr(f"JSON decoding error: {e}")
-                except
-                
-                
-                 KeyError as e:
+                except KeyError as e:
                     rospy.logerr(f"Key error: {e}")
         except Exception as e:
             rospy.logerr(f"Error handling connection: {addr}:{e}")

@@ -87,7 +87,10 @@ class Agent:
 
         # Initializing public variables
         self._config = configuration.load_config()
+        
         self.id = self._config["id"]
+        
+        self.read_params()
         # last command time initialize to 1970-01-01 00:00:00
         self._last_command_time = time.mktime(time.strptime("1970-01-01 00:00:00", "%Y-%m-%d %H:%M:%S"))
         self._command = {
@@ -146,9 +149,9 @@ class Agent:
             rospy.loginfo(f"Stopping: Player is penalized for {penalized_time} seconds")
             self.stop()
             return
-        elif state in ['STATE_SET', 'STATE_FINISHED', 'STATE_INITIAL', None]:
-            rospy.loginfo(f"Stopping: Game state is {state}")
-            self.stop()
+        # elif state in ['STATE_SET', 'STATE_FINISHED', 'STATE_INITIAL', None]:
+        #    rospy.loginfo(f"Stopping: Game state is {state}")
+        #    self.stop()
         elif state == 'STATE_READY':
             rospy.loginfo("Running: go_back_to_field (STATE_READY)")
             self._state_machine_runners['go_back_to_field']()
@@ -161,7 +164,10 @@ class Agent:
                 self._state_machine_runners['chase_ball']()
             else:
                 rospy.loginfo("Running: dribble (lost command, close ball)")
-                self._state_machine_runners['dribble']()
+                if self.if_can_kick == True:
+                	self._state_machine_runners['kick']()
+                else:
+                	self._state_machine_runners['dribble']()
         else:
             cmd = self._command["command"]
             if not self.get_if_ball() and cmd in ['chase_ball', 'kick', 'dribble']:

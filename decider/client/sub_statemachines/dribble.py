@@ -144,7 +144,7 @@ class DribbleStateMachine:
         """
         print("[DRIBBLE FSM] Stopping...")
         self.agent.cmd_vel(0, 0, 0)
-        time.sleep(0.5)
+        time.sleep(1)
         print("[DRIBBLE FSM] Stopped")
 
     def adjust_pos_to_ball(self):
@@ -215,14 +215,14 @@ class DribbleStateMachine:
             self.agent.cmd_vel(
                 0,
                 -self.horizontal_adjust_vel_y,
-                -self.horizontal_adjust_vel_theta
+                0
             )
         elif ball_x < 0:
             print(f"[DRIBBLE FSM] Moving right (Ball x: {ball_x})")
             self.agent.cmd_vel(
                 0,
                 self.horizontal_adjust_vel_y,
-                self.horizontal_adjust_vel_theta
+                0
             )
 
     def adjust_ball_angle(self):
