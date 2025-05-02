@@ -101,6 +101,7 @@ class Agent:
         self._lst_command = self._command
 
         self._robots_data = {}
+        self._last_play_time = time.time()
         
         rospy.loginfo("Registering interfaces")
         # action: provide functions to control the robot, such as cmd_vel 
@@ -145,43 +146,49 @@ class Agent:
     def run(self):
         state = self.receiver.game_state
         penalized_time = self.receiver.penalized_time
+        if state is not "STATE_PLAYING": 
+            self._last_play_time = time.time()
         if penalized_time > 0:
             rospy.loginfo(f"Stopping: Player is penalized for {penalized_time} seconds")
             self.stop()
             return
-        # elif state in ['STATE_SET', 'STATE_FINISHED', 'STATE_INITIAL', None]:
-        #    rospy.loginfo(f"Stopping: Game state is {state}")
-        #    self.stop()
+        elif state in ['STATE_SET', 'STATE_FINISHED', 'STATE_INITIAL', None]:
+            rospy.loginfo(f"Stopping: Game state is {state}")
+            self.stop()
         elif state == 'STATE_READY':
             rospy.loginfo("Running: go_back_to_field (STATE_READY)")
             self._state_machine_runners['go_back_to_field']()
-        elif time.time() - self._last_command_time > self.offline_time:
-            if not self.get_if_ball():
-                rospy.loginfo("Running: find_ball (lost command, no ball)")
-                self._state_machine_runners['find_ball']()
-            elif self.get_ball_distance() > 0.8:
-                rospy.loginfo("Running: chase_ball (lost command, far ball)")
-                self._state_machine_runners['chase_ball']()
-            else:
-                rospy.loginfo("Running: dribble (lost command, close ball)")
-                if self.if_can_kick == True:
-                	self._state_machine_runners['kick']()
-                else:
-                	self._state_machine_runners['dribble']()
         else:
-            cmd = self._command["command"]
-            if not self.get_if_ball() and cmd in ['chase_ball', 'kick', 'dribble']:
-                rospy.loginfo(f"Running: find_ball (server cmd {cmd}, no ball)")
-                self._state_machine_runners['find_ball']()
-            elif cmd in self._state_machine_runners:
-                rospy.loginfo(f"Running: {cmd} (server command)")
-                if cmd == 'kick' and self.if_can_kick == False:
-                    self._state_machine_runners['dribble']()
-                else:
-                    self._state_machine_runners[cmd]()
-            else:
-                rospy.loginfo(f"Error: State machine {cmd} not found. Stopping.")
+            if time.time() - self._last_play_time < 10.0 \
+                    and not self.receiver.kick_off:
                 self.stop()
+            if time.time() - self._last_command_time > self.offline_time:
+                if not self.get_if_ball():
+                    rospy.loginfo("Running: find_ball (lost command, no ball)")
+                    self._state_machine_runners['find_ball']()
+                elif self.get_ball_distance() > 0.8:
+                    rospy.loginfo("Running: chase_ball (lost command, far ball)")
+                    self._state_machine_runners['chase_ball']()
+                else:
+                    rospy.loginfo("Running: dribble (lost command, close ball)")
+                    if self.if_can_kick == True:
+                        self._state_machine_runners['kick']()
+                    else:
+                        self._state_machine_runners['dribble']()
+            else:
+                cmd = self._command["command"]
+                if not self.get_if_ball() and cmd in ['chase_ball', 'kick', 'dribble']:
+                    rospy.loginfo(f"Running: find_ball (server cmd {cmd}, no ball)")
+                    self._state_machine_runners['find_ball']()
+                elif cmd in self._state_machine_runners:
+                    rospy.loginfo(f"Running: {cmd} (server command)")
+                    if cmd == 'kick' and self.if_can_kick == False:
+                        self._state_machine_runners['dribble']()
+                    else:
+                        self._state_machine_runners[cmd]()
+                else:
+                    rospy.loginfo(f"Error: State machine {cmd} not found. Stopping.")
+                    self.stop()
 
     def read_params(self):
         self.offline_time = self._config.get("offline_time", 5)

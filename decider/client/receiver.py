@@ -17,9 +17,7 @@ from construct import (
     Flag,
     Int16sl,
 )
-import rospy
-
-import rospy
+#import rospy
 
 
 # 以下是 GameState
@@ -184,7 +182,7 @@ class Receiver:
                 self.opposite_team = 1 - self.team
             self.kick_of_team = self.data.kick_of_team  # 开球队
             self.kick_off = (
-                True if self.kick_of_team == self.team else False
+                True if self.kick_of_team == 12 else False
             )  # 是否开球
             self.player_info = self.data.teams[self.team].players[
                 self.player
@@ -194,9 +192,7 @@ class Receiver:
             self.opposite_team_color = self.data.teams[
                 self.opposite_team
             ].team_color  # 对面队员颜色
-            self.kick_off = (
-                True if self.data.kick_of_team == self.team else False
-            )  # 是否开球
+            
         # 解释报错
         except AssertionError as ae:
             logging.error(ae.message)
@@ -231,6 +227,7 @@ class Receiver:
         # print(self.data.first_half)
         # print(self.team)
         # print(self.opposite_team)
+        #print(self.kick_off)
         pass
 
     def initialize(self):
