@@ -102,9 +102,11 @@ class KickStateMachine:
         ):
             print("\n[KICK FSM] Positioning complete! Executing kick...")
             self.agent.cmd_vel(0, 0, 0)
+            self.agent.look_at([0.0, 0.0])
             time.sleep(2)
             self.agent.kick()
             time.sleep(2)
+            self.agent.look_at([None, None])
             print("[KICK FSM] Kick executed successfully!")
             self.adjust_position()
 

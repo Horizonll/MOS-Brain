@@ -198,6 +198,7 @@ class Agent:
                         self.stop()
         except Exception as e:
             rospy.logerr(f"Error in decider run: {e}")
+            self._state_machine_runners['find_ball']()
 
     def read_params(self):
         self.offline_time = self._config.get("offline_time", 5)
