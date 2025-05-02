@@ -170,7 +170,7 @@ class Vision:
         self._vision_last_frame_time = time.time()
         # accuracy *= exp^ -dt
         self._self_pos_accuracy *= math.exp(-diff_time)
-        self._ball_pos_accuracy *= math.exp(-diff_time * 5)
+        self._ball_pos_accuracy *= math.exp(-diff_time * 3)
 
         # target_matrix shape： 
         #   N * [class, x_center, y_center, confidence, distance, x, y, z]
