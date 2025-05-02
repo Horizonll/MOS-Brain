@@ -171,7 +171,15 @@ class DribbleStateMachine:
                 0,
                 0,
             )
-            
+        elif ball_distance < self.min_ball_distance_m:
+            print(
+                f"[DRIBBLE FSM] ball_distance ({ball_distance}) < 0.35. Moving forward..."
+            )
+            self.agent.cmd_vel(
+                -self.forward_vel,
+                0,
+                0,
+            )
 
         print("[DRIBBLE FSM] Position adjustment step completed.")
 
@@ -357,7 +365,7 @@ class DribbleStateMachine:
         """
         # neck_angle = self.agent.get_ball_angle()
         ball_x = self.agent.get_ball_pos()[0]
-        ball_x_lost = abs(ball_x) > self.lost_ball_x_threshold_mm # 80
+        ball_x_lost = abs(ball_x) > self.lost_ball_x_threshold_mm  # 80
         result = ball_x_lost
         print(f"[DRIBBLE FSM] Lost ball x: {'Yes' if result else 'No'}")
         return result

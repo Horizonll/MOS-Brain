@@ -152,7 +152,7 @@ class Agent:
         elif state == 'STATE_READY':
             rospy.loginfo("Running: go_back_to_field (STATE_READY)")
             self._state_machine_runners['go_back_to_field']()
-        elif time.time() - self._last_command_time > 5:
+        elif time.time() - self._last_command_time > self.offline_time:
             if not self.get_if_ball():
                 rospy.loginfo("Running: find_ball (lost command, no ball)")
                 self._state_machine_runners['find_ball']()
@@ -169,11 +169,17 @@ class Agent:
                 self._state_machine_runners['find_ball']()
             elif cmd in self._state_machine_runners:
                 rospy.loginfo(f"Running: {cmd} (server command)")
-                self._state_machine_runners[cmd]()
+                if cmd == 'kick' and self.if_can_kick == False:
+                    self._state_machine_runners['dribble']()
+                else:
+                    self._state_machine_runners[cmd]()
             else:
                 rospy.loginfo(f"Error: State machine {cmd} not found. Stopping.")
                 self.stop()
 
+    def read_params(self):
+        self.offline_time = self._config.get("offline_time", 5)
+        self.if_can_kick = self._config.get("if_can_kick", False)
 
     # The following are some simple encapsulations of interfaces
     # The implementation of the apis may be change in the future

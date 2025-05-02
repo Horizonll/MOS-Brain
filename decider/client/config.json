@@ -10,6 +10,7 @@
     "auto_find_server_ip_listen_port": 8003,
     "auto_find_server_ip_token": "NjM5NWVkMSAgLQo",
     "max_buffer_size": 1024,
+    "offline_time": 5, // seconds
     // vision
     "vision_size": [
         1280,
@@ -111,8 +112,11 @@
     },
     // sundry
     "team": 1,
+
+    "if_can_kick": false,
+
     // statemachines params
-    "drrible": {
+    "dribble": {
         "angle_to_ball_adjust_threshold_degree": 11.46,
         "good_angle_to_goal_adjust_threshold_degree": 10,
         "goal_center_bias_mm": 800,
@@ -125,9 +129,9 @@
         "adjust_angle_to_goal_vel_theta": 0.3,
         "min_ball_distance_m": 0.0,
         "max_ball_distance_m": 0.55,
-        "good_horizontal_position_to_ball_threshold_mm": 170,
+        "good_horizontal_position_to_ball_threshold_mm": 100,
         "lost_angle_to_target_threshold_degree": 35,
-        "lost_ball_x_threshold_mm": 250,
+        "lost_ball_x_threshold_mm": 150,
         "lost_ball_distance_threshold_m": 2.0
     },
     "find_ball": {
