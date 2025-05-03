@@ -105,7 +105,7 @@
         "adjust_angle_to_goal_vel_theta": 0.3,
         "min_ball_distance_m": 0.0,
         "max_ball_distance_m": 0.55,
-        "good_horizontal_position_to_ball_threshold_mm": 90,
+        "good_horizontal_position_to_ball_threshold_mm": 100,,
         "lost_angle_to_target_threshold_degree": 30,
         "lost_ball_x_threshold_mm": 70,
         "lost_ball_distance_threshold_m": 2.0

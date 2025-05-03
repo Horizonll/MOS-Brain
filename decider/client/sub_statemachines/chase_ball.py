@@ -109,6 +109,8 @@ class ChaseBallStateMachine:
         """Rotate the agent towards the ball"""
         print("[CHASE BALL FSM] Starting to rotate towards the ball...")
         target_angle_rad = self.agent.get_ball_angle()
+        if self.agent.get_ball_angle() is None:
+            return
         self.agent.cmd_vel(
             0,
             0,
