@@ -23,11 +23,18 @@ class ChaseBallStateMachine:
             },
             {
                 "trigger": "chase_ball",
-                "source": ["chase", "arrived"],
+                "source": ["arrived"],
                 "dest": "chase",
                 "conditions": "not_close_to_ball",
                 "after": "move_to_ball",
-            }
+            },
+            {
+                "trigger": "chase_ball",
+                "source": ["chase"],
+                "dest": "chase",
+                "conditions": "rotate_yaw_not_ok",
+                "after": "move_to_ball",
+            },
         ]
 
         # Initialize state machine
@@ -62,17 +69,17 @@ class ChaseBallStateMachine:
         return result
     
     def not_close_to_ball(self):
-        """Check if the agent is close to the ball (距离+角度检查)"""
-        if self.chase_distance is not None:
-            distance_close = self.chase_distance > self.agent.get_ball_distance()
-        else:
-            distance_close = self.agent.get_if_close_to_ball()
+
+        return not self.close_to_ball()
+    
+    def rotate_yaw_not_ok(self):
+        """Check if the agent's yaw rotation is OK"""
         if self.agent.get_ball_angle() is None:
             return False
         angle_close = abs(self.agent.get_ball_angle()) < self.close_angle_threshold_rad * 0.5
-        result = distance_close and angle_close
+        result = angle_close
         print(
-            f"[CHASE BALL FSM] Close to ball? Distance: {distance_close}, Angle: {angle_close}, Result: {result}"
+            f"[CHASE BALL FSM] Rotate yaw OK? Angle: {angle_close}, Result: {result}"
         )
         return not result
 
