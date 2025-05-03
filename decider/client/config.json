@@ -1,4 +1,6 @@
 {
+    // kick
+    "kick_key_is_y": true, 
     // velocities
     "walk_vel_x": 0.1,
     "walk_vel_y": 0.05,

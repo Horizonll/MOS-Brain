@@ -170,10 +170,8 @@ class Agent:
                 self._state_machine_runners['go_back_to_field']()
             else:
                 if time.time() - self.decider_start_time < self.start_walk_into_field_time:
-                    print(f"fuck1 {time.time() - self.decider_start_time}")
                     self._state_machine_runners['go_back_to_field']()
                 elif time.time() - self.penalize_end_time < self.start_walk_into_field_time:
-                    print(f"fuck2 {time.time() - self.penalize_end_time}")
                     self._state_machine_runners['go_back_to_field']()
                 elif time.time() - self._last_play_time < 10.0 \
                         and not self.receiver.kick_off:
