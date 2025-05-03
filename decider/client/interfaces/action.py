@@ -55,12 +55,19 @@ class Action:
         frame_prefix = "" if os.environ.get("ROS_NAMESPACE") is None \
                 else os.environ.get("ROS_NAMESPACE") + "/"
         kick_goal.header.frame_id = frame_prefix + "base_footprint"
-        if self.config["kick_key_is_y"]:
+        if self._config["kick_key_is_y"]:
             kick_goal.ball_position.x = 0.2
             kick_goal.ball_position.y = 0.1
             kick_goal.ball_position.z = 0
             kick_goal.kick_direction = Quaternion(1, 0, 0, 0)
             kick_goal.kick_speed = 3
+        else:
+            kick_goal.ball_position.x = 0.2
+            kick_goal.ball_position.y = -0.1
+            kick_goal.ball_position.z = 0
+            kick_goal.kick_direction = Quaternion(1,0,0,0)
+            kick_goal.kick_speed = 4
+
         self._kick_client.send_goal(kick_goal)
         rospy.loginfo("send kick")
         rospy.loginfo("kick goal init")
