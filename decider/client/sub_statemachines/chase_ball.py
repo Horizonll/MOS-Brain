@@ -78,7 +78,7 @@ class ChaseBallStateMachine:
             self.stop_moving()
             return
         
-        self.chase_distance = self.agent.get_command().get("data", {}).get("chase_distance", None)
+        self.chase_distance = self.agent.get_command().get("data", {}).get("chase_distance", 0.45)
 
         print(f"\n[CHASE BALL FSM] Current state: {self.state}")
         print(f"[CHASE BALL FSM] Triggering 'chase_ball' transition")
