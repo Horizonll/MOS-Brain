@@ -131,7 +131,7 @@ class GoBackToFieldStateMachine:
         #    self.agent.stop(0.5)
         #    return
         if self.state != "arrived_at_target":
-            self.agent.look_at([0.0, 0.0])
+            self.agent.look_at([-0.3, 0.0])
         else:
             self.agent.look_at([None, None])
         

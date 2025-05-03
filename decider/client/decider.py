@@ -83,7 +83,9 @@ class Agent:
         rospy.init_node("decider", log_level=rospy.DEBUG)
         rospy.loginfo("Initializing the Agent instance")
 
+        # Flags
         self.if_local_test = False
+        self.attack_method = "dribble"
 
         # Initializing public variables
         self._config = configuration.load_config()
@@ -196,10 +198,24 @@ class Agent:
                         self._state_machine_runners['find_ball']()
                     elif cmd in self._state_machine_runners:
                         rospy.loginfo(f"Running: {cmd} (server command)")
-                        if cmd == 'kick' and self.if_can_kick == False:
-                            self._state_machine_runners['dribble']()
+                        if cmd == 'kick':
+                            print(f"=======================> cmd = {cmd}")
+                            if self.get_self_pos()[1] < self.dribble_to_kick[0] or self.get_self_pos()[1] > self.dribble_to_kick[1]:
+                                print(f"=======================> cmd = {cmd} case 1")
+                                self.attack_method = "kick"
+                            if self.get_self_pos()[1] > self.kick_to_dribble[0] and self.get_self_pos()[1] < self.kick_to_dribble[1]:
+                                print(f"=======================> cmd = {cmd} case 2")
+                                self.attack_method = "dribble"
+
+                            if self.attack_method == "dribble" or self.if_can_kick == False:
+                                print(f"=======================> cmd = {cmd} action 1")
+                                self._state_machine_runners['dribble']()
+                            else:
+                                print(f"=======================> cmd = {cmd} action 2")
+                                self._state_machine_runners["kick"]()
                         else:
                             self._state_machine_runners[cmd]()
+
                     else:
                         rospy.loginfo(f"Error: State machine {cmd} not found. Stopping.")
                         self.stop()
@@ -212,6 +228,8 @@ class Agent:
         self.if_can_kick = self._config.get("if_can_kick", False)
 
         self.start_wait_time = self._config.get("start_wait_time", 3)
+        self.dribble_to_kick = self._config.get("dribble_to_kick", [-2300, 2300])
+        self.kick_to_dribble = self._config.get("kick_to_dribble", [-1700, 1700])
 
         self.start_walk_into_field_time = self._config.get("start_walk_into_field_time", 3)
 

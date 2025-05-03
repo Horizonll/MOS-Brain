@@ -1,6 +1,8 @@
 {
     // kick
     "kick_key_is_y": true, 
+    "dribble_to_kick": [-2300, 2300], 
+    "kick_to_dribble": [-1700, 1700], 
     // velocities
     "walk_vel_x": 0.1,
     "walk_vel_y": 0.05,
