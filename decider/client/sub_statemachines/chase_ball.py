@@ -9,31 +9,31 @@ class ChaseBallStateMachine:
         """Initialize the chase ball state machine with an agent"""
         self.agent = agent
         self._config = self.agent.get_config()
-        self.read_params()  # 新增参数读取方法
+        self.read_params()
 
         # Define states and transitions
-        self.states = ["chase", "arrived"]
+        self.states = ["rotate", "forward", "arrived"]
         self.transitions = [
             {
                 "trigger": "chase_ball",
-                "source": ["chase", "arrived"],
+                "source": ["rotate", "forward", "arrived"],
                 "dest": "arrived",
                 "conditions": "close_to_ball",
                 "after": "stop_moving_and_set_head",
             },
             {
                 "trigger": "chase_ball",
-                "source": ["arrived"],
-                "dest": "chase",
-                "conditions": "not_close_to_ball",
-                "after": "move_to_ball",
+                "source": ["rotate", "forward", "arrived"],
+                "dest": "rotate",
+                "conditions": ["not_close_to_ball", "large_angle"],
+                "after": "rotate_to_ball",
             },
             {
                 "trigger": "chase_ball",
-                "source": ["chase"],
-                "dest": "chase",
-                "conditions": "rotate_yaw_not_ok",
-                "after": "move_to_ball",
+                "source": ["rotate", "forward", "arrived"],
+                "dest": "forward",
+                "conditions": ["not_close_to_ball", "small_angle"],
+                "after": "move_forward_to_ball",
             },
         ]
 
@@ -41,7 +41,7 @@ class ChaseBallStateMachine:
         self.machine = Machine(
             model=self,
             states=self.states,
-            initial="chase",
+            initial="rotate",
             transitions=self.transitions,
         )
         print(f"[CHASE BALL FSM] Initialized. Starting state: {self.state}")
@@ -67,21 +67,24 @@ class ChaseBallStateMachine:
             f"[CHASE BALL FSM] Close to ball? Distance: {distance_close}, Angle: {angle_close}, Result: {result}"
         )
         return result
-    
-    def not_close_to_ball(self):
 
+    def not_close_to_ball(self):
+        """Check if the agent is NOT close to the ball"""
         return not self.close_to_ball()
-    
-    def rotate_yaw_not_ok(self):
-        """Check if the agent's yaw rotation is OK"""
+
+    def large_angle(self):
+        """Check if the angle to the ball is large"""
         if self.agent.get_ball_angle() is None:
             return False
-        angle_close = abs(self.agent.get_ball_angle()) < self.close_angle_threshold_rad * 0.5
-        result = angle_close
-        print(
-            f"[CHASE BALL FSM] Rotate yaw OK? Angle: {angle_close}, Result: {result}"
-        )
-        return not result
+        target_angle_rad = self.agent.get_ball_angle()
+        return abs(target_angle_rad) > self.close_angle_threshold_rad
+
+    def small_angle(self):
+        """Check if the angle to the ball is small"""
+        if self.agent.get_ball_angle() is None:
+            return False
+        target_angle_rad = self.agent.get_ball_angle()
+        return abs(target_angle_rad) < self.close_angle_threshold_rad * 0.5
 
     def run(self):
         """Main execution loop for the state machine"""
@@ -95,38 +98,33 @@ class ChaseBallStateMachine:
             print("[CHASE BALL FSM] No ball in sight. Stopping.")
             self.stop_moving()
             return
-        
+
         self.chase_distance = self.agent.get_command().get("data", {}).get("chase_distance", 0.45)
 
         print(f"\n[CHASE BALL FSM] Current state: {self.state}")
         print(f"[CHASE BALL FSM] Triggering 'chase_ball' transition")
         self.machine.model.trigger("chase_ball")
 
-    def move_to_ball(self):
-        """Move the agent towards the ball (参数化版本)"""
-        print("[CHASE BALL FSM] Starting to move towards the ball...")
+    def rotate_to_ball(self):
+        """Rotate the agent towards the ball"""
+        print("[CHASE BALL FSM] Starting to rotate towards the ball...")
         target_angle_rad = self.agent.get_ball_angle()
+        self.agent.cmd_vel(
+            0,
+            0,
+            np.sign(target_angle_rad) * self.walk_vel_theta
+        )
+        print("[CHASE BALL FSM] Rotation step completed.")
 
-        if abs(target_angle_rad) > self.close_angle_threshold_rad * 0.5:
-            print(
-                f"[CHASE BALL FSM] Large angle ({abs(target_angle_rad):.2f} rad). Rotating..."
-            )
-            self.agent.cmd_vel(
-                0, 
-                0, 
-                np.sign(target_angle_rad) * self.walk_vel_theta
-            )
-        else:
-            print(
-                f"[CHASE BALL FSM] Small angle ({abs(target_angle_rad):.2f} rad). Moving forward..."
-            )
-            self.agent.cmd_vel(
-                self.walk_vel_x,
-                0,
-                0
-            )
-
-        print("[CHASE BALL FSM] Movement step completed.")
+    def move_forward_to_ball(self):
+        """Move the agent forward towards the ball"""
+        print("[CHASE BALL FSM] Starting to move forward towards the ball...")
+        self.agent.cmd_vel(
+            self.walk_vel_x,
+            0,
+            0
+        )
+        print("[CHASE BALL FSM] Forward movement step completed.")
 
     def stop_moving(self):
         """Stop the agent's movement"""
@@ -139,3 +137,5 @@ class ChaseBallStateMachine:
         print("[CHASE BALL FSM] Stopping movement and setting head position...")
         self.agent.cmd_vel(0, 0, 0)
         print("[CHASE BALL FSM] Movement stopped and head position set.")
+
+    
