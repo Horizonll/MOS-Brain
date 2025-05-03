@@ -62,8 +62,19 @@ class ChaseBallStateMachine:
         return result
     
     def not_close_to_ball(self):
-        """Check if the agent is NOT close to the ball"""
-        return not self.close_to_ball()
+        """Check if the agent is close to the ball (距离+角度检查)"""
+        if self.chase_distance is not None:
+            distance_close = self.chase_distance > self.agent.get_ball_distance()
+        else:
+            distance_close = self.agent.get_if_close_to_ball()
+        if self.agent.get_ball_angle() is None:
+            return False
+        angle_close = abs(self.agent.get_ball_angle()) < self.close_angle_threshold_rad * 0.5
+        result = distance_close and angle_close
+        print(
+            f"[CHASE BALL FSM] Close to ball? Distance: {distance_close}, Angle: {angle_close}, Result: {result}"
+        )
+        return not result
 
     def run(self):
         """Main execution loop for the state machine"""
@@ -89,7 +100,7 @@ class ChaseBallStateMachine:
         print("[CHASE BALL FSM] Starting to move towards the ball...")
         target_angle_rad = self.agent.get_ball_angle()
 
-        if abs(target_angle_rad) > self.close_angle_threshold_rad:
+        if abs(target_angle_rad) > self.close_angle_threshold_rad * 0.5:
             print(
                 f"[CHASE BALL FSM] Large angle ({abs(target_angle_rad):.2f} rad). Rotating..."
             )
