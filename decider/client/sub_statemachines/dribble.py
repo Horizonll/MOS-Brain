@@ -115,7 +115,7 @@ class DribbleStateMachine:
         self.aim_yaw = self.agent.get_command().get('data').get('aim_yaw', None)
 
         if self.aim_yaw is None:
-            if self.agent.get_self_pos()[1] > 4000:
+            if self.agent.get_self_pos()[1] > self._config.get("dribble", {}).get("dribble_0_y", 3700):
                 self.aim_yaw = 0.0
             else:
                 self.aim_yaw = self.calc_angle_to_goal_degree()

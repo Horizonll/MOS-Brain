@@ -109,8 +109,9 @@
         "max_ball_distance_m": 0.55,
         "good_horizontal_position_to_ball_threshold_mm": 100,
         "lost_angle_to_target_threshold_degree": 30,
-        "lost_ball_x_threshold_mm": 70,
-        "lost_ball_distance_threshold_m": 2.0
+        "lost_ball_x_threshold_mm": 80,
+        "lost_ball_distance_threshold_m": 2.0,
+	"dribble_0_y": 3700
     },
     "find_ball": {
         "angle_threshold_degrees": 10,
