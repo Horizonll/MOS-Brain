@@ -127,9 +127,9 @@ class GoBackToFieldStateMachine:
 
     def run(self, aim_x=0, aim_y=0, aim_yaw=0):
         """状态机的主运行函数，控制机器人返回场地的整个流程"""
-        if self.agent.receiver.game_state != 'STATE_READY':
-            self.agent.stop(0.5)
-            return
+        # if self.agent.receiver.game_state != 'STATE_READY':
+        #    self.agent.stop(0.5)
+        #    return
         if self.state != "arrived_at_target":
             self.agent.look_at([0.0, 0.0])
         else:

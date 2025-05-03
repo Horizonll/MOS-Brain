@@ -143,7 +143,7 @@ class Agent:
 
         rospy.loginfo(f"Agent instance initialization completed, sleeping for {self.start_wait_time}")
 
-        time.sleep(self.start_wait_time)
+        # time.sleep(self.start_wait_time)
 
         self.decider_start_time = time.time()
         self.penalize_end_time = time.mktime(time.strptime("1970-01-01 00:00:00", "%Y-%m-%d %H:%M:%S"))
@@ -152,6 +152,7 @@ class Agent:
         try:
             state = self.receiver.game_state
             penalized_time = self.receiver.penalized_time
+            print(f"penalized_time = {self.receiver.penalized_time}")
             if state != "STATE_PLAYING":
                 self._last_play_time = time.time()
             if penalized_time > 0:
@@ -160,6 +161,8 @@ class Agent:
                 self.penalize_end_time = time.time()
                 return
             elif state in ['STATE_SET', 'STATE_FINISHED', 'STATE_INITIAL', None]:
+                if state == None:
+                    self.decider_start_time = time.time()
                 rospy.loginfo(f"Stopping: Game state is {state}")
                 self.stop()
             elif state == 'STATE_READY':
@@ -167,8 +170,10 @@ class Agent:
                 self._state_machine_runners['go_back_to_field']()
             else:
                 if time.time() - self.decider_start_time < self.start_walk_into_field_time:
+                    print(f"fuck1 {time.time() - self.decider_start_time}")
                     self._state_machine_runners['go_back_to_field']()
                 elif time.time() - self.penalize_end_time < self.start_walk_into_field_time:
+                    print(f"fuck2 {time.time() - self.penalize_end_time}")
                     self._state_machine_runners['go_back_to_field']()
                 elif time.time() - self._last_play_time < 10.0 \
                         and not self.receiver.kick_off:
@@ -177,7 +182,7 @@ class Agent:
                     if not self.get_if_ball():
                         rospy.loginfo("Running: find_ball (lost command, no ball)")
                         self._state_machine_runners['find_ball']()
-                    elif self.get_ball_distance() > 0.8:
+                    elif self.get_ball_distance() > 0.6:
                         rospy.loginfo("Running: chase_ball (lost command, far ball)")
                         self._state_machine_runners['chase_ball']()
                     else:
