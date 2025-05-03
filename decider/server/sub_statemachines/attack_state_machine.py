@@ -52,10 +52,12 @@ class AttackStateMachine:
 
     def read_params(self):
         shoot_config = self._config.get("attacking", {})
-        self.ball_in_control_threshold_m = shoot_config.get("ball_in_control_threshold_m", 0.4)
+        self.ball_in_control_threshold_m = shoot_config.get("ball_in_control_threshold_m", 0.55)
         self.ball_out_of_control_threshold_m = shoot_config.get("ball_out_of_control_threshold_m", 0.8)
         self.close_to_ball_threshold_m = shoot_config.get("close_to_ball_threshold_m", 0.8)
         self.no_control_chase_distance = shoot_config.get("no_control_chase_distance", 1.0)
+        
+        print(f"ball_in_control_threshold_m :{self.ball_in_control_threshold_m}===============================================")
 
     def log_transition(self):
         pass

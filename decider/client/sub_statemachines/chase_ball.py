@@ -52,6 +52,7 @@ class ChaseBallStateMachine:
         self.close_angle_threshold_rad = chase_config.get("close_angle_threshold_rad", 0.1)
         self.walk_vel_x = chase_config.get("walk_vel_x", 0.3)
         self.walk_vel_theta = chase_config.get("walk_vel_theta", 0.3)
+        self.default_chase_distance = chase_config.get("default_chase_distance", 0.45)
 
     def close_to_ball(self):
         """Check if the agent is close to the ball (距离+角度检查)"""
@@ -109,7 +110,8 @@ class ChaseBallStateMachine:
         """Rotate the agent towards the ball"""
         print("[CHASE BALL FSM] Starting to rotate towards the ball...")
         target_angle_rad = self.agent.get_ball_angle()
-        if self.agent.get_ball_angle() is None:
+        if self.agent.get_if_ball() == False:
+            print("noball,cant rotate")
             return
         self.agent.cmd_vel(
             0,
