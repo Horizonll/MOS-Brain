@@ -198,19 +198,18 @@ class Agent:
 
         for robot_id, data in self.robots_data.items():
 
-            data = data.get("data", {})
-            player_pos = [data.get('x'), data.get('y')]
-            ball_pos = [data.get('ballx'), data.get('bally')]
+            player_pos = [data.get("data", {}).get('x'), data.get("data", {}).get('y')]
+            ball_pos = [data.get("data", {}).get('ballx'), data.get("data", {}).get('bally')]
 
             if player_pos[0] is not None:
-                distance = data.get('ball_distance', BIG_NUMBER)
+                distance = data.get("data", {}).get('ball_distance', BIG_NUMBER)
 
             # Check for NoneType
             if any(v is None for v in player_pos) or any(v is None for v in ball_pos):
                 distance = BIG_NUMBER
             else:
                 distance = np.linalg.norm(np.array(player_pos) - np.array(ball_pos))
-                distance = data.get('ball_distance', BIG_NUMBER)
+                distance = data.get("data", {}).get('ball_distance', BIG_NUMBER)
             
             if data.get("status") != "connected":
                 distance = BIG_NUMBER

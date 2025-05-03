@@ -146,6 +146,7 @@ class Agent:
         time.sleep(self.start_wait_time)
 
         self.decider_start_time = time.time()
+        self.penalize_end_time = time.mktime(time.strptime("1970-01-01 00:00:00", "%Y-%m-%d %H:%M:%S"))
 
     def run(self):
         try:
@@ -156,6 +157,7 @@ class Agent:
             if penalized_time > 0:
                 rospy.loginfo(f"Stopping: Player is penalized for {penalized_time} seconds")
                 self.stop()
+                self.penalize_end_time = time.time()
                 return
             elif state in ['STATE_SET', 'STATE_FINISHED', 'STATE_INITIAL', None]:
                 rospy.loginfo(f"Stopping: Game state is {state}")
@@ -165,6 +167,8 @@ class Agent:
                 self._state_machine_runners['go_back_to_field']()
             else:
                 if time.time() - self.decider_start_time < self.start_walk_into_field_time:
+                    self._state_machine_runners['go_back_to_field']()
+                elif time.time() - self.penalize_end_time < self.start_walk_into_field_time:
                     self._state_machine_runners['go_back_to_field']()
                 elif time.time() - self._last_play_time < 10.0 \
                         and not self.receiver.kick_off:
