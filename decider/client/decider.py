@@ -154,7 +154,7 @@ class Agent:
         try:
             state = self.receiver.game_state
             penalized_time = self.receiver.penalized_time
-            print(f"penalized_time = {self.receiver.penalized_time}")
+            rospy.loginfo(f"penalized_time = {self.receiver.penalized_time}")
             if state != "STATE_PLAYING":
                 self._last_play_time = time.time()
             if penalized_time > 0:
@@ -199,25 +199,25 @@ class Agent:
                     elif cmd in self._state_machine_runners:
                         rospy.loginfo(f"Running: {cmd} (server command)")
                         if cmd == 'kick':
-                            print(f"=======================> cmd = {cmd}")
+                            rospy.loginfo(f"=======================> cmd = {cmd}")
                             if self.get_self_pos()[1] < self.dribble_to_kick[0] or self.get_self_pos()[1] > self.dribble_to_kick[1]:
-                                print(f"=======================> cmd = {cmd} case 1")
+                                rospy.loginfo(f"=======================> cmd = {cmd} case 1")
                                 self.attack_method = "kick"
                             if self.get_self_pos()[1] > self.kick_to_dribble[0] and self.get_self_pos()[1] < self.kick_to_dribble[1]:
-                                print(f"=======================> cmd = {cmd} case 2")
+                                rospy.loginfo(f"=======================> cmd = {cmd} case 2")
                                 self.attack_method = "dribble"
 
                             if self.attack_method == "dribble" or self.if_can_kick == False:
-                                print(f"=======================> cmd = {cmd} action 1")
+                                rospy.loginfo(f"=======================> cmd = {cmd} action 1")
                                 self._state_machine_runners['dribble']()
                             else:
-                                print(f"=======================> cmd = {cmd} action 2")
+                                rospy.loginfo(f"=======================> cmd = {cmd} action 2")
                                 self._state_machine_runners["kick"]()
                         else:
                             self._state_machine_runners[cmd]()
 
                     else:
-                        rospy.loginfo(f"Error: State machine {cmd} not found. Stopping.")
+                        rospy.logerr(f"Error: State machine {cmd} not found. Stopping.")
                         self.stop()
         except Exception as e:
             rospy.logerr(f"Error in decider run: {e}")
@@ -318,13 +318,13 @@ class Agent:
             np.ndarray | None: Averaged ball position in map coordinates (x, y), 
             returns None if no valid data
         """
-        print("Calculating ball position in map from other robots")
+        rospy.loginfo("Calculating ball position in map from other robots")
 
         valid_positions = []  # Stores valid (x,y) coordinates
 
         # Iterate through all robot data
         for robot_id, robot_data in self.get_robots_data().items():
-            print(f"Robot ID: {robot_id}, Data: {robot_data}")
+            rospy.loginfo(f"Robot ID: {robot_id}, Data: {robot_data}")
             # robot id 转换为 int
             robot_id = int(robot_id)
             # Skip self and disconnected robots
@@ -369,15 +369,15 @@ class Agent:
         if ball_pos_in_map is not None:
             # Calculate angle in radians
             ball_pos_relative = ball_pos_in_map - np.array(self.get_self_pos())
-            print(f"Ball position relative to self: {ball_pos_relative}")
+            rospy.loginfo(f"Ball position relative to self: {ball_pos_relative}")
             angle_rad = math.atan2(ball_pos_relative[1], ball_pos_relative[0])
-            print(f"Ball angle in radians: {angle_rad}")
+            rospy.loginfo(f"Ball angle in radians: {angle_rad}")
             angle_relative = angle_rad - (self.get_self_yaw() / 180 * np.pi) - np.pi / 2
-            print(f"Ball angle relative to self: {angle_relative}")
+            rospy.loginfo(f"Ball angle relative to self: {angle_relative}")
             # Normalize angle to [-pi, pi)
             angle_relative = (angle_relative + math.pi) % (2 * math.pi) - math.pi
 
-            print(f"Ball angle from other robots: {angle_relative}")
+            rospy.loginfo(f"Ball angle from other robots: {angle_relative}")
 
             return angle_relative
         return None
