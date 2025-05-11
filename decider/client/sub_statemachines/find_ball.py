@@ -62,7 +62,7 @@ class FindBallStateMachine:
             transitions=self.transitions,
             send_event=True
         )
-        print(f"[FIND BALL FSM] Initialized. Starting state: {self.state}")
+        rospy.loginfo(f"[FIND BALL FSM] Initialized. Starting state: {self.state}")
 
     # ------------------------- 参数读取方法 -------------------------
     def read_params(self):
@@ -89,7 +89,7 @@ class FindBallStateMachine:
     def ball_in_sight(self, event=None):  
         """检查是否看到球"""
         result = self.agent.get_if_ball()
-        print(f"[FIND BALL FSM] Ball in sight: {'Yes' if result else 'No'}")
+        rospy.loginfo(f"[FIND BALL FSM] Ball in sight: {'Yes' if result else 'No'}")
         return result
 
     def protection_done(self, event=None):  
@@ -100,31 +100,31 @@ class FindBallStateMachine:
         """检查旋转是否超时"""
         elapsed = time.time() - self.rotate_start_time
         result = elapsed >= self.rotation_timeout_seconds and self.state == "rotating"
-        print(f"[FIND BALL FSM] Rotation timeout: {'Yes' if result else f'No ({elapsed:.1f}s)'}")
+        rospy.loginfo(f"[FIND BALL FSM] Rotation timeout: {'Yes' if result else f'No ({elapsed:.1f}s)'}")
         return result
 
     def no_ball(self, event=None):
         """检查是否丢失球"""
         result = not self.ball_in_sight()
-        print(f"[FIND BALL FSM] Ball lost: {'Yes' if result else 'No'}")
+        rospy.loginfo(f"[FIND BALL FSM] Ball lost: {'Yes' if result else 'No'}")
         return result
 
     # ------------------------- 状态动作 -------------------------
     def set_protect_pose(self, event=None): 
         """设置保护姿势（手臂位置）"""
-        print("[FIND BALL FSM] Setting protect pose...")
+        rospy.loginfo("[FIND BALL FSM] Setting protect pose...")
         # 示例：从配置中读取保护姿势参数（假设配置中存在相关定义）
         # protect_pose = self._config.get("find_ball", {}).get("protect_pose", default_pose)
         # self.agent.joint_goal_publisher.publish(protect_pose)
-        print("[FIND BALL FSM] Protect pose set")
+        rospy.loginfo("[FIND BALL FSM] Protect pose set")
 
     def start_rotation(self, event=None):
         """开始旋转身体寻找球"""
-        print("[FIND BALL FSM] Starting rotation...")
+        rospy.loginfo("[FIND BALL FSM] Starting rotation...")
         ball_angle_from_other_robots = self.agent.get_ball_angle_from_other_robots()
         
         if ball_angle_from_other_robots is not None:
-            print(f"[FIND BALL FSM] Other robots see the ball at angle: {ball_angle_from_other_robots}")
+            rospy.loginfo(f"[FIND BALL FSM] Other robots see the ball at angle: {ball_angle_from_other_robots}")
             target_angle_rad = ball_angle_from_other_robots
             if abs(target_angle_rad) < 0.7:
                 rotate_vel = self.last_rotaion * self.rotation_vel_theta
@@ -132,7 +132,7 @@ class FindBallStateMachine:
                 rotate_vel = np.sign(target_angle_rad) * self.rotation_vel_theta
                 self.last_rotaion = np.sign(target_angle_rad)
         else:
-            print("[FIND BALL FSM] No other robots see the ball, rotating randomly...")
+            rospy.loginfo("[FIND BALL FSM] No other robots see the ball, rotating randomly...")
             rotate_vel = self.rotation_vel_theta  # 可配置为随机方向或固定方向
         
         self.agent.cmd_vel(0, 0, rotate_vel)
@@ -140,36 +140,36 @@ class FindBallStateMachine:
 
     def stop_rotation(self, event=None):
         """停止旋转"""
-        print("[FIND BALL FSM] Stopping rotation...")
+        rospy.loginfo("[FIND BALL FSM] Stopping rotation...")
         self.agent.stop(0.5)
         self.rotate_start_time = time.time()  # 重置旋转开始时间
-        print("[FIND BALL FSM] Rotation stopped")
+        rospy.loginfo("[FIND BALL FSM] Rotation stopped")
 
     def face_to_ball(self, event=None):
         """调整身体面向球"""
-        print("[FIND BALL FSM] Facing to ball...")
+        rospy.loginfo("[FIND BALL FSM] Facing to ball...")
         if not self.agent.get_if_ball():
-            print("[FIND BALL FSM] No ball in sight, cannot face to ball")
+            rospy.loginfo("[FIND BALL FSM] No ball in sight, cannot face to ball")
             return
 
         target_angle_rad = self.agent.get_ball_angle()
         angle_threshold_rad = np.deg2rad(self.find_ball_angle_threshold_degrees)
 
         if abs(target_angle_rad) > angle_threshold_rad:
-            print(
+            rospy.loginfo(
                 f"[FIND BALL FSM] Target angle ({np.rad2deg(target_angle_rad):.1f}°) > threshold ({self.find_ball_angle_threshold_degrees}°). Rotating..."
             )
             self.agent.cmd_vel(0, 0, np.sign(target_angle_rad) * self.rotation_vel_theta)
         else:
-            print(
+            rospy.loginfo(
                 f"[FIND BALL FSM] Target angle within threshold. Stopping rotation..."
             )
             self.agent.stop()
 
-        print("[FIND BALL FSM] Facing to ball completed")
+        rospy.loginfo("[FIND BALL FSM] Facing to ball completed")
 
     def run(self):
         """运行状态机"""
         self.agent.look_at([None, None])
         self.step()
-        print("[FIND BALL FSM] Running...")
+        rospy.loginfo("[FIND BALL FSM] Running...")
