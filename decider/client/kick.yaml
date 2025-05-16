@@ -1,0 +1,13 @@
+kick:
+  good_angle_threshold_degree: 10
+  really_bad_angle_threshold_degree: 30
+  horizontal_position_threshold_mm: 30
+  horizontal_adjust_threshold_degree: 5
+  min_kick_distance_m: 0
+  max_kick_distance_m: 0.38
+  lost_ball_distance_threshold_m: 0.8
+  forward_vel: 0.1
+  lateral_vel: 0.04
+  rotate_vel_theta: 0.5
+  horizontal_adjust_forward_vel: 0.05
+  rotate_vel_y: 0.05
