@@ -187,7 +187,7 @@ class Receiver:
             self.player_info = self.data.teams[self.team].players[
                 self.player
             ]  # player信息
-            self.penalized_time = self.player_info.secs_till_unpenalized  # 罚时信息
+            self.penalized_time = 0 # self.player_info.secs_till_unpenalized  # 罚时信息
             self.team_color = self.data.teams[self.team].team_color  # 队员颜色
             self.opposite_team_color = self.data.teams[
                 self.opposite_team
