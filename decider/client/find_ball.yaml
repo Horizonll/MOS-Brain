@@ -1,0 +1,5 @@
+find_ball:
+  angle_threshold_degrees: 10
+  rotation_vel_theta: 0.5
+  rotation_timeout_seconds: 10
+  protection_pose_duration: 0.5
