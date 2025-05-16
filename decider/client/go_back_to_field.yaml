@@ -1,0 +1,12 @@
+go_back_to_field:
+  aim_x: 0
+  aim_y: -1000
+  aim_yaw: 0
+  min_dist: 300
+  coarse_yaw_threshold_degree: 30
+  fine_yaw_start_threshold_degree: 20
+  fine_yaw_end_threshold_degree: 5
+  good_yaw_threshold_degree: 10
+  walk_vel_x: 0.1
+  walk_vel_theta: 0.4
+  arrive_trust_time: 20
