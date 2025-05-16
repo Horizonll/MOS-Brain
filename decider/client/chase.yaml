@@ -1,0 +1,5 @@
+chase:
+  close_angle_threshold_rad: 0.4
+  walk_vel_x: 0.10
+  walk_vel_theta: 0.4
+  default_chase_distance: 0.4
