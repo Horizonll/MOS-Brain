@@ -5,9 +5,9 @@ TODO.md
 decider/test_recieve.py
 decider/test2.py
 decider/test.py
+config_override.d
 **/__pycache__
 *.pyc
 .env/
-config_override.json
+*.log
 *.swp
-agent.log

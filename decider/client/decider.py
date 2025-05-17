@@ -21,7 +21,7 @@ logging.basicConfig(
 )
 
 # ROS
-import rospy
+import rclpy
 from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Twist
 

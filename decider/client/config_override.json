@@ -1,0 +1,38 @@
+{
+	"server_ip": "192.168.9.106",
+	"server_port": 8002,
+	"id": 2, 
+	"if_can_kick": true, 
+	"team": 1,
+    "go_back_to_field": {
+        "aim_x": 0,
+        "aim_y": -1500,
+        "aim_yaw": 0,
+        "min_dist": 300,
+        "coarse_yaw_threshold_degree": 30,
+        "fine_yaw_start_threshold_degree": 20,
+        "fine_yaw_end_threshold_degree": 5,
+        "good_yaw_threshold_degree": 10,
+        "walk_vel_x": 0.1,
+        "walk_vel_theta": 0.5,
+        "arrive_trust_time": 20
+    }, 
+    "dribble": {
+	"angle_to_ball_adjust_threshold_degree": 11.46,
+	"good_angle_to_goal_adjust_threshold_degree": 10,
+	"goal_center_bias_mm": 500,
+ 	"walk_vel_x": 0.10,
+  	"back_vel": 0.05,
+   	"horizontal_adjust_vel_y": 0.05,
+    	"horizontal_adjust_vel_theta": 0.5,
+     	"rotate_vel_theta": 0.5,
+      	"adjust_angle_to_goal_vel_y": 0.08,
+       	"adjust_angle_to_goal_vel_theta": 0.3,
+     	"min_ball_distance_m": 0.0,
+    	"max_ball_distance_m": 0.55,
+     	"good_horizontal_position_to_ball_threshold_mm": 100,
+      	"lost_angle_to_target_threshold_degree": 30,
+       	"lost_ball_x_threshold_mm": 70,
+        "lost_ball_distance_threshold_m": 2.0
+     }
+}

@@ -23,43 +23,6 @@ import json
 import re
 
 
-def _remove_comment(json_str):
-    # remove single line comment
-    json_str = re.sub(r'//.*', '', json_str)
-    # remove multiple lines comment
-    json_str = re.sub(r'/\*.*?\*/', '', json_str, flags=re.DOTALL)
-    return json_str
-
-
-def load_config():
-    config = {}
-
-    # Loading basic configs; which is mandatory
-    try:
-        f_config = open("/home/thmos/MOS-Brain/decider/client/config.json", "r")
-        json_str = f_config.read()
-        json_str = _remove_comment(json_str)
-        config = json.loads(json_str)
-    except:
-        print("[!] Can not parse config.json !");
-        print(json_str)
-        exit()
-
-    # Loading override configs; this is not mandatory
-    try:
-        f_override = open("/home/thmos/MOS-Brain/decider/client/config_override.json", "r")
-        json_str = f_override.read()
-        json_str = _remove_comment(json_str)
-        override = json.loads(json_str)
-        for key, value in override.items():
-            config[key] = value
-    except Exception as e:
-        print("[!] Can not parse config_override.json! " + str(e))
-        print(json_str)
-        pass
-
-    return config
-
 
 def recursive_dict_merge(base_dict, merge_dict):
     """
@@ -94,6 +57,8 @@ def recursive_dict_merge(base_dict, merge_dict):
             merged[key] = value
 
     return merged
+
+
 
 def read_all_yaml_in_directory(directory_path):
     """
@@ -151,7 +116,7 @@ def read_all_yaml_in_directory(directory_path):
                 # Use safe_load for security
                 data = yaml.safe_load(file)
                 all_yaml_data = recursive_dict_merge(all_yaml_data, data)
-                print(f"Successfully loaded {file_name}: " + str(data))
+                print(f"Successfully loaded {file_name}: ", yaml_file_path)
 
         except FileNotFoundError:
              # This case should ideally not happen because we checked isfile()
@@ -165,6 +130,15 @@ def read_all_yaml_in_directory(directory_path):
 
 
     return all_yaml_data
+
+
+
+def load_config(prefix = ""):
+    config = read_all_yaml_in_directory(prefix + "config.d")
+    config_override = read_all_yaml_in_directory(prefix + "config_override.d")
+    return recursive_dict_merge(config, config_override)
+
+
 
 # Example usage:
 if __name__ == "__main__":
