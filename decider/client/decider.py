@@ -20,18 +20,12 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(filename)s:%(funcName)s(): %(message)s'
 )
 
-# ROS
-import rclpy
-from sensor_msgs.msg import JointState
-from geometry_msgs.msg import Twist
-
 # Submodules
 import configuration
 from angle import angle
 
 # Interfaces with other components
-import interfaces.action
-import interfaces.vision
+import interface
 
 # Network
 from robot_client import RobotClient
@@ -80,8 +74,7 @@ class Agent:
     }
 
     def __init__(self):
-        rospy.init_node("decider", log_level=rospy.DEBUG)
-        rospy.loginfo("Initializing the Agent instance")
+        print("Initializing the Agent instance")
 
         # Flags
         self.if_local_test = False
@@ -105,7 +98,7 @@ class Agent:
         self._robots_data = {}
         self._last_play_time = time.time()
         
-        rospy.loginfo("Registering interfaces")
+        print("Registering interfaces")
         # action: provide functions to control the robot, such as cmd_vel 
         # and kick
         self._action = interfaces.action.Action(self._config)
@@ -123,7 +116,7 @@ class Agent:
         # sub_statemachines and create a dictionary from command to 
         # statemachine.run
 
-        rospy.loginfo("Initializing sub-state machines")
+        print("Initializing sub-state machines")
         # py_files = Agent._get_python_files("sub_statemachines/")
         # print(py_files)
         
@@ -143,7 +136,7 @@ class Agent:
             "stop": self.stop,
         }
 
-        rospy.loginfo(f"Agent instance initialization completed, sleeping for {self.start_wait_time}")
+        print(f"Agent instance initialization completed, sleeping for {self.start_wait_time}")
 
         # time.sleep(self.start_wait_time)
 
@@ -154,21 +147,21 @@ class Agent:
         try:
             state = self.receiver.game_state
             penalized_time = self.receiver.penalized_time
-            rospy.loginfo(f"penalized_time = {self.receiver.penalized_time}")
+            print(f"penalized_time = {self.receiver.penalized_time}")
             if state != "STATE_PLAYING":
                 self._last_play_time = time.time()
             if penalized_time > 0:
-                rospy.loginfo(f"Stopping: Player is penalized for {penalized_time} seconds")
+                print(f"Stopping: Player is penalized for {penalized_time} seconds")
                 self.stop()
                 self.penalize_end_time = time.time()
                 return
             elif state in ['STATE_SET', 'STATE_FINISHED', 'STATE_INITIAL', None]:
                 if state == None:
                     self.decider_start_time = time.time()
-                rospy.loginfo(f"Stopping: Game state is {state}")
+                print(f"Stopping: Game state is {state}")
                 self.stop()
             elif state == 'STATE_READY':
-                rospy.loginfo("Running: go_back_to_field (STATE_READY)")
+                print("Running: go_back_to_field (STATE_READY)")
                 self._state_machine_runners['go_back_to_field']()
             else:
                 if time.time() - self.decider_start_time < self.start_walk_into_field_time:
@@ -180,13 +173,13 @@ class Agent:
                     self._state_machine_runners['chase_ball']()
                 elif time.time() - self._last_command_time > self.offline_time:
                     if not self.get_if_ball():
-                        rospy.loginfo("Running: find_ball (lost command, no ball)")
+                        print("Running: find_ball (lost command, no ball)")
                         self._state_machine_runners['find_ball']()
                     elif self.get_ball_distance() > 0.6:
-                        rospy.loginfo("Running: chase_ball (lost command, far ball)")
+                        print("Running: chase_ball (lost command, far ball)")
                         self._state_machine_runners['chase_ball']()
                     else:
-                        rospy.loginfo("Running: dribble (lost command, close ball)")
+                        print("Running: dribble (lost command, close ball)")
                         if self.if_can_kick == True:
                             self._state_machine_runners['kick']()
                         else:
@@ -194,33 +187,33 @@ class Agent:
                 else:
                     cmd = self._command["command"]
                     if not self.get_if_ball() and cmd in ['chase_ball', 'kick', 'dribble']:
-                        rospy.loginfo(f"Running: find_ball (server cmd {cmd}, no ball)")
+                        print(f"Running: find_ball (server cmd {cmd}, no ball)")
                         self._state_machine_runners['find_ball']()
                     elif cmd in self._state_machine_runners:
-                        rospy.loginfo(f"Running: {cmd} (server command)")
+                        print(f"Running: {cmd} (server command)")
                         if cmd == 'kick':
-                            rospy.loginfo(f"=======================> cmd = {cmd}")
+                            print(f"=======================> cmd = {cmd}")
                             if self.get_self_pos()[1] < self.dribble_to_kick[0] or self.get_self_pos()[1] > self.dribble_to_kick[1]:
-                                rospy.loginfo(f"=======================> cmd = {cmd} case 1")
+                                print(f"=======================> cmd = {cmd} case 1")
                                 self.attack_method = "kick"
                             if self.get_self_pos()[1] > self.kick_to_dribble[0] and self.get_self_pos()[1] < self.kick_to_dribble[1]:
-                                rospy.loginfo(f"=======================> cmd = {cmd} case 2")
+                                print(f"=======================> cmd = {cmd} case 2")
                                 self.attack_method = "dribble"
 
                             if self.attack_method == "dribble" or self.if_can_kick == False:
-                                rospy.loginfo(f"=======================> cmd = {cmd} action 1")
+                                print(f"=======================> cmd = {cmd} action 1")
                                 self._state_machine_runners['dribble']()
                             else:
-                                rospy.loginfo(f"=======================> cmd = {cmd} action 2")
+                                print(f"=======================> cmd = {cmd} action 2")
                                 self._state_machine_runners["kick"]()
                         else:
                             self._state_machine_runners[cmd]()
 
                     else:
-                        rospy.logerr(f"Error: State machine {cmd} not found. Stopping.")
+                        print(f"Error: State machine {cmd} not found. Stopping.")
                         self.stop()
         except Exception as e:
-            rospy.logerr(f"Error in decider run: {e}")
+            print(f"Error in decider run: {e}")
             self._state_machine_runners['find_ball']()
 
     def read_params(self):
@@ -237,7 +230,7 @@ class Agent:
     # The implementation of the apis may be change in the future
     def cmd_vel(self, vel_x: float, vel_y: float, vel_theta: float):
         self._action.cmd_vel(vel_x, vel_y, vel_theta)
-        rospy.loginfo(f"Setting the robot's speed: linear velocity x={vel_x}, "
+        print(f"Setting the robot's speed: linear velocity x={vel_x}, "
                 + f"y={vel_y}, angular velocity theta={vel_theta}")
 
     def look_at(self, args):
@@ -249,7 +242,7 @@ class Agent:
 
     def kick(self):
         self._action.do_kick()
-        rospy.loginfo("Executing the kicking action")
+        print("Executing the kicking action")
 
     def get_robots_data(self):
         return self._robots_data
@@ -318,13 +311,13 @@ class Agent:
             np.ndarray | None: Averaged ball position in map coordinates (x, y), 
             returns None if no valid data
         """
-        rospy.loginfo("Calculating ball position in map from other robots")
+        print("Calculating ball position in map from other robots")
 
         valid_positions = []  # Stores valid (x,y) coordinates
 
         # Iterate through all robot data
         for robot_id, robot_data in self.get_robots_data().items():
-            rospy.loginfo(f"Robot ID: {robot_id}, Data: {robot_data}")
+            print(f"Robot ID: {robot_id}, Data: {robot_data}")
             # robot id 转换为 int
             robot_id = int(robot_id)
             # Skip self and disconnected robots
@@ -369,15 +362,15 @@ class Agent:
         if ball_pos_in_map is not None:
             # Calculate angle in radians
             ball_pos_relative = ball_pos_in_map - np.array(self.get_self_pos())
-            rospy.loginfo(f"Ball position relative to self: {ball_pos_relative}")
+            print(f"Ball position relative to self: {ball_pos_relative}")
             angle_rad = math.atan2(ball_pos_relative[1], ball_pos_relative[0])
-            rospy.loginfo(f"Ball angle in radians: {angle_rad}")
+            print(f"Ball angle in radians: {angle_rad}")
             angle_relative = angle_rad - (self.get_self_yaw() / 180 * np.pi) - np.pi / 2
-            rospy.loginfo(f"Ball angle relative to self: {angle_relative}")
+            print(f"Ball angle relative to self: {angle_relative}")
             # Normalize angle to [-pi, pi)
             angle_relative = (angle_relative + math.pi) % (2 * math.pi) - math.pi
 
-            rospy.loginfo(f"Ball angle from other robots: {angle_relative}")
+            print(f"Ball angle from other robots: {angle_relative}")
 
             return angle_relative
         return None
@@ -387,12 +380,12 @@ class Agent:
 
 
 def main():
-    rospy.loginfo("Decider started")
+    print("Decider started")
     agent = Agent()
 
     try:
         def sigint_handler(sig, frame):
-            rospy.loginfo("User interrupted the program, exiting gracefully...")
+            print("User interrupted the program, exiting gracefully...")
             exit(0)
 
         signal.signal(signal.SIGINT, sigint_handler)
@@ -400,7 +393,7 @@ def main():
             agent.run()
             time.sleep(0.1)
     except KeyboardInterrupt:
-        rospy.loginfo("Program interrupted by the user")
+        print("Program interrupted by the user")
         exit()
     finally:
         pass

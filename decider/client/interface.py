@@ -17,7 +17,8 @@
 #               label: ["L", "T", "X", "P"]
 #       
 
-import os, sys, time, random, math
+import os, sys, time, random, math, threading
+from tf_transformations import euler_from_quaternion
 
 try:
     from booster_robotics_sdk_python import B1LocoClient, ChannelFactory
@@ -29,6 +30,8 @@ try:
     import rclpy
     from std_msgs.msg import Header
     from geometry_msgs.msg import Pose
+    from sensor_msgs.msg import CameraInfo
+    from rclpy.executors import SingleThreadedExecutor
 except Exception as e:
     print("Fatal: Can not import ros2 standard library: " )
     print(e)
@@ -61,7 +64,8 @@ class Interfaces:
         self._label_map = { "LCross": "L", \
                             "XCross": "X", \
                             "TCross": "T", \
-                            "Goalpost": "P", \
+                            "PenaltyPoint": "P", \
+                            "Goalpost": "G", \
                             "Ball": "B", \
                             "Opponent": "R" }
 
@@ -80,9 +84,28 @@ class Interfaces:
                     "/booster_vision/detection", self._detection_callback, 1)
         self._odometer_sub = self._node.create_subscription(Odometer, \
                     "/odometer_state", self._odometer_callback, 1)
+        self._headpose_sub = self._node.create_subscription(Odometer, \
+                    "/head_pose", self._headpose_callback, 1)
+        self._camera_size_sub = self._node.create_subscription(Odometer, \
+                    "/camera/camera/aligned_depth_to_color/camera_info", \
+                    self._camera_size_callback, 1)
         self._imu_data = math.nan
         self._detection_data = [['header', [0, 0], 0]]
+        self._ball_data = [['header', [0, 0], 0]]
         self._odometer_data = [0, 0, 0]
+        self._headpose_data = [0, 0]
+        self._camera_size_data = [0, 0]
+
+        # multiple threading
+        if self._config.get("multithread", True) == True:
+            self._executor = SingleThreadedExecutor();
+            self._executor.add_node(self._node)
+            self._executor_thread = threading.Thread(target = self.spin, \
+                                                     args = ())
+            self._executor_thread.start()
+        else:
+            print("Warn: run in single thread mode; you have to call" + \
+                  "Interfaces.spin_once() continueously")
 
 
     def cmd_vel(self, vel_x: float, vel_y: float, vel_theta: float):
@@ -90,6 +113,10 @@ class Interfaces:
         vel_y *= self._config.get("walk_vel_y", 1)
         vel_theta *= self._config.get("walk_vel_theta", 1)
         self._client.Move(vel_x, vel_y, vel_theta)
+
+
+    def head_goal(self, args : list):
+        self._client.RotateHead(args[0], args[1])
 
 
     def do_kick(self):
@@ -103,7 +130,17 @@ class Interfaces:
     
     def get_detection(self) -> list:
         return self._detection_data
+    
    
+    def get_headpose(self) -> list:
+        return self._headpose_data
+
+    def get_camera_size(self) -> list:
+        return self._camera_size_data
+
+    def get_ball(self) -> list:
+        return self._ball_data
+
 
     def get_odometer(self) -> list:
         return self._odometer_data
@@ -111,6 +148,10 @@ class Interfaces:
 
     def spin_once(self) -> None:
         rclpy.spin_once(self._node)
+
+
+    def spin(self) -> None:
+        rclpy.spin(self._node)
 
 
     def _imu_callback(self, msg: LowState):
@@ -122,10 +163,14 @@ class Interfaces:
         data = [['header', \
                  [header.stamp.sec, header.stamp.nanosec], \
                 header.frame_id]]
+        self._ball_data = data
         for obj in msg.detected_objects:
             obj_data = [self._label_map.get(obj.label, obj.label), \
+                        obj.confidence, \
                         [[obj.xmin, obj.ymin], [obj.xmax, obj.ymax]], \
                         obj.position_projection.tolist()]
+            if(obj_data[0] == 'B'):
+                self._ball_data.append(obj_data)
             data.append(obj_data)
         self._detection_data = data
 
@@ -134,12 +179,27 @@ class Interfaces:
         self._odometer_data = [msg.x, msg.y, msg.theta]
 
 
+    def _headpose_callback(self, msg: Pose):
+        quaternion = (
+            msg.orientation.x,
+            msg.orientation.y,
+            msg.orientation.z,
+            msg.orientation.w
+        )
+        roll_rad, pitch_rad, yaw_rad = euler_from_quaternion(quaternion)
+        self._headpose_data = [pitch_rad, yaw_rad]
+
+    
+    def _camera_size_callback(self, msg: CameraInfo):
+        self._camera_size_data = [msg.width, msg.height]
+
+
 
 if __name__ == "__main__":
     A = Interfaces(config = {})
+    A.head_goal([0.4, 0])
     try:
         while rclpy.ok():
-            A.spin_once()
             time.sleep(0.01)
             imu_data = A.get_imu()
             det_data = A.get_detection()

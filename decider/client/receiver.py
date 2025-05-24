@@ -17,7 +17,6 @@ from construct import (
     Flag,
     Int16sl,
 )
-import rospy
 
 
 # 以下是 GameState
@@ -198,9 +197,8 @@ class Receiver:
             logging.error(ae.message)
         except socket.timeout:
             pass
-            rospy.logwarn("Socket timeout")
         except ConstError:
-            rospy.logwarn("Parse Error: Probably using an old protocol!")
+            pass
         except Exception as e:
             logging.exception(e)
             pass
