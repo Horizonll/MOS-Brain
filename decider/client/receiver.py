@@ -1,7 +1,7 @@
 # receiver.py
 #   @description:   Utilities to connect with the game controller
 import socket
-import logging
+# import logging
 import threading
 from construct import Container, ConstError
 from construct import (
@@ -17,7 +17,7 @@ from construct import (
     Flag,
     Int16sl,
 )
-import rospy
+import rclpy.logging
 
 
 # 以下是 GameState
@@ -143,6 +143,7 @@ class Receiver:
         self.peer = None  # 服务器（ip， 端口）
 
         # logging = logging.getLogger("game_controller")  # 创建logger
+        self.logger = rclpy.logging.get_logger('game_controller')
 
         self.socket1 = socket.socket(
             socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP
@@ -178,13 +179,13 @@ class Receiver:
             self.opposite_team_color = self.opposite_team.team_color
 
         except AssertionError as ae:
-            logging.error(ae.message)
+            self.logger.error(ae.message)
         except socket.timeout:
-            rospy.logwarn("Socket timeout")
+            self.logger.warn("Socket timeout")
         except ConstError:
-            rospy.logwarn("Parse Error: Probably using an old protocol!")
+            self.logger.warn("Parse Error: Probably using an old protocol!")
         except Exception as e:
-            logging.exception(e)
+            self.logger.warn(e)
 
     def receive(self):
         self.initialize()
