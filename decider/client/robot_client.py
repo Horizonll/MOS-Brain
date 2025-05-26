@@ -12,7 +12,7 @@ class RobotClient:
         self.config = self.agent._config
         # 设置默认的 HOST_IP
         self.HOST_IP = self.config.get('server_ip', '127.0.0.1')
-        print("Default Host ip = " + self.HOST_IP)
+        rospy.loginfo("Default Host ip = " + self.HOST_IP)
         rospy.loginfo("Default Host ip = " + self.HOST_IP)
 
         # Start network-related threads
@@ -29,7 +29,7 @@ class RobotClient:
         send_thread = threading.Thread(target=self.send_loop)
         send_thread.daemon = True
         send_thread.start()
-        print("send_thread started")
+        rospy.loginfo("send_thread started")
         rospy.loginfo("Started the sending loop thread")
 
         # Start the TCP client thread
@@ -47,7 +47,7 @@ class RobotClient:
                     new_ip = loop.run_until_complete(self.listen_host_ip())
                     if new_ip:
                         self.HOST_IP = new_ip
-                        print("Host ip updated to = " + self.HOST_IP)
+                        rospy.loginfo("Host ip updated to = " + self.HOST_IP)
                         rospy.loginfo("Host ip updated to = " + self.HOST_IP)
                 except Exception as e:
                     rospy.logerr(f"Error listening for server IP: {e}")
@@ -77,8 +77,7 @@ class RobotClient:
                 self.send_robot_data(robot_data)
                 time.sleep(0.5)
             except Exception as e:
-                print(f"Error in send_loop: {e}")
-                rospy.logerr(f"Error sending data: {e}")
+                rospy.logerr(f"Error in send_loop: {e}")
 
     def send_robot_data(self, robot_data):
         try:

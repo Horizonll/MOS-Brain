@@ -13,6 +13,7 @@ import numpy as np
 import threading
 import logging
 import sub_statemachines
+import sys
 from typing import Optional
 
 logging.basicConfig(
@@ -223,6 +224,21 @@ class Agent:
             rospy.logerr(f"Error in decider run: {e}")
             self._state_machine_runners['find_ball']()
 
+    def debug_run(self):
+        try:
+            cmd = self._command["command"]
+            rospy.loginfo(f"Debug_mode: {cmd}")
+            if cmd in self._state_machine_runners:
+                rospy.loginfo(f"Running: {cmd} (server command)")
+                self._state_machine_runners[cmd]()
+
+            else:
+                rospy.logerr(f"Error: State machine {cmd} not found. Stopping.")
+                self.stop()
+        except Exception as e:
+            rospy.logerr(f"Error in decider run: {e}")
+            self._state_machine_runners['find_ball']()        
+
     def read_params(self):
         self.offline_time = self._config.get("offline_time", 5)
         self.if_can_kick = self._config.get("if_can_kick", False)
@@ -236,6 +252,9 @@ class Agent:
     # The following are some simple encapsulations of interfaces
     # The implementation of the apis may be change in the future
     def cmd_vel(self, vel_x: float, vel_y: float, vel_theta: float):
+        vel_x *= self._config.get("max_walk_vel_x", 0.25)
+        vel_y *= self._config.get("max_walk_vel_y", 0.1)
+        vel_theta *= self._config.get("max_walk_vel_theta", 0.5)
         self._action.cmd_vel(vel_x, vel_y, vel_theta)
         rospy.loginfo(f"Setting the robot's speed: linear velocity x={vel_x}, "
                 + f"y={vel_y}, angular velocity theta={vel_theta}")
@@ -388,7 +407,16 @@ class Agent:
 
 def main():
     rospy.loginfo("Decider started")
+    ""
     agent = Agent()
+
+    # 解析命令行参数
+    debug_mode = False
+    for arg in sys.argv[1:]:  # 排除脚本名称
+        if arg.lower().startswith("debug_mode="):
+            _, value = arg.split('=', 1)
+            debug_mode = (value.upper() == "TRUE")
+            break
 
     try:
         def sigint_handler(sig, frame):
@@ -397,7 +425,11 @@ def main():
 
         signal.signal(signal.SIGINT, sigint_handler)
         while True:
-            agent.run()
+            if debug_mode:
+                rospy.loginfo("correct")
+                agent.debug_run()
+            else:
+                agent.run()
             time.sleep(0.1)
     except KeyboardInterrupt:
         rospy.loginfo("Program interrupted by the user")

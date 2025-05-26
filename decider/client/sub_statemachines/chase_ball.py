@@ -2,6 +2,7 @@ import math
 import time
 from transitions import Machine
 import numpy as np
+import rospy
 
 
 class ChaseBallStateMachine:
@@ -96,7 +97,7 @@ class ChaseBallStateMachine:
         )
         # if no ball, then stop
         if not self.agent.get_if_ball():
-            rospy.loginfo("[CHASE BALL FSM] No ball in sight. Stopping.")
+            rospy.logwarn("[CHASE BALL FSM] No ball in sight. Stopping.")
             self.stop_moving()
             return
 
@@ -111,7 +112,7 @@ class ChaseBallStateMachine:
         rospy.loginfo("[CHASE BALL FSM] Starting to rotate towards the ball...")
         target_angle_rad = self.agent.get_ball_angle()
         if self.agent.get_if_ball() == False:
-            rospy.loginfo("noball,cant rotate")
+            rospy.logwarn("[CHASE BALL FSM] Noball,cant rotate")
             return
         self.agent.cmd_vel(
             0,

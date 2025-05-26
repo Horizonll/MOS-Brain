@@ -149,7 +149,7 @@ class FindBallStateMachine:
         """调整身体面向球"""
         rospy.loginfo("[FIND BALL FSM] Facing to ball...")
         if not self.agent.get_if_ball():
-            rospy.loginfo("[FIND BALL FSM] No ball in sight, cannot face to ball")
+            rospy.logwarn("[FIND BALL FSM] No ball in sight, cannot face to ball")
             return
 
         target_angle_rad = self.agent.get_ball_angle()

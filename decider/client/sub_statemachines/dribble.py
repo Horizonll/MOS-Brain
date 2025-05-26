@@ -1,6 +1,7 @@
 import time
 import math
 import numpy as np
+import rospy
 from transitions import Machine
 
 
@@ -105,7 +106,7 @@ class DribbleStateMachine:
         """
         # 如果没有球，直接return
         if not self.agent.get_if_ball():
-            print("No ball in sight.")
+            rospy.logwarn("No ball in sight.")
             self.agent.cmd_vel(0, 0, 0)
             return
 
