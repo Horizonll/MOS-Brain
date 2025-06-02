@@ -1,7 +1,7 @@
 # receiver.py
 #   @description:   Utilities to connect with the game controller
 import socket
-# import logging
+import logging
 import threading
 from construct import Container, ConstError
 from construct import (
@@ -17,13 +17,20 @@ from construct import (
     Flag,
     Int16sl,
 )
-import rclpy.logging
+# import rospy
 
 
 # 以下是 GameState
 Short = Int16ul
 
 RobotInfo = "robot_info" / Struct(
+    # define NONE                        0
+    # define HL_BALL_MANIPULATION                30
+    # define HL_PHYSICAL_CONTACT                 31
+    # define HL_ILLEGAL_ATTACK                   32
+    # define HL_ILLEGAL_DEFENSE                  33
+    # define HL_PICKUP_OR_INCAPABLE              34
+    # define HL_SERVICE                          35
     "penalty" / Byte,
     "secs_till_unpenalized" / Byte,
     "number_of_warnings" / Byte,
@@ -33,7 +40,7 @@ RobotInfo = "robot_info" / Struct(
 )
 
 TeamInfo = "team" / Struct(
-    "team_number" / Int16ul,  # 实际队伍编号
+    "team_number" / Byte,
     "team_color"
     / Enum(
         Byte,
@@ -103,7 +110,7 @@ GAME_CONTROLLER_RESPONSE_VERSION = 2
 ReturnData = Struct(
     "header" / Const(b"RGrt"),
     "version" / Const(2, Byte),
-    "team" / Int16ul,  # 实际队伍编号
+    "team" / Byte,
     "player" / Byte,
     "message" / Byte,
 )
@@ -121,16 +128,19 @@ ReturnData = Struct(
 
 
 class Receiver:
-    def __init__(self, team_number, player, goal_keeper=False, debug=True):
+    def __init__(self, team, player, goal_keeper=False, debug=True):
         self.ip = "0.0.0.0"  # 本地ip
         self.listen_port = 3838  # 本地端口
         self.answer_port = 3939  # 服务器端口
 
         self.debug = debug
         self.kick_off = False  # 是否开球
-        self.team_number = team_number  # 实际队伍编号
+        self.team_input = team  # 来自初始化的team序号，用于改变上下半场team序号
+        self.team = team  # 队伍序号（0或1）
+        self.opposite_team = 1 - team  # 对面球队编号
         self.player = player  # 球员序号（0-10，上场只有4个）
         self.game_state = None  # 比赛状态
+        self.kick_off = None  # 是否开球
         self.data = None  # 获取消息数据
         self.player_info = None  # 球员信息
         self.penalized_time = 0  # 罚时倒计时
@@ -143,7 +153,6 @@ class Receiver:
         self.peer = None  # 服务器（ip， 端口）
 
         # logging = logging.getLogger("game_controller")  # 创建logger
-        self.logger = rclpy.logging.get_logger('game_controller')
 
         self.socket1 = socket.socket(
             socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP
@@ -155,37 +164,47 @@ class Receiver:
         self.socket1.bind(self.addr)  # 主机、端口绑定到socket上
         self.socket1.settimeout(2)  # 阻塞时间(2s收不到就警告timeout)
 
+        # self.initialize()  # 初始化
+
         self.t = threading.Thread(target=self.receive, daemon=True)  # 设置线程，持续接收信息
         self.t.start()  # 开启线程
 
     def receive_once(self):
         # 接收一次消息
         try:
-            data, self.peer = self.socket1.recvfrom(GameState.sizeof())  # 收消息
+            data, self.peer = self.socket1.recvfrom(
+                GameState.sizeof()
+            )  # 收消息 sizeof()函数是占内存的大小
             self.data = GameState.parse(data)  # 解析消息
             self.game_state = self.data.game_state  # 比赛状态
-
-            # 查找当前队伍和对手队伍的信息
-            for team in self.data.teams:
-                if team.team_number == self.team_number:
-                    self.team = team
-                else:
-                    self.opposite_team = team
-
-            # 更新玩家信息
-            self.player_info = self.team.players[self.player]
-            self.penalized_time = self.player_info.secs_till_unpenalized
-            self.team_color = self.team.team_color
-            self.opposite_team_color = self.opposite_team.team_color
-
+            if not self.data.first_half:
+                self.team = 1 - self.team_input
+                self.opposite_team = 1 - self.team
+            self.kick_of_team = self.data.kick_of_team  # 开球队
+            self.kick_off = (
+                True if self.kick_of_team == 12 else False
+            )  # 是否开球
+            self.player_info = self.data.teams[self.team].players[
+                self.player
+            ]  # player信息
+            self.penalized_time = self.player_info.secs_till_unpenalized  # 罚时信息
+            self.team_color = self.data.teams[self.team].team_color  # 队员颜色
+            self.opposite_team_color = self.data.teams[
+                self.opposite_team
+            ].team_color  # 对面队员颜色
+            
+        # 解释报错
         except AssertionError as ae:
-            self.logger.error(ae.message)
+            logging.error(ae.message)
         except socket.timeout:
-            self.logger.warn("Socket timeout")
+            pass
+            # rospy.logwarn("Socket timeout")
         except ConstError:
-            self.logger.warn("Parse Error: Probably using an old protocol!")
+            # rospy.logwarn("Parse Error: Probably using an old protocol!")
+            pass
         except Exception as e:
-            self.logger.warn(e)
+            logging.exception(e)
+            pass
 
     def receive(self):
         self.initialize()
@@ -231,7 +250,7 @@ class Receiver:
         data = Container(
             header=b"RGrt",
             version=GAME_CONTROLLER_RESPONSE_VERSION,
-            team=self.team_number,  # 使用实际队伍编号
+            team=self.team,
             player=self.player,
             message=return_message,
         )
@@ -240,5 +259,5 @@ class Receiver:
 
 
 if __name__ == "__main__":
-    receiver = Receiver(team_number=12, player=0, goal_keeper=False, debug=True)
+    receiver = Receiver(team=1, player=0, goal_keeper=False, debug=True)
     receiver.receive()
