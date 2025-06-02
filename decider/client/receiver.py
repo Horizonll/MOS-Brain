@@ -135,9 +135,9 @@ class Receiver:
 
         self.debug = debug
         self.kick_off = False  # 是否开球
-        self.team_input = team  # 来自初始化的team序号，用于改变上下半场team序号
+        # self.team_input = team  # 来自初始化的team序号，用于改变上下半场team序号
         self.team = team  # 队伍序号（0或1）
-        self.opposite_team = 1 - team  # 对面球队编号
+        # self.opposite_team = 1 - team  # 对面球队编号
         self.player = player  # 球员序号（0-10，上场只有4个）
         self.game_state = None  # 比赛状态
         self.kick_off = None  # 是否开球
@@ -146,7 +146,7 @@ class Receiver:
         self.penalized_time = 0  # 罚时倒计时
         self.red_card = 0  # 是否红牌(0或1)
         self.team_color = None  # 队员颜色
-        self.opposite_team_color = None  # 对面队员颜色
+        # self.opposite_team_color = None  # 对面队员颜色
 
         self.man_penalize = True  #
         self.is_goalkeeper = goal_keeper  # 守门员
@@ -177,21 +177,24 @@ class Receiver:
             )  # 收消息 sizeof()函数是占内存的大小
             self.data = GameState.parse(data)  # 解析消息
             self.game_state = self.data.game_state  # 比赛状态
-            if not self.data.first_half:
-                self.team = 1 - self.team_input
-                self.opposite_team = 1 - self.team
+            # if not self.data.first_half:
+            #     self.team_input = 1 - self.team_input
+                # self.opposite_team = 1 - self.team
             self.kick_of_team = self.data.kick_of_team  # 开球队
             self.kick_off = (
                 True if self.kick_of_team == 12 else False
             )  # 是否开球
-            self.player_info = self.data.teams[self.team].players[
+            teaminfo_bool = 0
+            if self.data.teams[1].team_number == 12:
+                teaminfo_bool = 1
+            self.player_info = self.data.teams[teaminfo_bool].players[
                 self.player
             ]  # player信息
             self.penalized_time = self.player_info.secs_till_unpenalized  # 罚时信息
-            self.team_color = self.data.teams[self.team].team_color  # 队员颜色
-            self.opposite_team_color = self.data.teams[
-                self.opposite_team
-            ].team_color  # 对面队员颜色
+            self.team_color = self.data.teams[teaminfo_bool].team_color  # 队员颜色
+            # self.opposite_team_color = self.data.teams[
+            #     self.opposite_team
+            # ].team_color  # 对面队员颜色
             
         # 解释报错
         except AssertionError as ae:
@@ -218,16 +221,16 @@ class Receiver:
 
     def debug_print(self):
         print("-----------message-----------")
-        # print(self.data)
+        print(self.data.teams[1].team_number)
         print(self.game_state)
         print(self.penalized_time)
         print(self.red_card)
         print(self.player_info)
-        print(self.team_color == "RED")
-        print(self.opposite_team_color)
-        print(self.data.first_half)
+        # print(self.team_color == "RED")
+        # print(self.opposite_team_color)
+        # print(self.data.first_half)
         print(self.team)
-        print(self.opposite_team)
+        # print(self.opposite_team)
         print(self.kick_off)
         # pass
 
@@ -259,5 +262,5 @@ class Receiver:
 
 
 if __name__ == "__main__":
-    receiver = Receiver(team=1, player=0, goal_keeper=False, debug=True)
+    receiver = Receiver(team=12, player=0, goal_keeper=False, debug=True)
     receiver.receive()
