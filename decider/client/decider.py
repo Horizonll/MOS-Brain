@@ -3,6 +3,7 @@
 #   @description : The entry py file for decision on clients
 #
 
+import argparse
 import os
 import json
 import math
@@ -406,34 +407,36 @@ class Agent:
 
 
 def main():
-    rospy.loginfo("Decider started")
-    ""
-    agent = Agent()
+    print("Decider started")
 
     # 解析命令行参数
-    debug_mode = False
-    for arg in sys.argv[1:]:  # 排除脚本名称
-        if arg.lower().startswith("debug_mode="):
-            _, value = arg.split('=', 1)
-            debug_mode = (value.upper() == "TRUE")
-            break
+    parser = argparse.ArgumentParser(description='Decider program arguments')
+    parser.add_argument('--debug', action='store_true',
+                        help='Enable debug mode')
+    parser.add_argument('--rate', type=float, default=10.0,
+                        help='Loop rate in Hz (default: 10.0)')
+    args = parser.parse_args()
+
+    agent = Agent()
 
     try:
         def sigint_handler(sig, frame):
-            rospy.loginfo("User interrupted the program, exiting gracefully...")
-            exit(0)
+            print("User interrupted the program, exiting gracefully...")
+            sys.exit(0)
 
         signal.signal(signal.SIGINT, sigint_handler)
+
+        interval = 1.0 / args.rate
         while True:
-            if debug_mode:
-                rospy.loginfo("correct")
+            if args.debug_mode:
+                print("correct")
                 agent.debug_run()
             else:
                 agent.run()
-            time.sleep(0.1)
+            time.sleep(interval)
+
     except KeyboardInterrupt:
-        rospy.loginfo("Program interrupted by the user")
-        exit()
+        print("Program interrupted by the user")
     finally:
         pass
 

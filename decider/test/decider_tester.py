@@ -1,17 +1,17 @@
 import socket
 import time
 import json
+import argparse
 
-# 定义命令字典
+# Command dictionary (using first letters as shortcuts)
 COMMANDS = {
-    "dribble": 'dribble',
-    "forward": 'forward',
-    "stop": 'stop',
-    "find_ball": 'find_ball',
-    "chase_ball": 'chase_ball',
-    "shoot": 'kick',
-    "go_back_to_field": 'go_back_to_field',
-    "exit": 'exit'  # 添加一个退出选项
+    'd': {'name': 'dribble', 'shortcut': 'd', 'description': 'Dribble'},
+    's': {'name': 'stop', 'shortcut': 's', 'description': 'Stop'},
+    'f': {'name': 'find_ball', 'shortcut': 'f', 'description': 'Find Ball'},
+    'c': {'name': 'chase_ball', 'shortcut': 'c', 'description': 'Chase Ball'},
+    'k': {'name': 'kick', 'shortcut': 'k', 'description': 'Kick Ball'},
+    'g': {'name': 'go_back_to_field', 'shortcut': 'g', 'description': 'Return to Field'},
+    'q': {'name': 'exit', 'shortcut': 'q', 'description': 'Exit Program'}
 }
 
 COMMANDS_DATA = {
@@ -25,68 +25,76 @@ COMMANDS_DATA = {
     "exit": {},
 }
 
-def send_command(cmd, server_ip, server_port):
+def send_command(cmd, server_ip, server_port=8002):
     """
-    发送指定的命令到指定的IP和端口。
+    Send the specified command to the given IP and port.
     
-    :param cmd: 要发送的命令（必须在COMMANDS中）
-    :param server_ip: 服务器IP地址
-    :param server_port: 服务器端口号
+    :param cmd: Command to send (must exist in COMMANDS)
+    :param server_ip: Server IP address
+    :param server_port: Server port number
     """
     if cmd == 'exit':
-        print("Exiting program.")
+        print("Program exited.")
         return False
     
-    # 创建socket对象
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    
     try:
-        # 连接服务器
-        client_socket.connect((server_ip, server_port))
-        
-        # 准备要发送的数据
-        cmd_data = {
-            "command": cmd,
-            "data": COMMANDS_DATA[cmd],
-            "send_time": time.time(),
-        }
-        
-        # 将字典转换为JSON字符串并编码为字节
-        message = json.dumps(cmd_data).encode('utf-8')
-        
-        # 发送数据
-        client_socket.sendall(message)
-        print(f"Command '{cmd}' sent successfully.")
-        
+        # Create and connect socket
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+            client_socket.settimeout(2.0)  # Set timeout
+            client_socket.connect((server_ip, server_port))
+            
+            # Prepare and send data
+            cmd_data = {
+                "command": cmd,
+                "data": COMMANDS_DATA[cmd],
+                "send_time": time.time()
+            }
+            message = json.dumps(cmd_data).encode('utf-8')
+            client_socket.sendall(message)
+            
+            # Optional: Receive server response
+            try:
+                response = client_socket.recv(1024).decode('utf-8')
+                print(f"Server response: {response}")
+            except socket.timeout:
+                print("Sent successfully, but no response from server")
+                
+            print(f"Command '{cmd}' sent successfully.")
+            
     except Exception as e:
-        print(f"Error: {e}")
-    finally:
-        # 关闭socket连接
-        client_socket.close()
+        print(f"Failed to send command: {e}")
+        
     return True
 
-
 def main():
-    server_ip = "192.168.9.51"  # 默认服务器IP地址
-    server_port = 8002       # 默认服务器端口号
+    # Parse command line arguments to get server IP
+    parser = argparse.ArgumentParser(description='Send control commands to specified server')
+    parser.add_argument('--ip', type=str, default="192.168.9.51",
+                        help='Server IP address (default: 192.168.9.51)')
+    args = parser.parse_args()
     
-    print("Available commands:")
-    for key in COMMANDS.keys():
-        if key != 'exit':
-            print(f"- {key}")
-    print("Enter 'exit' to quit the program.")
-
+    server_ip = args.ip
+    server_port = 8002  # Fixed port number
+    
+    print(f"Server IP: {server_ip}, Port: {server_port}")
+    print("\nAvailable commands and shortcuts:")
+    
+    # Display command menu (sorted alphabetically)
+    for key in sorted(COMMANDS.keys()):
+        cmd = COMMANDS[key]
+        print(f"[{cmd['shortcut']}] {cmd['description']}")
+    
+    print("\nEnter corresponding letter to execute command, 'q' to quit.")
+    
     while True:
-        # 获取用户输入
-        user_input = input("Enter command: ").strip().lower()
+        user_input = input("\nEnter command: ").strip().lower()
         
-        if user_input not in COMMANDS:
-            print("Invalid command. Please try again.")
-            continue
-        
-        # 发送命令
-        if not send_command(COMMANDS[user_input], server_ip, server_port):
-            break
+        if user_input in COMMANDS:
+            cmd_name = COMMANDS[user_input]['name']
+            if not send_command(cmd_name, server_ip, server_port):
+                break
+        else:
+            print("Invalid command, please try again.")
 
 if __name__ == "__main__":
     main()
