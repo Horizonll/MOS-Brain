@@ -103,6 +103,41 @@ class KeyboardController:
             }
             print(f"切换到{mode_names.get(mode, '未知模式')}")
     
+    def rotate_head_down(self):
+        """头部向下"""
+        yaw, pitch = 0.0, 1.0
+        res = self.client.RotateHead(pitch, yaw)
+        if res == 0:
+            print("头部向下")
+    
+    def rotate_head_up(self):
+        """头部向上"""
+        yaw, pitch = 0.0, -0.3
+        res = self.client.RotateHead(pitch, yaw)
+        if res == 0:
+            print("头部向上")
+    
+    def rotate_head_right(self):
+        """头部向右"""
+        yaw, pitch = -0.785, 0.0
+        res = self.client.RotateHead(pitch, yaw)
+        if res == 0:
+            print("头部向右")
+    
+    def rotate_head_left(self):
+        """头部向左"""
+        yaw, pitch = 0.785, 0.0
+        res = self.client.RotateHead(pitch, yaw)
+        if res == 0:
+            print("头部向左")
+    
+    def reset_head_position(self):
+        """重置头部位置"""
+        yaw, pitch = 0.0, 0.0
+        res = self.client.RotateHead(pitch, yaw)
+        if res == 0:
+            print("重置头部位置")
+    
     def print_help(self):
         """打印控制说明"""
         print("\n===== 单键控制机器人运动 =====")
@@ -110,6 +145,9 @@ class KeyboardController:
         print("a: 左移           d: 右移")
         print("q: 向左旋转       e: 向右旋转")
         print("k: 停止运动       m: 模式切换")
+        print("j: 头部向左       l: 头部向右")
+        print("i: 头部向上       k: 头部向下")
+        print("o: 重置头部位置")
         print("esc: 退出程序")
         print("===========================\n")
     
@@ -147,6 +185,16 @@ class KeyboardController:
                     elif key == 'm':
                         mode_idx = (mode_idx + 1) % len(modes)
                         self.change_mode(modes[mode_idx])
+                    elif key == 'i':
+                        self.rotate_head_up()
+                    elif key == 'k':
+                        self.rotate_head_down()
+                    elif key == 'j':
+                        self.rotate_head_left()
+                    elif key == 'l':
+                        self.rotate_head_right()
+                    elif key == 'o':
+                        self.reset_head_position()
                     elif key == '\x1b':  # ESC键
                         self.is_running = False
                         print("程序退出")

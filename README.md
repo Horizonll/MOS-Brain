@@ -22,14 +22,11 @@ The decision-rev of MOS-8.5.
 roscore
 ```
 
-2. 检查电机开关，启动步态程序
+2. 启动ZED
 
 ```sh
-roslaunch thmos_bringup mos_run.launch
+ros2 launch zed_wrapper zed_camera.launch.py camera_model:='zed2i'
 ```
-
-- 如果带有电机序号的错误提示，先检查电机线是否松动，如果没有问题，尝试重启步态程序，再不行联系本体同学。
-- 不带电机序号的错误提示，大概率IMU没接好，检查IMU线是否牢固，是否亮灯
 
 3. 启动视觉程序
 
