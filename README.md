@@ -16,60 +16,44 @@ The decision-rev of MOS-8.5.
 
 #### 调试启动流程
 
-1. 启动roscore，保证所有topic注册在一个core中
+1. 启动K1视觉
 
 ```sh
-roscore
+/home/booster/Workspace/robocup_demo/scripts/start_vision.sh
 ```
 
-2. 启动ZED
+2. 开新终端启动ZED
 
 ```sh
 ros2 launch zed_wrapper zed_camera.launch.py camera_model:='zed2i'
 ```
 
-3. 启动视觉程序
+3. 启动interface
 
-插拔ZED一次，将机器人放置到入场点，根据入场位置调整三个参数
-  
 ```sh
-cd ~/thmos_ws/src/thmos_code/vision/scripts && python3 vision_with_local.py 3300 1000 90
+/bin/python /home/booster/Workspace/THMOS/interface-booster/interface.py
 ```
 
-启动后，一定检查IMU是否发生明显漂移（0.1degrees/s以上），如果有漂移就插拔IMU重启步态
+4. 启动head_tracker
 
-- 正常情况下帧率为10，如果大于10问题大概率是ZED没连上，先尝试插拔，插拔解决不了换线
-- 帧率小于10可能是debug没关或内存泄漏
-- 检查当前定位命令：`rostopic echo /pos_in_map`，如果没有数据，检查IMU和ZED是否正常工作
+```sh
+/bin/python /home/booster/Workspace/THMOS/head-control/head_control.py
+```
 
-1. 启动决策程序
+5. 启动决策程序
 
 - 情况一：单独测试每个状态机
 
 以debug模式启动单机决策
 
 ```sh
-cd ~/MOS-Brain/decider/client && python3 decider.py --debug
+/bin/python /home/booster/Workspace/THMOS/MOS-Brain/decider/client/decider.py --debug
 ```
 
 拿到本机ip后，在同一子网内的设备上（如笔记本）运行测试程序
 
 ```sh
-cd ~/MOS-Brain/decider/test && python3 decider_tester.py --ip your-ip
-```
-
-- 情况二：测试比赛策略
-
-启动子机决策，注意在`client/config_override.json`中配置team和id
-
-```sh
-cd ~/MOS-Brain/decider/client && python3 decider.py
-```
-
-如果在该机器人上运行多机决策，运行
-
-```sh
-cd ~/MOS-Brain/decider/server && python3 decider_server.py
+python3 decider_tester.py --ip robotip
 ```
 
 ### Sync
