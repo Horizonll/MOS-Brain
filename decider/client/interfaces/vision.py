@@ -11,6 +11,8 @@ import rospy
 from std_msgs.msg import Float32MultiArray, Header
 from sensor_msgs.msg import JointState, Imu
 from geometry_msgs.msg import Quaternion, Twist, Pose2D, Point
+from nav_msgs.msg import Odometry
+from thmos_msgs.msg import Location, VisionDetections, VisionObj
 
 class Vision:
     # @public variants:
@@ -57,11 +59,11 @@ class Vision:
 
     def __init__(self, config): 
 
-        self._ball_pos_in_vis = np.array([0, 0])
+        self._ball_pos_in_vis = np.array([0, 0]) # 
         self._ball_pos_in_vis_D = np.array([0, 0])
         self._ball_pos_in_vis_I = np.array([0, 0])
-        self._ball_pos = np.array([0, 0])
-        self._ball_pos_in_map = np.array([0, 0])
+        self._ball_pos = np.array([0, 0]) # mm
+        self._ball_pos_in_map = np.array([0, 0]) # mm
         self._vision_last_frame_time = 0
         self.self_pos = np.array([0,0])
         self.self_yaw = 0
@@ -72,51 +74,25 @@ class Vision:
         self.ball_distance = 6000
         self._search_ball_phase = 0
 
-        self.head = 0.75
-        self.neck = 0
+        # self.head = 0.75
+        # self.neck = 0
         self._force_look_at = [None, None]
 
         self._config = config
-        self._pos_sub = rospy.Subscriber("/pos_in_map",  \
+        self._location_sub = rospy.Subscriber("/THMOS/location",  \
                                         Pose2D,  \
                                         self._position_callback)
-        self._vision_sub = rospy.Subscriber("/vision/obj_pos", \
-                                        Float32MultiArray, \
+        self._vision_sub = rospy.Subscriber("/THMOS/vision/detections", \
+                                        VisionDetections, \
                                         self._vision_callback)
-        self._soccer_real_sub = rospy.Subscriber("/soccer_real_pos_in_map",  \
-                                        Point, \
-                                        self._soccer_real_callback)
-        self._head_pub = rospy.Publisher("/head_goals",  \
-                                        JointState,  \
-                                        queue_size = 1)
+        # self._soccer_real_sub = rospy.Subscriber("/soccer_real_pos_in_map",  \
+        #                                 Point, \
+        #                                 self._soccer_real_callback)
+        # self._head_pub = rospy.Publisher("/head_goals",  \
+        #                                 JointState,  \
+        #                                 queue_size = 1)
         
-        self._head_set([self.head, self.neck])
-    
-
-    def _track_ball_stage_looking_at_ball(self):
-        if(self._ball_pos_accuracy < self._config["_ball_pos_accuracy_look_around"]):
-            phase_count = len(self._config["search_ball_head_angle"])
-            self.head = self._config["search_ball_head_angle"][self._search_ball_phase][0]
-            self.neck = self._config["search_ball_head_angle"][self._search_ball_phase][1]
-            self._head_set([self.head, self.neck])
-            if(time.time() - self._last_track_ball_phase_time > 
-                    self._config["move_head_phase_time_gap"]):
-                self._last_track_ball_phase_time = time.time()
-                self._search_ball_phase += 1
-                self._search_ball_phase %= phase_count
-            return
-        args = self._config["looking_at_ball_arguments"]
-        width = self._config["vision_size"][0]
-        height = self._config["vision_size"][1]
-        addn =  (self._ball_pos_in_vis[0] - width/2) / width * args[1][0] + \
-                (self._ball_pos_in_vis_I[0]) / width * args[1][1] + \
-                (self._ball_pos_in_vis_D[0]) / width * args[1][2];
-        addh =  (self._ball_pos_in_vis[1] - height/2) / height * args[0][0] + \
-                (self._ball_pos_in_vis_I[1]) / height * args[0][1] + \
-                (self._ball_pos_in_vis_D[1]) / height * args[0][2];
-        self.head += addh
-        self.neck -= addn
-        self._head_set([self.head, self.neck])
+        # self._head_set([self.head, self.neck])
 
 
     def _track_ball_stage_head_up(self):
@@ -208,9 +184,9 @@ class Vision:
             self._ball_pos_accuracy        += ball_confidence * 100
         
         
-        self._vision_last_frame_time        = time.time()
+        # self._vision_last_frame_time        = time.time()
         
-        self._track_ball(); 
+        # self._track_ball(); 
 
     def look_at(self, args):
         self._force_look_at = args
