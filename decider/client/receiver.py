@@ -17,7 +17,6 @@ from construct import (
     Flag,
     Int16sl,
 )
-import rospy
 
 
 # 以下是 GameState
@@ -128,7 +127,7 @@ ReturnData = Struct(
 
 
 class Receiver:
-    def __init__(self, team, player, goal_keeper=False, debug=True):
+    def __init__(self, team, player, goal_keeper=False, debug=True, logger=None):
         self.ip = "0.0.0.0"  # 本地ip
         self.listen_port = 3838  # 本地端口
         self.answer_port = 3939  # 服务器端口
@@ -152,7 +151,7 @@ class Receiver:
         self.is_goalkeeper = goal_keeper  # 守门员
         self.peer = None  # 服务器（ip， 端口）
 
-        # logging = logging.getLogger("game_controller")  # 创建logger
+        self.logger = logger or logging.getLogger(__name__)
 
         self.socket1 = socket.socket(
             socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP

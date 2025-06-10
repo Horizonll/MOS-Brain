@@ -3,7 +3,6 @@ import json
 import socket
 import threading
 import time
-import rospy
 
 
 class RobotClient:

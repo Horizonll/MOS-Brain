@@ -3,7 +3,6 @@ from math import inf
 import time
 from transitions import Machine
 import numpy as np
-import rospy
 
 
 class ChaseBallStateMachine:

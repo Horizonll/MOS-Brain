@@ -8,10 +8,8 @@
 
 import os
 import rclpy
-import actionlib
-from bitbots_msgs.msg import KickGoal, KickAction
 from geometry_msgs.msg import Quaternion, Twist, Pose2D, Point
-from thmos_msgs.msg import Location, VisionDetections, VisionObj, HeadPose
+from thmos_msg.msg import VisionDetections, VisionObj, HeadPose
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from std_msgs.msg import Float32MultiArray, Header
 
@@ -33,8 +31,7 @@ class Action:
     #   _action_cb()        Do nothing
     
     def __init__(self, agent): 
-        super().__init__('action_node')
-
+        self.agent = agent
         self.logger = agent.get_logger().get_child("action_node")
         self._config = self.agent._config
 
@@ -44,8 +41,8 @@ class Action:
             depth=1
         )
 
-        self._cmd_vel_pub = self.create_publisher(Twist, "/THMOS/walk/move", 1)
-        self._head_pose_pub = self.create_publisher(
+        self._cmd_vel_pub = self.agent.create_publisher(Twist, "/THMOS/walk/move", 1)
+        self._head_pose_pub = self.agent.create_publisher(
             HeadPose,
             "hardware/set_head_pose",
             qos_profile
@@ -64,6 +61,11 @@ class Action:
     # cmd_vel(vel_x, vel_y, vel_theta)
     #   publish a velocity command
     def cmd_vel(self, vel_x, vel_y, vel_theta):
+        # convert to float
+        vel_x = float(vel_x)
+        vel_y = float(vel_y)
+        vel_theta = float(vel_theta)
+         
         cmd = Twist()
         cmd.linear.x = vel_x
         cmd.linear.y = vel_y

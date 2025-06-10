@@ -11,7 +11,7 @@ from std_msgs.msg import Float32MultiArray, Header
 from sensor_msgs.msg import JointState, Imu
 from geometry_msgs.msg import Quaternion, Twist, Pose2D, Point
 from nav_msgs.msg import Odometry
-from thmos_msgs.msg import Location, VisionDetections, VisionObj, HeadPose
+from thmos_msg.msg import VisionDetections, VisionObj, HeadPose
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
 class Vision(Node):
@@ -58,8 +58,7 @@ class Vision(Node):
     #   _track_ball_stage_looking_at_ball()  looing at ball algorithm
 
     def __init__(self, agent):
-        super().__init__('vision_node')
-
+        self.agent = agent
         self.logger = agent.get_logger().get_child("vision_node")
         
         self._ball_pos_in_vis = np.array([0, 0]) # 
@@ -72,8 +71,6 @@ class Vision(Node):
         self.self_yaw = 0
         self._self_pos_accuracy = 0
         self._ball_pos_accuracy = 0
-        self._last_track_ball_time = -99999999
-        self._last_track_ball_phase_time = self.get_clock().now().nanoseconds * 1e-9
         self.ball_distance = 6000
         self._search_ball_phase = 0
 
@@ -87,14 +84,14 @@ class Vision(Node):
         )
         
         # Create subscribers
-        self._location_sub = self.create_subscription(
+        self._location_sub = self.agent.create_subscription(
             Pose2D,
             "/THMOS/location",
             self._position_callback,
             qos_profile
         )
         
-        self._vision_sub = self.create_subscription(
+        self._vision_sub = self.agent.create_subscription(
             VisionDetections,
             "/THMOS/vision/detections",
             self._vision_callback,
@@ -143,6 +140,8 @@ class Vision(Node):
         # 获取position_projection (x, y) 坐标
         # 假设_position_projection格式为 [x, y]，其中y朝前，z朝上
         position_projection = np.array(best_ball.position_projection) * 1000 # 转换为毫米
+        # 裁剪前两个值
+        position_projection = position_projection[:2]
         if position_projection.shape != (2,):
             self.logger.error("Invalid position_projection format, expected 2D coordinates")
             return

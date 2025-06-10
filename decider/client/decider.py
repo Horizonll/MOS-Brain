@@ -46,10 +46,14 @@ class Agent(Node):
     Manages state machines and handles communication with other components.
     """
     
-    def __init__(self):
+    def __init__(self, args=None):
         """Initialize the Agent instance and set up ROS 2 node and components."""
         super().__init__('decider')
         self.get_logger().info("Initializing the Agent instance")
+
+        # Parse command line arguments
+        self.debug_mode = args.debug if args else False
+        self.loop_rate = args.rate if args else 10.0
         
         # Flags and configuration
         self.if_local_test = False
@@ -71,9 +75,9 @@ class Agent(Node):
         
         # Initialize interfaces
         self.get_logger().info("Registering interfaces")
-        self._action = interfaces.action.Action(self._config)
+        self._action = interfaces.action.Action(self)
         self._vision = interfaces.vision.Vision(self)
-        self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"]-1)
+        self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"]-1, logger=self.get_logger().get_child("receiver"))
         self._robot_client = RobotClient(self)
         
         # Initialize state machines
@@ -86,13 +90,13 @@ class Agent(Node):
         self.penalize_end_time = self._get_initial_time()
         
         # 创建定时器，替代ROS 1中的while循环
-        timer_period = 1.0 / self._config.get("loop_rate", 10.0)  # 默认10Hz
+        timer_period = 1.0 / self.loop_rate  # 默认10Hz
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
     def timer_callback(self):
         """定时器回调函数，替代ROS 1中的主循环"""
         try:
-            if self._config.get("debug_mode", False):
+            if self.debug_mode:
                 self.debug_run()
             else:
                 self.run()
@@ -242,8 +246,11 @@ class Agent(Node):
                 self.stop()
                 
         except Exception as e:
-            self.get_logger().error(f"Error in decider run: {e}")
-            self._state_machine_runners['find_ball']()        
+            #print traceback
+            import traceback
+            traceback.print_exc()
+
+            self.get_logger().error(f"Error in decider debug run: {e}")  
 
     def read_params(self) -> None:
         """Read configuration parameters with default values."""
@@ -276,7 +283,7 @@ class Agent(Node):
 
     def stop(self, sleep_time: float = 0) -> None:
         """Stop the robot's movement and optionally sleep."""
-        self._action.cmd_vel(0, 0, 0)
+        self._action.cmd_vel(0.0, 0.0, 0.0)
         time.sleep(sleep_time)
 
     def kick(self) -> None:
@@ -453,7 +460,7 @@ def main(args=None):
     rclpy.init(args=args)
     
     # Create and run agent
-    agent = Agent()
+    agent = Agent(cmd_args)
     
     try:
         # Spin the node to execute callbacks

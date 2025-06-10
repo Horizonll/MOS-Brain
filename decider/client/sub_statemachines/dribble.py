@@ -1,7 +1,6 @@
 import time
 import math
 import numpy as np
-import rospy
 from transitions import Machine
 
 
