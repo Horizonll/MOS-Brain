@@ -1,4 +1,5 @@
 import math
+from math import inf
 import time
 from transitions import Machine
 import numpy as np
@@ -9,6 +10,7 @@ class ChaseBallStateMachine:
     def __init__(self, agent):
         """Initialize the chase ball state machine with an agent"""
         self.agent = agent
+        self.logger = self.agent.get_logger().get_child("chase_ball_fsm")
         self._config = self.agent.get_config()
         self.read_params()
 
@@ -45,7 +47,7 @@ class ChaseBallStateMachine:
             initial="rotate",
             transitions=self.transitions,
         )
-        rospy.loginfo(f"[CHASE BALL FSM] Initialized. Starting state: {self.state}")
+        self.logger.info(f"[CHASE BALL FSM] Initialized. Starting state: {self.state}")
 
     def read_params(self):
         """从配置中读取参数"""
@@ -65,7 +67,7 @@ class ChaseBallStateMachine:
             return False
         angle_close = abs(self.agent.get_ball_angle()) < self.close_angle_threshold_rad
         result = distance_close and angle_close
-        rospy.loginfo(
+        self.logger.info(
             f"[CHASE BALL FSM] Close to ball? Distance: {distance_close}, Angle: {angle_close}, Result: {result}"
         )
         return result
@@ -90,57 +92,57 @@ class ChaseBallStateMachine:
 
     def run(self):
         """Main execution loop for the state machine"""
-        self.agent.look_at([None, None])
+        self.agent.move_head(inf, inf)
         command = self.agent.get_command()["command"]
-        rospy.loginfo(
+        self.logger.info(
             f"[CHASE BALL FSM] agent.command: {command}, state: {self.state}"
         )
         # if no ball, then stop
         if not self.agent.get_if_ball():
-            rospy.logwarn("[CHASE BALL FSM] No ball in sight. Stopping.")
+            self.logger.warn("[CHASE BALL FSM] No ball in sight. Stopping.")
             self.stop_moving()
             return
 
         self.chase_distance = self.agent.get_command().get("data", {}).get("chase_distance", 0.45)
 
-        rospy.loginfo(f"\n[CHASE BALL FSM] Current state: {self.state}")
-        rospy.loginfo(f"[CHASE BALL FSM] Triggering 'chase_ball' transition")
+        self.logger.info(f"\n[CHASE BALL FSM] Current state: {self.state}")
+        self.logger.info(f"[CHASE BALL FSM] Triggering 'chase_ball' transition")
         self.machine.model.trigger("chase_ball")
 
     def rotate_to_ball(self):
         """Rotate the agent towards the ball"""
-        rospy.loginfo("[CHASE BALL FSM] Starting to rotate towards the ball...")
+        self.logger.info("[CHASE BALL FSM] Starting to rotate towards the ball...")
         target_angle_rad = self.agent.get_ball_angle()
         if self.agent.get_if_ball() == False:
-            rospy.logwarn("[CHASE BALL FSM] Noball,cant rotate")
+            self.logger.warn("[CHASE BALL FSM] Noball,cant rotate")
             return
         self.agent.cmd_vel(
             0,
             0,
             np.sign(target_angle_rad) * self.walk_vel_theta
         )
-        rospy.loginfo("[CHASE BALL FSM] Rotation step completed.")
+        self.logger.info("[CHASE BALL FSM] Rotation step completed.")
 
     def move_forward_to_ball(self):
         """Move the agent forward towards the ball"""
-        rospy.loginfo("[CHASE BALL FSM] Starting to move forward towards the ball...")
+        self.logger.info("[CHASE BALL FSM] Starting to move forward towards the ball...")
         self.agent.cmd_vel(
             self.walk_vel_x,
             0,
             0
         )
-        rospy.loginfo("[CHASE BALL FSM] Forward movement step completed.")
+        self.logger.info("[CHASE BALL FSM] Forward movement step completed.")
 
     def stop_moving(self):
         """Stop the agent's movement"""
-        rospy.loginfo("[CHASE BALL FSM] Stopping movement...")
+        self.logger.info("[CHASE BALL FSM] Stopping movement...")
         self.agent.cmd_vel(0, 0, 0)
-        rospy.loginfo("[CHASE BALL FSM] Movement stopped.")
+        self.logger.info("[CHASE BALL FSM] Movement stopped.")
 
     def stop_moving_and_set_head(self):
         """Stop the agent's movement and set head position"""
-        rospy.loginfo("[CHASE BALL FSM] Stopping movement and setting head position...")
+        self.logger.info("[CHASE BALL FSM] Stopping movement and setting head position...")
         self.agent.cmd_vel(0, 0, 0)
-        rospy.loginfo("[CHASE BALL FSM] Movement stopped and head position set.")
+        self.logger.info("[CHASE BALL FSM] Movement stopped and head position set.")
 
     

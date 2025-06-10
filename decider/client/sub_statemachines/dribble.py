@@ -16,6 +16,7 @@ class DribbleStateMachine:
         :param agent: 代理对象
         """
         self.agent = agent
+        self.logger = self.agent.get_logger().get_child("dribble_fsm")
         self._config = self.agent.get_config()
         self.read_params()  # 新增参数读取方法
 
@@ -98,7 +99,7 @@ class DribbleStateMachine:
             after_state_change=self.print_state,
         )
         self.direction = True  # FIXME: True: right, False: left
-        rospy.loginfo(f"[DRIBBLE FSM] Initialized. Starting state: {self.state}")
+        self.logger.info(f"[DRIBBLE FSM] Initialized. Starting state: {self.state}")
 
     def run(self):
         """
@@ -106,7 +107,7 @@ class DribbleStateMachine:
         """
         # 如果没有球，直接return
         if not self.agent.get_if_ball():
-            rospy.logwarn("No ball in sight.")
+            self.logger.warn("No ball in sight.")
             self.agent.cmd_vel(0, 0, 0)
             return
 
@@ -120,54 +121,54 @@ class DribbleStateMachine:
                 self.aim_yaw = 0.0
             else:
                 self.aim_yaw = self.calc_angle_to_goal_degree()
-            rospy.loginfo(f"[DRIBBLE FSM] Calculated aim_yaw: {self.aim_yaw:.2f}°")
+            self.logger.info(f"[DRIBBLE FSM] Calculated aim_yaw: {self.aim_yaw:.2f}°")
 
         self.machine.model.trigger("dribble")
-        rospy.loginfo("[DRIBBLE FSM] Running...")
-        rospy.loginfo(f"[DRIBBLE FSM] Current state: {self.state}")
+        self.logger.info("[DRIBBLE FSM] Running...")
+        self.logger.info(f"[DRIBBLE FSM] Current state: {self.state}")
 
     def print_state(self):
         """
         打印当前状态
         """
-        rospy.loginfo(f"[DRIBBLE FSM] Current state: {self.state}")
+        self.logger.info(f"[DRIBBLE FSM] Current state: {self.state}")
 
     def forward(self):
         """
         向前带球
         """
-        rospy.loginfo("[DRIBBLE FSM] Moving forward...")
+        self.logger.info("[DRIBBLE FSM] Moving forward...")
 
         vel_x = self.forward_vel
         self.agent.cmd_vel(vel_x, 0, (self.agent.get_self_yaw()-self.aim_yaw)/30)
-        rospy.loginfo("[DRIBBLE FSM] Forward movement done")
+        self.logger.info("[DRIBBLE FSM] Forward movement done")
 
     def stop_moving(self):
         """
         停止移动
         """
-        rospy.loginfo("[DRIBBLE FSM] Stopping...")
+        self.logger.info("[DRIBBLE FSM] Stopping...")
         self.agent.cmd_vel(0, 0, 0)
         time.sleep(1)
-        rospy.loginfo("[DRIBBLE FSM] Stopped")
+        self.logger.info("[DRIBBLE FSM] Stopped")
 
     def adjust_pos_to_ball(self):
         """
         调整机器人位置以靠近球
         """
-        rospy.loginfo("[DRIBBLE FSM] Adjusting position to ball...")
+        self.logger.info("[DRIBBLE FSM] Adjusting position to ball...")
         target_angle_rad = self.agent.get_ball_angle()
         ball_distance = self.agent.get_ball_distance()
 
         if abs(target_angle_rad) > self.angle_to_ball_adjust_threshold_rad:
-            rospy.loginfo(
+            self.logger.info(
                 f"[DRIBBLE FSM] target_angle_rad ({target_angle_rad}) > {self.angle_to_ball_adjust_threshold_rad}. ball_distance: {ball_distance}. Rotating..."
             )
             self.agent.cmd_vel(
                 0, 0, np.sign(target_angle_rad) * self.rotate_vel_theta
             )
         elif ball_distance > self.max_ball_distance_m:
-            rospy.loginfo(
+            self.logger.info(
                 f"[DRIBBLE FSM] ball_distance ({ball_distance}) > 0.8. Moving backward..."
             )
             self.agent.cmd_vel(
@@ -176,7 +177,7 @@ class DribbleStateMachine:
                 0,
             )
         elif ball_distance < self.min_ball_distance_m:
-            rospy.loginfo(
+            self.logger.info(
                 f"[DRIBBLE FSM] ball_distance ({ball_distance}) < 0.35. Moving forward..."
             )
             self.agent.cmd_vel(
@@ -185,7 +186,7 @@ class DribbleStateMachine:
                 0,
             )
 
-        rospy.loginfo("[DRIBBLE FSM] Position adjustment step completed.")
+        self.logger.info("[DRIBBLE FSM] Position adjustment step completed.")
 
     def good_pos_to_ball(self):
         """
@@ -193,7 +194,7 @@ class DribbleStateMachine:
         :return: True 表示位置合适，False 表示位置不合适
         """
         result = self.min_ball_distance_m < self.agent.get_ball_distance() < self.max_ball_distance_m and self.good_angle_to_ball()
-        rospy.loginfo(f"[DRIBBLE FSM] Good position to ball: {'Yes' if result else 'No'}")
+        self.logger.info(f"[DRIBBLE FSM] Good position to ball: {'Yes' if result else 'No'}")
         return result
     
     def bad_pos_to_ball(self):
@@ -202,7 +203,7 @@ class DribbleStateMachine:
         :return: True 表示位置不合适，False 表示位置合适
         """
         result = not self.good_pos_to_ball()
-        rospy.loginfo(f"[DRIBBLE FSM] Bad position to ball: {'Yes' if result else 'No'}")
+        self.logger.info(f"[DRIBBLE FSM] Bad position to ball: {'Yes' if result else 'No'}")
         return result
     
     def adjust_horizontal_position(self):
@@ -210,19 +211,19 @@ class DribbleStateMachine:
         Adjust the robot's horizontal position to approach the ball
         调整机器人左右位置以靠近球
         """
-        rospy.loginfo("[DRIBBLE FSM] Starting horizontal position adjustment...")
+        self.logger.info("[DRIBBLE FSM] Starting horizontal position adjustment...")
 
         # neck_angle = self.agent.get_ball_angle()
         ball_x = self.agent.get_ball_pos()[0]
         if ball_x > 0:
-            rospy.loginfo(f"[DRIBBLE FSM] Moving left (Ball x: {ball_x})")
+            self.logger.info(f"[DRIBBLE FSM] Moving left (Ball x: {ball_x})")
             self.agent.cmd_vel(
                 0,
                 -self.horizontal_adjust_vel_y,
                 0
             )
         elif ball_x < 0:
-            rospy.loginfo(f"[DRIBBLE FSM] Moving right (Ball x: {ball_x})")
+            self.logger.info(f"[DRIBBLE FSM] Moving right (Ball x: {ball_x})")
             self.agent.cmd_vel(
                 0,
                 self.horizontal_adjust_vel_y,
@@ -233,10 +234,10 @@ class DribbleStateMachine:
         """
         调整角度
         """
-        rospy.loginfo("[DRIBBLE FSM] Adjusting angle...")
+        self.logger.info("[DRIBBLE FSM] Adjusting angle...")
         target_angle_rad = self.agent.get_ball_angle()
 
-        rospy.loginfo(f"[DRIBBLE FSM] Adjusting angle... Current angle: {target_angle_rad}")
+        self.logger.info(f"[DRIBBLE FSM] Adjusting angle... Current angle: {target_angle_rad}")
         self.agent.cmd_vel(
             0, 0, np.sign(target_angle_rad) * self.rotate_vel_theta
         )
@@ -248,7 +249,7 @@ class DribbleStateMachine:
         """
         target_angle_rad = self.agent.get_ball_angle()
         result =  not abs(target_angle_rad) > self.angle_to_ball_adjust_threshold_rad
-        rospy.loginfo(f"[DRIBBLE FSM] Bad angle to ball: {'Yes' if result else 'No'}")
+        self.logger.info(f"[DRIBBLE FSM] Bad angle to ball: {'Yes' if result else 'No'}")
         return result
 
     def good_angle_to_ball(self):
@@ -258,7 +259,7 @@ class DribbleStateMachine:
         """
         target_angle_rad = self.agent.get_ball_angle()
         result = abs(target_angle_rad) < self.angle_to_ball_adjust_threshold_rad
-        rospy.loginfo(f"[DRIBBLE FSM] Good angle to ball: {'Yes' if result else 'No'}")
+        self.logger.info(f"[DRIBBLE FSM] Good angle to ball: {'Yes' if result else 'No'}")
         return result
 
     def good_yaw_angle(self):
@@ -271,7 +272,7 @@ class DribbleStateMachine:
         ang_delta = ang_tar - self.agent.get_self_yaw()
         result = abs(ang_delta) < self.good_angle_to_goal_threshold_degree
 
-        rospy.loginfo(
+        self.logger.info(
             f"[ANGLE CHECK] Angle delta: {abs(ang_delta):.2f}° (OK? {'Yes' if result else 'No'})"
         )
         return result
@@ -283,32 +284,32 @@ class DribbleStateMachine:
         """
         """Check if angle is outside acceptable range"""
         result = not self.good_yaw_angle()
-        rospy.loginfo(
+        self.logger.info(
             f"[ANGLE CHECK] Bad yaw angle: {'Yes' if result else 'No'} (angle delta: {abs(self.aim_yaw - self.agent.get_self_yaw()):.2f}°)"
         )
         return result
 
     def adjust_yaw_angle(self):
         """Adjust robot's yaw angle relative to the goal"""
-        rospy.loginfo("[DRIBBLE FSM] Starting yaw angle adjustment...")
+        self.logger.info("[DRIBBLE FSM] Starting yaw angle adjustment...")
 
         # Calculate target yaw angle using the robot's position
         target_angle_deg = self.aim_yaw
         current_yaw = self.agent.get_self_yaw()
         yaw_delta = target_angle_deg - current_yaw
 
-        rospy.loginfo(
+        self.logger.info(
             f"[DRIBBLE FSM] Target yaw: {target_angle_deg:.2f}°, Current yaw: {current_yaw:.2f}°, Delta: {yaw_delta:.2f}°"
         )
 
         if yaw_delta > self.good_angle_to_goal_threshold_degree:
-            rospy.loginfo(f"[DRIBBLE FSM] Rotating CCW (Δ={yaw_delta:.2f}°)")
+            self.logger.info(f"[DRIBBLE FSM] Rotating CCW (Δ={yaw_delta:.2f}°)")
             self.agent.cmd_vel(0, -self.adjust_angle_to_goal_vel_y, self.adjust_angle_to_goal_vel_theta)
         elif yaw_delta < -self.good_angle_to_goal_threshold_degree:
-            rospy.loginfo(f"[DRIBBLE FSM] Rotating CW (Δ={yaw_delta:.2f}°)")
+            self.logger.info(f"[DRIBBLE FSM] Rotating CW (Δ={yaw_delta:.2f}°)")
             self.agent.cmd_vel(0, self.adjust_angle_to_goal_vel_y, -self.adjust_angle_to_goal_vel_theta)
         else:
-            rospy.loginfo("[DRIBBLE FSM] Yaw angle is within acceptable range.")
+            self.logger.info("[DRIBBLE FSM] Yaw angle is within acceptable range.")
 
     def good_horizontal_position(self):
         """
@@ -317,7 +318,7 @@ class DribbleStateMachine:
         """
         ball_x = self.agent.get_ball_pos()[0]
         result = abs(ball_x) < self.good_horizontal_position_to_ball_threshold_mm
-        rospy.loginfo(f"[DRIBBLE FSM] Good position: {'Yes' if result else 'No'}")
+        self.logger.info(f"[DRIBBLE FSM] Good position: {'Yes' if result else 'No'}")
         return result
 
     def bad_horizontal_position(self):
@@ -327,7 +328,7 @@ class DribbleStateMachine:
         """
         ball_x = self.agent.get_ball_pos()[0]
         result = abs(ball_x) > self.good_horizontal_position_to_ball_threshold_mm
-        rospy.loginfo(f"[DRIBBLE FSM] Bad position: {'Yes' if result else 'No'}")
+        self.logger.info(f"[DRIBBLE FSM] Bad position: {'Yes' if result else 'No'}")
         return result
 
     def lost_ball(self):
@@ -346,8 +347,8 @@ class DribbleStateMachine:
         # if yaw_angle_lost:
         #     print(f"[DRIBBLE FSM] Yaw angle lost: {yaw_angle:.2f} rad")
 
-        rospy.loginfo(f"[DRIBBLE FSM] Ball distance: {ball_distance:.2f} m")
-        rospy.loginfo(f"[DRIBBLE FSM] Lost ball: {'Yes' if result else 'No'}")
+        self.logger.info(f"[DRIBBLE FSM] Ball distance: {ball_distance:.2f} m")
+        self.logger.info(f"[DRIBBLE FSM] Lost ball: {'Yes' if result else 'No'}")
         return result
 
     def lost_yaw(self):
@@ -359,7 +360,7 @@ class DribbleStateMachine:
         yaw_angle = self.aim_yaw - self.agent.get_self_yaw()
         yaw_angle_lost = abs(yaw_angle) > self.lost_angle_to_target_threshold_degree # 45
         result = yaw_angle_lost
-        rospy.loginfo(f"[DRIBBLE FSM] Lost ball yaw: {'Yes' if result else 'No'}")
+        self.logger.info(f"[DRIBBLE FSM] Lost ball yaw: {'Yes' if result else 'No'}")
         return result
 
     def lost_ball_x(self):
@@ -371,7 +372,7 @@ class DribbleStateMachine:
         ball_x = self.agent.get_ball_pos()[0]
         ball_x_lost = abs(ball_x) > self.lost_ball_x_threshold_mm  # 80
         result = ball_x_lost
-        rospy.loginfo(f"[DRIBBLE FSM] Lost ball x: {'Yes' if result else 'No'}")
+        self.logger.info(f"[DRIBBLE FSM] Lost ball x: {'Yes' if result else 'No'}")
         return result
 
     def not_lost_ball(self):
@@ -380,7 +381,7 @@ class DribbleStateMachine:
         :return: True 表示未丢球，False 表示丢球
         """
         result = not self.lost_ball() and not self.lost_ball_x()
-        rospy.loginfo(f"[DRIBBLE FSM] Not lost ball: {'Yes' if result else 'No'}")
+        self.logger.info(f"[DRIBBLE FSM] Not lost ball: {'Yes' if result else 'No'}")
         return result
     
     def not_lost_yaw(self):
@@ -389,14 +390,14 @@ class DribbleStateMachine:
         :return: True 表示未丢球，False 表示丢球
         """
         result = not self.lost_yaw()
-        rospy.loginfo(f"[DRIBBLE FSM] Not lost yaw: {'Yes' if result else 'No'}")
+        self.logger.info(f"[DRIBBLE FSM] Not lost yaw: {'Yes' if result else 'No'}")
         return result
 
     def calculate_angle(self):
         """
         计算角度
         """
-        rospy.loginfo("[DRIBBLE FSM] Calculating angles...")
+        self.logger.info("[DRIBBLE FSM] Calculating angles...")
 
         if self.agent.get_self_pos()[0] > 0:
             if self.agent.get_self_pos()[0] > self.goal_center_bias_mm:
@@ -422,13 +423,13 @@ class DribbleStateMachine:
 
         self.angle_to_goal_rad = angle_to_goal_rad
         self.angle_ball_to_goal_rad = angle_ball_to_goal
-        rospy.loginfo("[DRIBBLE FSM] Angles calculated")
+        self.logger.info("[DRIBBLE FSM] Angles calculated")
 
     def dribble_forward(self):
         """
         向前带球
         """
-        rospy.loginfo("[DRIBBLE FSM] Dribbling forward...")
+        self.logger.info("[DRIBBLE FSM] Dribbling forward...")
         vel_x = self.forward_vel
         vel_y = 0.0
         vel_theta = 0.0
@@ -441,7 +442,7 @@ class DribbleStateMachine:
         #     vel_theta = self._config.get("walk_vel_theta", -0.3)
 
         self.agent.cmd_vel(vel_x, vel_y, vel_theta)
-        rospy.loginfo("[DRIBBLE FSM] Dribbling forward done")
+        self.logger.info("[DRIBBLE FSM] Dribbling forward done")
 
     def calc_angle_to_goal_degree(self):
         """

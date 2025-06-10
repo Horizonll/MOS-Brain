@@ -4,17 +4,17 @@
 
 import math
 import time
-import angle
 import numpy as np
-
-import rospy
+import rclpy
+from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray, Header
 from sensor_msgs.msg import JointState, Imu
 from geometry_msgs.msg import Quaternion, Twist, Pose2D, Point
 from nav_msgs.msg import Odometry
-from thmos_msgs.msg import Location, VisionDetections, VisionObj
+from thmos_msgs.msg import Location, VisionDetections, VisionObj, HeadPose
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
-class Vision:
+class Vision(Node):
     # @public variants:
     #   VARIANTS        TYPE        DESCTIPTION
     #   self_pos        np.array    self position in map; already filtered
@@ -57,8 +57,11 @@ class Vision:
     #   _track_ball()                        the main algorithm to move head
     #   _track_ball_stage_looking_at_ball()  looing at ball algorithm
 
-    def __init__(self, config): 
+    def __init__(self, agent):
+        super().__init__('vision_node')
 
+        self.logger = agent.get_logger().get_child("vision_node")
+        
         self._ball_pos_in_vis = np.array([0, 0]) # 
         self._ball_pos_in_vis_D = np.array([0, 0])
         self._ball_pos_in_vis_I = np.array([0, 0])
@@ -70,62 +73,33 @@ class Vision:
         self._self_pos_accuracy = 0
         self._ball_pos_accuracy = 0
         self._last_track_ball_time = -99999999
-        self._last_track_ball_phase_time = time.time()
+        self._last_track_ball_phase_time = self.get_clock().now().nanoseconds * 1e-9
         self.ball_distance = 6000
         self._search_ball_phase = 0
 
-        # self.head = 0.75
-        # self.neck = 0
-        self._force_look_at = [None, None]
-
-        self._config = config
-        self._location_sub = rospy.Subscriber("/THMOS/location",  \
-                                        Pose2D,  \
-                                        self._position_callback)
-        self._vision_sub = rospy.Subscriber("/THMOS/vision/detections", \
-                                        VisionDetections, \
-                                        self._vision_callback)
-        # self._soccer_real_sub = rospy.Subscriber("/soccer_real_pos_in_map",  \
-        #                                 Point, \
-        #                                 self._soccer_real_callback)
-        # self._head_pub = rospy.Publisher("/head_goals",  \
-        #                                 JointState,  \
-        #                                 queue_size = 1)
+        self._config = self.agent._config
         
-        # self._head_set([self.head, self.neck])
-
-
-    def _track_ball_stage_head_up(self):
-        self._head_set([0.70, 0])
-
-
-    def _track_ball(self):
-        if(time.time() - self._last_track_ball_time < \
-                self._config["move_head_time_gap"]):
-            return
-        self._last_track_ball_time = time.time()
-
-        self._track_ball_stage_looking_at_ball()
-            
-    
-
-    # _head_set(args: float[2]):
-    #   设置头的角度，并记录角度信息并发布
-    #    @param head: 上下角度，[0,1.5]，1.5下，0上
-    #    @param neck: 左右角度，[-1.1,1.1]，-1.1右，1.1左
-    def _head_set(self, args):
-        if(not self._force_look_at[0] is None):
-            args[0] = self._force_look_at[0]
-        if(not self._force_look_at[1] is None):
-            args[1] = self._force_look_at[1]
-        head = np.clip(args[0], 0, 0.9)
-        neck = np.clip(args[1], -1.1, 1.1)
-        self.head, self.neck = head, neck
-        head_goal = JointState()
-        head_goal.name = ["head", "neck"]
-        head_goal.header = Header()
-        head_goal.position = [head, neck]
-        self._head_pub.publish(head_goal) 
+        # Configure QoS profile for subscriptions
+        qos_profile = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10
+        )
+        
+        # Create subscribers
+        self._location_sub = self.create_subscription(
+            Pose2D,
+            "/THMOS/location",
+            self._position_callback,
+            qos_profile
+        )
+        
+        self._vision_sub = self.create_subscription(
+            VisionDetections,
+            "/THMOS/vision/detections",
+            self._vision_callback,
+            qos_profile
+        )
 
 
     def _position_callback(self, msg):
@@ -136,60 +110,71 @@ class Vision:
     def _soccer_real_callback(self, msg):
         self._ball_pos_in_map = np.array([msg.x, msg.y])
 
-
-    def _vision_callback(self, msg):
-        layout = msg.layout
-        h = layout.dim[0].size
-        w = layout.dim[1].size
-
-        diff_time = time.time() - self._vision_last_frame_time;
-        self._vision_last_frame_time = time.time()
-        # accuracy *= exp^ -dt
-        self._self_pos_accuracy *= math.exp(-diff_time)
-        self._ball_pos_accuracy *= math.exp(-diff_time * 3)
-
-        # target_matrix shape： 
-        #   N * [class, x_center, y_center, confidence, distance, x, y, z]
-        # target_matrix的第一位表示类别，其中0-5对应
-        #   ['ball', 'goalpost', 'robot', 'L-Intersection', 
-        #       'T-Intersection', 'X-Intersection']
-        # x_center, y_center 表示物体中心像素坐标
-        # confidence置信度，表示物体识别准确度，越高越好
-        # distance是通过相机内参矩阵算出来的结果，只有球有效
-        # x, y, z 表示目标相对于机器人身体坐标系的坐标，机器
-        # 人身体坐标系z朝上，y朝前，右手坐标系，单位mm
-        obj_mat = np.array(msg.data, dtype=np.float32).reshape(h, w)
-        ball_row, ball_confidence = None, 0
-
-        for i, row in enumerate(obj_mat):
-            if(row[0] == 0):  # ball
-                if(row[3] > ball_confidence):
-                    ball_confidence = row[3]
-                    ball_row = row
-            elif(int(row[0]) <= 5):
-                self._self_pos_accuracy += \
-                        self._config["pos_accuracy_add"][str(int(row[0]))]
-
-        if(ball_row is not None):
-            self._ball_pos_in_vis_D = \
-                    (ball_row[1:3] - self._ball_pos_in_vis) * \
-                    0.0001 / (time.time() - self._vision_last_frame_time)
-            self._ball_pos_in_vis_I = self._ball_pos_in_vis_I * \
-                    self._config["ball_accuracy_integrated_factor"] +  \
-                    ball_row[1:3] - np.array(self._config["vision_size"]) / 2; 
-
-            self._ball_pos_in_vis           = ball_row[1:3]
-            self.ball_distance              = ball_row[4]
-            self._ball_pos                  = ball_row[5:8]
-            self._ball_pos_accuracy        += ball_confidence * 100
+    def _vision_callback(self, msg: VisionDetections):
+        """
+        处理机器人位置信息并结合视觉检测计算球的绝对坐标
         
+        Args:
+            msg (RobotPosition): 包含机器人位置和朝向的消息
+        """
         
-        # self._vision_last_frame_time        = time.time()
-        
-        # self._track_ball(); 
+        # 输出调试信息
+        self.logger.debug(f"Robot position: ({self.self_pos[0]:.2f}, {self.self_pos[1]:.2f})")
+        self.logger.debug(f"Robot yaw: {self.self_yaw:.2f} radians")
 
-    def look_at(self, args):
-        self._force_look_at = args
+        ball_objects = [obj for obj in msg.detected_objects if obj.label == "Ball"]
+        if not ball_objects:
+            self.logger.info("No ball objects detected")
+            return  
+        
+        # Find the best ball with highest confidence
+        best_ball = max(ball_objects, key=lambda obj: obj.confidence)
+
+        # Validate message
+        if best_ball.xmin >= best_ball.xmax or best_ball.ymin >= best_ball.ymax:
+            self.logger.warning("Invalid bounding box received for best ball")
+            self._last_coord = None  # Invalid bounding box
+            return
+            
+        # Calculate target center coordinates
+        curr_coord = (np.array([best_ball.xmin, best_ball.ymin]) + 
+                      np.array([best_ball.xmax, best_ball.ymax])) * 0.5
+        
+        # 获取position_projection (x, y) 坐标
+        # 假设_position_projection格式为 [x, y]，其中y朝前，z朝上
+        position_projection = np.array(best_ball.position_projection) * 1000 # 转换为毫米
+        if position_projection.shape != (2,):
+            self.logger.error("Invalid position_projection format, expected 2D coordinates")
+            return
+        # 保存相对坐标
+        self._ball_pos = position_projection
+        
+        # 计算到球的距离
+        distance = np.linalg.norm(position_projection) / 1000  # 转换为米
+        
+        # 计算球在球场中的绝对坐标
+        # 创建旋转矩阵 (假设机器人坐标系与全局坐标系的转换)
+        # 注意: 这里假设self_yaw是绕z轴的旋转角（符合ROS惯例）
+        rotation_matrix = np.array([
+            [np.cos(self.self_yaw), -np.sin(self.self_yaw)],
+            [np.sin(self.self_yaw), np.cos(self.self_yaw)]
+        ])
+        
+        # 将相对坐标旋转到全局坐标系
+        rotated_relative = rotation_matrix @ position_projection
+        
+        # 计算绝对坐标（全局坐标系）
+        absolute_coord = self.self_pos + rotated_relative
+        
+        # 保存计算结果
+        self._ball_distance = distance
+        self._ball_pos_in_map = absolute_coord
+        self._ball_pos_in_vis = curr_coord
+        
+        # 输出信息
+        self.logger.info(f"Ball relative coordinates: ({position_projection[0]:.2f}, {position_projection[1]:.2f})")
+        self.logger.info(f"Estimated distance to ball: {distance:.2f} meters")
+        self.logger.info(f"Ball absolute coordinates on field: ({absolute_coord[0]:.2f}, {absolute_coord[1]:.2f})")
 
     def get_ball_pos(self):
         return self._ball_pos
@@ -204,3 +189,17 @@ class Vision:
         return self._ball_pos_accuracy > self._config["ball_pos_accuracy_critical"]
 
 
+def main(args=None):
+    rclpy.init(args=args)
+    config = {
+    }
+    
+    vision_node = Vision(config)
+    rclpy.spin(vision_node)
+    
+    vision_node.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()    
