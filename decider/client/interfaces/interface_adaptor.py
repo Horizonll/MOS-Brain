@@ -103,7 +103,7 @@ class Interfaces(Node):
         self._facing_pub.publish(msg_pub)
 
 
-    def _odometer_cb(self, msg: Odometer):
+    def _odometer_cb(self, msg: Odometry):
         msg_pub = Vector3()
         msg_pub.x = msg.x
         msg_pub.y = msg.y
