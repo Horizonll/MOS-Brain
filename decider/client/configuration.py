@@ -1,56 +1,69 @@
-# configuration.py
-#
-#   @description : Loading configurations from config.json and 
-#                  config_overide.json for variant configs
-#   
-#   @interfaces : 
-#       1. read_config(): dictionary
-#           description: reading config from config.json
-#                        and overide it from config_override.json
-#           return: a dictionary, the config
-# 
-#   @note :
-#       1. The .json parser allows annotation begins with '//' or
-#          quoted with '/*' and '*/' (C++ flavor)
-#
-
 import json
 import re
-
+import yaml
+from pathlib import Path
+import os
 
 def _remove_comment(json_str):
-    # remove single line comment
+    # 移除单行注释
     json_str = re.sub(r'//.*', '', json_str)
-    # remove multiple lines comment
+    # 移除多行注释
     json_str = re.sub(r'/\*.*?\*/', '', json_str, flags=re.DOTALL)
     return json_str
 
+def _deep_merge(dest, src):
+    """递归合并字典，支持多级覆盖"""
+    for key, value in src.items():
+        if isinstance(value, dict) and key in dest and isinstance(dest[key], dict):
+            dest[key] = _deep_merge(dest[key], value)
+        else:
+            dest[key] = value
+    return dest
+
+def _load_file(file_path):
+    """根据文件扩展名自动选择解析器"""
+    file_ext = Path(file_path).suffix.lower()
+    content = Path(file_path).read_text()
+    
+    if file_ext in ['.json']:
+        content = _remove_comment(content)
+        return json.loads(content)
+    elif file_ext in ['.yaml', '.yml']:
+        return yaml.safe_load(content)
+    else:
+        raise ValueError(f"Unsupported file format: {file_ext}")
 
 def load_config():
     config = {}
-
-    # Loading basic configs; which is mandatory
+    
+    # 获取当前Python文件所在目录
+    current_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+    
+    # 定义配置文件路径（相对于当前脚本目录）
+    base_config_path = current_dir / "config.json"
+    
+    # 加载基础配置（必需）
     try:
-        f_config = open("/home/thmos/MOS-Brain/decider/client/config.json", "r")
-        json_str = f_config.read()
-        json_str = _remove_comment(json_str)
-        config = json.loads(json_str)
-    except:
-        print("[!] Can not parse config.json !");
-        print(json_str)
+        config = _load_file(base_config_path)
+    except Exception as e:
+        print(f"[!] 无法解析基础配置文件 {base_config_path} !")
+        print(e)
         exit()
 
-    # Loading override configs; this is not mandatory
-    try:
-        f_override = open("/home/thmos/MOS-Brain/decider/client/config_override.json", "r")
-        json_str = f_override.read()
-        json_str = _remove_comment(json_str)
-        override = json.loads(json_str)
-        for key, value in override.items():
-            config[key] = value
-    except Exception as e:
-        print("[!] Can not parse config_override.json! " + str(e))
-        print(json_str)
-        pass
+    # 加载覆盖配置（可选）
+    override_paths = [
+        current_dir / "config_override.json",
+        current_dir / "config_override.yaml",
+        current_dir / "config_override.yml"
+    ]
+
+    for path in override_paths:
+        if path.exists():
+            try:
+                override = _load_file(path)
+                config = _deep_merge(config, override)
+            except Exception as e:
+                print(f"[!] 无法解析覆盖配置文件 {path} !")
+                print(e)
 
     return config

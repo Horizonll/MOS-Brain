@@ -31,7 +31,7 @@ class Action:
     
     def __init__(self, config): 
         self._config = config
-        self._cmd_vel_pub = rospy.Publisher("/cmd_vel", \
+        self._cmd_vel_pub = rospy.Publisher("/THMOS/walk/move", \
                                         Twist,  \
                                         queue_size = 1)
 

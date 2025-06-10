@@ -1,4 +1,6 @@
 {
+    "id": 0,
+    "team_id": 12,
     // kick
     "kick_key_is_y": true, 
     "dribble_to_kick": [-2300, 2300], 
