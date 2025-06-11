@@ -52,7 +52,7 @@ class Action:
 
         head_pose_msg = HeadPose()
         head_pose_msg.header = Header()
-        head_pose_msg.header.stamp = self.get_clock().now().to_msg()
+        head_pose_msg.header.stamp = self.agent.get_clock().now().to_msg()
         head_pose_msg.pitch = pitch
         head_pose_msg.yaw = yaw
 

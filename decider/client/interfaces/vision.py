@@ -1,7 +1,3 @@
-# interfaces/vision.py
-#   @description:   Subscribe position
-#
-
 import math
 import time
 import numpy as np
@@ -76,6 +72,11 @@ class Vision(Node):
 
         self._config = self.agent._config
         
+        # 设置默认配置参数
+        self._config.setdefault("ball_pos_accuracy_critical", 0.5)
+        self._config.setdefault("max_valid_ball_distance", 6000)  # 默认6米
+        self._config.setdefault("max_ball_data_age", 0.5)  # 默认0.5秒
+        
         # Configure QoS profile for subscriptions
         qos_profile = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -114,6 +115,8 @@ class Vision(Node):
         Args:
             msg (RobotPosition): 包含机器人位置和朝向的消息
         """
+        # 更新视觉数据时间戳
+        self._vision_last_frame_time = time.time()
         
         # 输出调试信息
         self.logger.debug(f"Robot position: ({self.self_pos[0]:.2f}, {self.self_pos[1]:.2f})")
@@ -122,15 +125,20 @@ class Vision(Node):
         ball_objects = [obj for obj in msg.detected_objects if obj.label == "Ball"]
         if not ball_objects:
             self.logger.info("No ball objects detected")
+            # 没有检测到球时重置相关变量
+            self._ball_pos_accuracy = 0
             return  
         
         # Find the best ball with highest confidence
         best_ball = max(ball_objects, key=lambda obj: obj.confidence)
+        
+        # 更新球位置的置信度
+        self._ball_pos_accuracy = best_ball.confidence
 
         # Validate message
         if best_ball.xmin >= best_ball.xmax or best_ball.ymin >= best_ball.ymax:
             self.logger.warning("Invalid bounding box received for best ball")
-            self._last_coord = None  # Invalid bounding box
+            self._ball_pos_accuracy = 0
             return
             
         # Calculate target center coordinates
@@ -139,11 +147,12 @@ class Vision(Node):
         
         # 获取position_projection (x, y) 坐标
         # 假设_position_projection格式为 [x, y]，其中y朝前，z朝上
-        position_projection = np.array(best_ball.position_projection) * 1000 # 转换为毫米
+        position_projection = np.array(best_ball.position_projection)
         # 裁剪前两个值
         position_projection = position_projection[:2]
         if position_projection.shape != (2,):
             self.logger.error("Invalid position_projection format, expected 2D coordinates")
+            self._ball_pos_accuracy = 0
             return
         # 保存相对坐标
         self._ball_pos = position_projection
@@ -166,14 +175,14 @@ class Vision(Node):
         absolute_coord = self.self_pos + rotated_relative
         
         # 保存计算结果
-        self._ball_distance = distance
+        self.ball_distance = distance
         self._ball_pos_in_map = absolute_coord
         self._ball_pos_in_vis = curr_coord
         
         # 输出信息
-        self.logger.info(f"Ball relative coordinates: ({position_projection[0]:.2f}, {position_projection[1]:.2f})")
-        self.logger.info(f"Estimated distance to ball: {distance:.2f} meters")
-        self.logger.info(f"Ball absolute coordinates on field: ({absolute_coord[0]:.2f}, {absolute_coord[1]:.2f})")
+        # self.logger.info(f"Ball relative coordinates: ({position_projection[0]:.2f}, {position_projection[1]:.2f})")
+        # self.logger.info(f"Estimated distance to ball: {distance:.2f} meters")
+        # self.logger.info(f"Ball absolute coordinates on field: ({absolute_coord[0]:.2f}, {absolute_coord[1]:.2f})")
 
     def get_ball_pos(self):
         return self._ball_pos
@@ -185,7 +194,24 @@ class Vision(Node):
         return self._ball_pos_in_map
 
     def get_if_ball(self):
-        return self._ball_pos_accuracy > self._config["ball_pos_accuracy_critical"]
+        """
+        判断是否成功检测到球
+        
+        Returns:
+            bool: True表示成功检测到球，False表示未检测到
+        """
+        
+        # 检查是否有有效的视觉数据
+        if np.all(self._ball_pos_in_vis == 0):
+            return False
+        
+        # 检查视觉数据的时间戳，确保数据是最近的
+        current_time = time.time()
+        if current_time - self._vision_last_frame_time > 2.0:
+            return False
+        
+        # 如果所有检查都通过，返回True表示检测到球
+        return True
 
 
 def main(args=None):
