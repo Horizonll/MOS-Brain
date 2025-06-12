@@ -469,6 +469,7 @@ def main(args=None):
         print("Program interrupted by the user")
     finally:
         # Cleanup
+        agent.stop()
         agent.destroy_node()
         rclpy.shutdown()
 
