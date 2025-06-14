@@ -58,7 +58,7 @@ cd ~/MOS-Brain/decider/client && python3 decider.py --debug
 拿到本机ip后，在同一子网内的设备上（如笔记本）运行测试程序
 
 ```sh
-cd ~/MOS-Brain/decider/test && python3 decider_tester.py --ip your-ip
+cd ~/MOS-Brain/decider/test && python3 decider_tester.py --ip robot-ip
 ```
 
 - 情况二：测试比赛策略
