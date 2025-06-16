@@ -50,11 +50,12 @@ class Action:
             
     def _move_head(self, pitch, yaw):
 
-        head_pose_msg = HeadPose()
+        head_pose_msg = JointState()
         head_pose_msg.header = Header()
         head_pose_msg.header.stamp = self.agent.get_clock().now().to_msg()
-        head_pose_msg.pitch = pitch
-        head_pose_msg.yaw = yaw
+        head_pose_msg.position = [0.0, 0.0] 
+        head_pose_msg.position[0] = float(yaw)  # Set yaw
+        head_pose_msg.position[1] = float(pitch)
 
         self._head_pose_pub.publish(head_pose_msg)
 
