@@ -1,6 +1,7 @@
 import math
 import time
 from transitions import Machine
+import rospy
 
 
 class KickStateMachine:
