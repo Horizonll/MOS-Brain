@@ -8,8 +8,9 @@
 
 import os
 import rclpy
+from sensor_msgs import JointState
 from geometry_msgs.msg import Quaternion, Twist, Pose2D, Point
-from thmos_msg.msg import VisionDetections, VisionObj, HeadPose
+from thmos_msgs.msg import VisionDetections, VisionObj
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from std_msgs.msg import Float32MultiArray, Header
 
@@ -43,7 +44,7 @@ class Action:
 
         self._cmd_vel_pub = self.agent.create_publisher(Twist, "/THMOS/walk/move", 1)
         self._head_pose_pub = self.agent.create_publisher(
-            HeadPose,
+            JointState,
             "hardware/set_head_pose",
             qos_profile
         )

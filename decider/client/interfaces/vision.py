@@ -7,7 +7,7 @@ from std_msgs.msg import Float32MultiArray, Header
 from sensor_msgs.msg import JointState, Imu
 from geometry_msgs.msg import Quaternion, Twist, Pose2D, Point
 from nav_msgs.msg import Odometry
-from thmos_msg.msg import VisionDetections, VisionObj, HeadPose
+from thmos_msgs.msg import VisionDetections, VisionObj, HeadPose
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
 class Vision(Node):
