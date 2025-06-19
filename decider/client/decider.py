@@ -428,7 +428,7 @@ def main():
 
         interval = 1.0 / args.rate
         while True:
-            if args.debug_mode:
+            if args.debug:
                 print("correct")
                 agent.debug_run()
             else:
@@ -438,6 +438,7 @@ def main():
     except KeyboardInterrupt:
         print("Program interrupted by the user")
     finally:
+        agent.stop()
         pass
 
 

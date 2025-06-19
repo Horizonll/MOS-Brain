@@ -1,6 +1,7 @@
 import time
 from transitions import Machine
 import numpy as np
+import rospy
 
 
 class GoBackToFieldStateMachine:
@@ -90,8 +91,8 @@ class GoBackToFieldStateMachine:
         self.fine_yaw_start_threshold_degree = self._config.get("go_back_to_field").get("fine_yaw_start_threshold_degree", 20)  # 精细偏航开始阈值（度）
         self.fine_yaw_end_threshold_degree = self._config.get("go_back_to_field").get("fine_yaw_end_threshold_degree", 5)  # 精细偏航结束阈值（度）
         self.good_yaw_threshold_degree = self._config.get("go_back_to_field").get("good_yaw_threshold_degree", 10)  # 良好偏航阈值（度）
-        self.walk_vel_x = self._config.get("go_back_to_field").get("walk_vel_x", 0.3)  # 前进速度（m/s）
-        self.walk_vel_theta = self._config.get("go_back_to_field").get("walk_vel_theta", 0.3)  # 旋转速度（rad/s）
+        self.walk_vel_x = self._config.get("go_back_to_field").get("walk_vel_x", 0.8)  # 前进速度（m/s）
+        self.walk_vel_theta = self._config.get("go_back_to_field").get("walk_vel_theta", 0.8)  # 旋转速度（rad/s）
         self.arrive_trust_time = self._config.get("go_back_to_field").get("arrive_trust_time", 5)  # 到达目标后信任时间（秒）
         self.aim_x = self._config.get("go_back_to_field").get("aim_x", 0)  # 目标位置的 x 坐标（mm）
         self.aim_y = self._config.get("go_back_to_field").get("aim_y", 1000)  # 目标位置的 y 坐标（mm）
