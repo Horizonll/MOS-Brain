@@ -25,7 +25,6 @@ logging.basicConfig(
 # ROS 2
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Twist
 
 # Submodules
@@ -235,6 +234,8 @@ class Agent(Node):
     def debug_run(self) -> None:
         """Debug mode execution loop."""
         try:
+            self.get_logger().info(f"ball angle: {self.get_ball_angle()}")
+            self.get_logger().info(f"ball pos: {self.get_ball_pos()}")
             cmd = self._command["command"]
             self.get_logger().info(f"Debug_mode: {cmd}")
             
@@ -321,7 +322,7 @@ class Agent(Node):
         ball_x = ball_pos[0]
         ball_y = ball_pos[1]
         
-        if ball_pos is not None and ball_x is not None and ball_y is not None:
+        if ball_pos is not None and ball_x is not None and ball_y is not None and self.get_if_ball():
             if ball_x == 0 and ball_y == 0:
                 return None
             else:

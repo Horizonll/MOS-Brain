@@ -3,6 +3,7 @@ from math import inf
 import time
 from transitions import Machine
 import numpy as np
+import logging
 
 
 class ChaseBallStateMachine:
@@ -10,6 +11,9 @@ class ChaseBallStateMachine:
         """Initialize the chase ball state machine with an agent"""
         self.agent = agent
         self.logger = self.agent.get_logger().get_child("chase_ball_fsm")
+
+        logging.getLogger('transitions').setLevel(logging.WARNING)
+
         self._config = self.agent.get_config()
         self.read_params()
 

@@ -63,6 +63,7 @@ class Vision(Node):
         self._ball_pos = np.array([0, 0]) # mm
         self._ball_pos_in_map = np.array([0, 0]) # mm
         self._vision_last_frame_time = 0
+        self._last_ball_time = 0
         self.self_pos = np.array([0,0])
         self.self_yaw = 0
         self._self_pos_accuracy = 0
@@ -94,7 +95,7 @@ class Vision(Node):
         
         self._vision_sub = self.agent.create_subscription(
             VisionDetections,
-            "/THMOS/vision/detections",
+            "/THMOS/vision/obj_pos",
             self._vision_callback,
             qos_profile
         )
@@ -122,7 +123,7 @@ class Vision(Node):
         self.logger.debug(f"Robot position: ({self.self_pos[0]:.2f}, {self.self_pos[1]:.2f})")
         self.logger.debug(f"Robot yaw: {self.self_yaw:.2f} radians")
 
-        ball_objects = [obj for obj in msg.detected_objects if obj.label == "Ball"]
+        ball_objects = [obj for obj in msg.detected_objects if obj.label == "ball"]
         if not ball_objects:
             self.logger.info("No ball objects detected")
             # 没有检测到球时重置相关变量
@@ -154,6 +155,13 @@ class Vision(Node):
             self.logger.error("Invalid position_projection format, expected 2D coordinates")
             self._ball_pos_accuracy = 0
             return
+
+        # 如果有nan值，记录错误并返回
+        if np.isnan(position_projection).any():
+            self.logger.error("NaN values found in position_projection")
+            self._ball_pos_accuracy = 0
+            return
+
         # 保存相对坐标
         self._ball_pos = position_projection
         
@@ -178,6 +186,8 @@ class Vision(Node):
         self.ball_distance = distance
         self._ball_pos_in_map = absolute_coord
         self._ball_pos_in_vis = curr_coord
+
+        self._last_ball_time = time.time()
         
         # 输出信息
         # self.logger.info(f"Ball relative coordinates: ({position_projection[0]:.2f}, {position_projection[1]:.2f})")
@@ -207,7 +217,7 @@ class Vision(Node):
         
         # 检查视觉数据的时间戳，确保数据是最近的
         current_time = time.time()
-        if current_time - self._vision_last_frame_time > 2.0:
+        if current_time - self._last_ball_time > 0.5:
             return False
         
         # 如果所有检查都通过，返回True表示检测到球

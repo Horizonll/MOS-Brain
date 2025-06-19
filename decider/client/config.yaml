@@ -10,9 +10,9 @@ kick_to_dribble: [-1700, 1700]
 walk_vel_x: 0.1
 walk_vel_y: 0.1
 walk_vel_theta: 0.1
-max_walk_vel_x: 0.3
-max_walk_vel_y: 0.15
-max_walk_vel_theta: 0.3
+max_walk_vel_x: 1
+max_walk_vel_y: 0.5
+max_walk_vel_theta: 3
 
 # networking
 server_ip: "192.168.9.105"
@@ -107,7 +107,7 @@ go_back_to_field:
   arrive_trust_time: 20
 chase:
   close_angle_threshold_rad: 0.4
-  walk_vel_x: 0.10
+  walk_vel_x: 0.4
   walk_vel_theta: 0.4
   default_chase_distance: 0.4
 kick:

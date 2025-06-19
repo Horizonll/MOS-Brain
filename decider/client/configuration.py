@@ -40,7 +40,7 @@ def load_config():
     current_dir = Path(os.path.dirname(os.path.abspath(__file__)))
     
     # 定义配置文件路径（相对于当前脚本目录）
-    base_config_path = current_dir / "config.json"
+    base_config_path = current_dir / "config.yaml"
     
     # 加载基础配置（必需）
     try:
