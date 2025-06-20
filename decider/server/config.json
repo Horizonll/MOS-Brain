@@ -1,6 +1,6 @@
 {
     "control_interval_s": 1.0,
-    "broadcast_address": "192.168.15.255",
+    "broadcast_address": "192.168.9.255",
     "shooting": {
         "ball_in_control_threshold_m": 0.6,        
         "ball_out_of_control_threshold_m": 1.2,   
