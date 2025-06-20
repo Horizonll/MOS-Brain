@@ -177,7 +177,7 @@ class DribbleStateMachine:
             )
         elif ball_distance < self.min_ball_distance_m:
             rospy.loginfo(
-                f"[DRIBBLE FSM] ball_distance ({ball_distance}) < 0.35. Moving forward..."
+                f"[DRIBBLE FSM] ball_distance ({ball_distance}) < 0.0. Moving forward..."
             )
             self.agent.cmd_vel(
                 -self.forward_vel,
