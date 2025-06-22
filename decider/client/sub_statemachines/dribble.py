@@ -148,7 +148,7 @@ class DribbleStateMachine:
         """
         rospy.loginfo("[DRIBBLE FSM] Stopping...")
         self.agent.cmd_vel(0, 0, 0)
-        time.sleep(1)
+        time.sleep(0.4)
         rospy.loginfo("[DRIBBLE FSM] Stopped")
 
     def adjust_pos_to_ball(self):
@@ -177,7 +177,7 @@ class DribbleStateMachine:
             )
         elif ball_distance < self.min_ball_distance_m:
             rospy.loginfo(
-                f"[DRIBBLE FSM] ball_distance ({ball_distance}) < 0.35. Moving forward..."
+                f"[DRIBBLE FSM] ball_distance ({ball_distance}) < 0.0. Moving forward..."
             )
             self.agent.cmd_vel(
                 -self.forward_vel,
@@ -496,10 +496,10 @@ class DribbleStateMachine:
 
         self.forward_vel = self._config.get("dribble", {}).get("walk_vel_x", 0.1)
         self.backward_vel = self._config.get("dribble", {}).get("back_vel", 0.05)
-        self.horizontal_adjust_vel_y = self._config.get("dribble", {}).get("horizontal_adjust_vel_y", 0.03)
-        self.horizontal_adjust_vel_theta = self._config.get("dribble", {}).get("horizontal_adjust_vel_theta", 0.2)
+        self.horizontal_adjust_vel_y = self._config.get("dribble", {}).get("horizontal_adjust_vel_y", 0.3)
+        self.horizontal_adjust_vel_theta = self._config.get("dribble", {}).get("horizontal_adjust_vel_theta", 0.3)
         self.rotate_vel_theta = self._config.get("dribble", {}).get("rotate_vel_theta", 0.3)
-        self.adjust_angle_to_goal_vel_y = self._config.get("dribble", {}).get("adjust_angle_to_goal_vel_y", 0.08)
+        self.adjust_angle_to_goal_vel_y = self._config.get("dribble", {}).get("adjust_angle_to_goal_vel_y", 0.3)
         self.adjust_angle_to_goal_vel_theta = self._config.get("dribble", {}).get("adjust_angle_to_goal_vel_theta", 0.3)
     
     # def good_angle(self):
