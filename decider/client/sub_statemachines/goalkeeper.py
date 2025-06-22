@@ -138,14 +138,14 @@ class GoalkeeperStateMachine:
             self.agent.cmd_vel(
                 0,
                 -self.horizontal_adjust_vel_y,
-                (self.agent.get_self_yaw()-self.aim_yaw)/30
+                0
             )
         elif ball_x < 0:
             rospy.loginfo(f"[GOALKEEPER FSM] Moving right (Ball x: {ball_x})")
             self.agent.cmd_vel(
                 0,
                 self.horizontal_adjust_vel_y,
-                (self.agent.get_self_yaw()-self.aim_yaw)/30
+                0
             )
 
     def adjust_ball_angle(self):
