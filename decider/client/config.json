@@ -172,6 +172,7 @@
         "lost_angle_to_target_threshold_degree": 30,
         "lost_ball_x_threshold_mm": 80,
         "lost_ball_distance_threshold_m": 2.0,
+        "aim_yaw": 180,
 	"goalkeeper_0_y": 3700
     }
 }

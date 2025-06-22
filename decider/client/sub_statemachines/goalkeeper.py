@@ -80,13 +80,10 @@ class GoalkeeperStateMachine:
         self.calculate_angle()
 
         # 计算目标角度
-        self.aim_yaw = self.agent.get_command().get('data').get('aim_yaw', None)
+        self.aim_yaw = self._config.get("goalkeeper", {}).get('aim_yaw', None)
 
-        if self.aim_yaw is None:
-            if self.agent.get_self_pos()[1] > self._config.get("goalkeeper", {}).get("goalkeeper_0_y", 3700):
-                self.aim_yaw = 0.0
-            else:
-                self.aim_yaw = self.calc_angle_to_goal_degree()
+        if self.aim_yaw is None: 
+            self.aim_yaw = 180.0
             rospy.loginfo(f"[GOALKEEPER FSM] Calculated aim_yaw: {self.aim_yaw:.2f}°")
 
         self.machine.model.trigger("goalkeeper")
@@ -326,25 +323,6 @@ class GoalkeeperStateMachine:
         self.angle_to_goal_rad = angle_to_goal_rad
         self.angle_ball_to_goal_rad = angle_ball_to_goal
         rospy.loginfo("[GOALKEEPER FSM] Angles calculated")
-
-    def goalkeeper_forward(self):
-        """
-        向前带球
-        """
-        rospy.loginfo("[GOALKEEPER FSM] Dribbling forward...")
-        vel_x = self.forward_vel
-        vel_y = 0.0
-        vel_theta = 0.0
-
-        # if self.direction:
-        #     vel_y = -self._config.get("walk_vel_y", 0.05)
-        #     vel_theta = -self._config.get("walk_vel_theta", 0.3)
-        # else:
-        #     vel_y = self._config.get("walk_vel_y", 0.05)
-        #     vel_theta = self._config.get("walk_vel_theta", -0.3)
-
-        self.agent.cmd_vel(vel_x, vel_y, vel_theta)
-        rospy.loginfo("[GOALKEEPER FSM] Goalkeeper forward done")
 
     def calc_angle_to_goal_degree(self):
         """
