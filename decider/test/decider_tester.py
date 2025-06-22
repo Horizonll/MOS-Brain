@@ -11,6 +11,7 @@ COMMANDS = {
     'c': {'name': 'chase_ball', 'shortcut': 'c', 'description': 'Chase Ball'},
     'k': {'name': 'kick', 'shortcut': 'k', 'description': 'Kick Ball'},
     'g': {'name': 'go_back_to_field', 'shortcut': 'g', 'description': 'Return to Field'},
+    'p': {'name': 'goalkeeper', 'shortcut': 'p', 'description': 'Guard the goal'},
     'q': {'name': 'exit', 'shortcut': 'q', 'description': 'Exit Program'}
 }
 
@@ -22,6 +23,7 @@ COMMANDS_DATA = {
     "chase_ball": {},
     "kick": {},
     "go_back_to_field": {'aim_x': 0, 'aim_y': 2000, 'aim_yaw': 0},
+    "goalkeeper": {},
     "exit": {},
 }
 

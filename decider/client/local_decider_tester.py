@@ -44,6 +44,7 @@ COMMANDS = {
     "chase_ball": 'chase_ball',
     "shoot": 'kick',
     "go_back_to_field": 'go_back_to_field',
+    "goalkeeper": 'goalkeeper',
 }
 
 COMMANDS_DATA = {
@@ -54,6 +55,7 @@ COMMANDS_DATA = {
     "chase_ball": {},
     "kick": {},
     "go_back_to_field": {'aim_x': 0, 'aim_y': 2000, 'aim_yaw': 0},
+    "goalkeeper": {},
     "exit": {},
 }
 

@@ -154,5 +154,24 @@
         "rotate_vel_theta": 0.5,
         "horizontal_adjust_forward_vel": 0.2,
         "rotate_vel_y": 0.05
+    },
+    "goalkeeper": {
+        "angle_to_ball_adjust_threshold_degree": 11.46,
+        "good_angle_to_goal_adjust_threshold_degree": 10,
+        "goal_center_bias_mm": 500,
+        "walk_vel_x": 0.30,
+        "back_vel": 0.10,
+        "horizontal_adjust_vel_y": 0.30,
+        "horizontal_adjust_vel_theta": 0.3,
+        "rotate_vel_theta": 0.3,
+        "adjust_angle_to_goal_vel_y": 0.30,
+        "adjust_angle_to_goal_vel_theta": 0.3,
+        "min_ball_distance_m": 0.0,
+        "max_ball_distance_m": 0.55,
+        "good_horizontal_position_to_ball_threshold_mm": 100,
+        "lost_angle_to_target_threshold_degree": 30,
+        "lost_ball_x_threshold_mm": 80,
+        "lost_ball_distance_threshold_m": 2.0,
+	"goalkeeper_0_y": 3700
     }
 }
