@@ -69,7 +69,7 @@ class GoalkeeperStateMachine:
                 "dest": "go_back_to_field",
                 "conditions": "bad_pos_to_ball",
                 "after": "adjust_horizontal_position",
-            }''',
+            },'''
         ]
         self.machine = Machine(
             model=self,
