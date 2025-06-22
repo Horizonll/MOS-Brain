@@ -104,25 +104,6 @@ class GoalkeeperStateMachine:
         self.agent.cmd_vel(0, 0, 0)
         time.sleep(0.4)
         rospy.loginfo("[GOALKEEPER FSM] Stopped")
-
-    def near_ball_to_goal(self):
-        """
-        检查球相对球门的位置是否接近
-        :return: True 表示位置接近，False 表示位置不接近
-        """
-        ball_y = self.agent.get_ball_pos()[1]
-        result = self.min_ball_distance_m < ball_y < self.max_ball_distance_m
-        rospy.loginfo(f"[DRIBBLE FSM] Near ball to goal: {'Yes' if result else 'No'}")
-        return result
-    
-    def far_ball_to_goal(self):
-        """
-        检查球相对球门的位置是否不接近
-        :return: True 表示位置不接近，False 表示位置接近
-        """
-        result = not self.near_pos_to_ball()
-        rospy.loginfo(f"[DRIBBLE FSM] Far ball to goal: {'Yes' if result else 'No'}")
-        return result
     
     def adjust_horizontal_position(self):
         """
@@ -376,13 +357,6 @@ class GoalkeeperStateMachine:
         )
         self.max_ball_distance_m = self._config.get("goalkeeper", {}).get(
             "max_ball_distance_m", 0.55
-        )
-
-        self.min_ball_distance_goal = self._config.get("goalkeeper", {}).get(
-            "min_ball_distance_goal", 0.0
-        )
-        self.max_ball_distance_goal = self._config.get("goalkeeper", {}).get(
-            "max_ball_distance_goal", 0.55
         )
 
         self.good_horizontal_position_to_ball_threshold_mm = self._config.get("goalkeeper", {}).get(
