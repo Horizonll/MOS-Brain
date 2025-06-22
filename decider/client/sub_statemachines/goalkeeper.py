@@ -56,6 +56,20 @@ class GoalkeeperStateMachine:
                 "conditions": "bad_horizontal_position",
                 "after": "adjust_horizontal_position",
             },
+            '''{
+                "trigger": "goalkeeper",
+                "source": ["horizontal_position_adjust"],
+                "dest": "chase_ball",
+                "conditions": "good_pos_to_ball",
+                "after": "kick",
+            },
+            {
+                "trigger": "goalkeeper",
+                "source": ["chase_ball"],
+                "dest": "go_back_to_field",
+                "conditions": "bad_pos_to_ball",
+                "after": "adjust_horizontal_position",
+            }''',
         ]
         self.machine = Machine(
             model=self,
@@ -104,6 +118,24 @@ class GoalkeeperStateMachine:
         self.agent.cmd_vel(0, 0, 0)
         time.sleep(0.4)
         rospy.loginfo("[GOALKEEPER FSM] Stopped")
+
+    def good_pos_to_ball(self):
+        """
+        检查球相对机器人的距离是否合适
+        :return: True 表示距离合适，False 表示距离不合适
+        """
+        result = self.min_ball_distance_m < self.agent.get_ball_distance() < self.max_ball_distance_m
+        rospy.loginfo(f"[DRIBBLE FSM] Good position to ball: {'Yes' if result else 'No'}")
+        return result
+    
+    def bad_pos_to_ball(self):
+        """
+        检查球相对机器人的距离是否不合适
+        :return: True 表示距离不合适，False 表示距离合适
+        """
+        result = not self.good_pos_to_ball()
+        rospy.loginfo(f"[DRIBBLE FSM] Bad position to ball: {'Yes' if result else 'No'}")
+        return result
     
     def adjust_horizontal_position(self):
         """
