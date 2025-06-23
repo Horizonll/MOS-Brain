@@ -36,7 +36,7 @@ import interfaces.action
 import interfaces.vision
 
 # Network
-from robot_client import RobotClient
+import network
 from receiver import Receiver
 
 class Agent(Node):
@@ -77,7 +77,7 @@ class Agent(Node):
         self._action = interfaces.action.Action(self)
         self._vision = interfaces.vision.Vision(self)
         self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"]-1, logger=self.get_logger().get_child("receiver"))
-        self._robot_client = RobotClient(self)
+        self._robot_client = network.Network(self)
         
         # Initialize state machines
         self.get_logger().info("Initializing sub-state machines")
