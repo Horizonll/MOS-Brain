@@ -18,17 +18,17 @@ class Network:
             "send_robot_data": {
                 "port": 8001, 
                 "frequency": 20,     # in Hz
-                "signature_secret": "YXdpb3BqeHo7bHas"
+                "secret": "YXdpb3BqeHo7bHas"
             },
             "receive_from_server": {
                 "port": 8002, 
                 "timeout": 10       # re-qeury server ip after timeout, in second
-                "signature_secret": "PIDcvpasdvfpIFES"
+                "secret": "PIDcvpasdvfpIFES"
             }, 
             "find_server_ip": {
                 "constant_server_ip": "auto-find", 
                 "broadcast_port": 8003, 
-                "broadcast_secret": "a2xzYXZoO29hd2pp"
+                "secret": "a2xzYXZoO29hd2pp"
             }
         }
 
@@ -56,7 +56,8 @@ class Network:
                 robot_data["ballx"] = robot_data["bally"] = None
             # TODO: comment here if signature is not required
             robot_data_str = json.dumps(robot_data)
-            hash_str = hashlib.sha3_256(robot_data_str.encode("utf-8")).hexdigest()
+            hash_str = hashlib.sha3_256(robot_data_str.encode("utf-8") + \
+                config.get("secret")).hexdigest()
             data = {"raw": robot_data_str, "signature": hash_str};
             try:
                 send_socket.connect((self.server_ip, config.port))
@@ -75,8 +76,19 @@ class Network:
         while True:
             try:
                 recv.bind((self.server_ip, config.get("port")))
-                data, addr = recv_sock.recvfrom(4096)
-                js_data = json.loads(data.decode("utf-8").strip())
+                data_with_signature_raw, addr = recv_sock.recvfrom(4096)
+                data_with_signature = json.loads(data_with_signature_raw.decode("utf-8").strip())
+
+                # verify signature
+                data = data_with_signature["raw"]
+                signature = data_with_signature["signature"]
+                target_signature = hashlib.sha3_256(data.encode("utf-8") + \
+                    config.get("secret")).hexdigest()
+                if target_signature != signature:
+                    self.logger.warn("[Network.receive_loop] Received but signature mismatch")
+                    continue
+
+                js_data = json.loads(data.strip())
                 if "command" in js_data:
                     self.agent._command = js_data
                     self.agent._last_command_time = time.time()
