@@ -200,7 +200,7 @@ class Receiver:
             pass
             rospy.logwarn("Socket timeout")
         except ConstError:
-            rospy.logwarn("Parse Error: Probably using an old protocol!")
+            rospy.logerr("Parse Error: Probably using an old protocol!")
         except Exception as e:
             logging.exception(e)
             pass
