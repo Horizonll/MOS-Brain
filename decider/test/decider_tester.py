@@ -15,7 +15,7 @@ COMMANDS = {
 }
 
 COMMANDS_DATA = {
-    "dribble": {},
+    "dribble": {'aim_yaw': 0},
     "forward": {},
     "stop": {},
     "find_ball": {},
