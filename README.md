@@ -47,7 +47,7 @@ The decision-rev of MOS-8.5.
 拿到本机ip后，在同一子网内的设备上（如笔记本）运行测试程序
 
 ```sh
-python3 decider_tester.py --ip robotip
+/usr/bin/python /home/booster/Workspace/THMOS/MOS-Brain/decider/test/decider_tester.py --ip 127.0.0.1
 ```
 
 - 情况二：测试完整流程
