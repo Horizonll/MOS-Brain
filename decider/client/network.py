@@ -1,17 +1,18 @@
-# Network.py
+# py
 #
 #   @description: Commucate with server using UDP
 #
 #   @change logs:
 #       Jun 23th, 2025: First code
+#       Jun 24th, 2025: Test passed
 
 import json, socket, time, threading, hashlib
 
 class Network:
     def __init__(self, agent):
         self.agent = agent
-        self.logger = self.agent.get_logger()
-        self.logger.info("[Network] Submodule started")
+        self.logger = self.agent.get_logger().get_child("network")
+        self.logger.info("Submodule started")
 
         # TODO: read config from file or transfer in from agent
         self.config = {
@@ -22,21 +23,42 @@ class Network:
             },
             "receive_from_server": {
                 "port": 8002, 
-                "timeout": 10       # re-qeury server ip after timeout, in second
+                "timeout": 10,       # re-qeury server ip after timeout, in second
                 "secret": "PIDcvpasdvfpIFES"
             }, 
             "find_server_ip": {
                 "constant_server_ip": "auto-find", 
-                "broadcast_port": 8003, 
+                "port": 8003, 
                 "secret": "a2xzYXZoO29hd2pp"
             }
         }
 
+        self.server_ip = self._find_server_ip()
+
+
+    def start_send_loop(self):
+        self.logger.info("Starting the send_loop thread")
+        self._send_loop_thread = threading.Thread(target=self._send_loop)
+        self._send_loop_thread.daemon = True
+        self._send_loop_thread.start()
+    
+    def start_receive_loop(self):
+        self.logger.info("Starting the recv_loop thread")
+        self._recv_loop_thread = threading.Thread(target=self._receive_loop)
+        self._recv_loop_thread.daemon = True
+        self._recv_loop_thread.start()
 
     def _send_loop(self):
         send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        send_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            send_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        except Exception as e:
+            self.logger.warn("SO_REUSEPORT are not supported!")
+        
         config = self.config.get("send_robot_data")
-        self.logger.info("[Network.send_loop] Started")
+        logger = self.logger.get_child("send_loop")
+        logger.info("Started loop")
         while True:
             robot_data = {
                 "id": self.agent.get_config()["id"],
@@ -54,41 +76,39 @@ class Network:
             }
             if not self.agent.get_if_ball():
                 robot_data["ballx"] = robot_data["bally"] = None
-            # TODO: comment here if signature is not required
-            robot_data_str = json.dumps(robot_data)
-            hash_str = hashlib.sha3_256(robot_data_str.encode("utf-8") + \
-                config.get("secret")).hexdigest()
-            data = {"raw": robot_data_str, "signature": hash_str};
+            signed_msg = self._sign_message(json.dumps(robot_data), \
+                                            config.get("secret"))
             try:
-                send_socket.connect((self.server_ip, config.port))
-                send_socket.sendall(json.dumps(data).encode("utf-8"))
+                address = (self.server_ip, config.get("port"))
+                send_socket.sendto(signed_msg.encode("utf-8"), address)
             except Exception as e:
-                self.logger.error(f"[Network.send_loop] Error sending robot data: {e}")
+                logger.error(f"Error sending robot data: {e}")
             time.sleep(1.0 / config.get("frequency"))
+        send_socket.close()
 
 
     def _receive_loop(self):
-        config = self.config.get("receive_robot_data")
-        self.logger.info("[Network.receive_loop] Started")
+        config = self.config.get("receive_from_server")
+        logger = self.logger.get_child("receive_loop")
+        logger.info("Started loop")
         recv_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         recv_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            recv_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        except Exception as e:
+            logger.warn("SO_REUSEPORT are not supported!")
         recv_socket.settimeout(config.get("timeout"))
+        recv_socket.bind(("", config.get("port")))
         while True:
             try:
-                recv.bind((self.server_ip, config.get("port")))
-                data_with_signature_raw, addr = recv_sock.recvfrom(4096)
-                data_with_signature = json.loads(data_with_signature_raw.decode("utf-8").strip())
-
-                # verify signature
-                data = data_with_signature["raw"]
-                signature = data_with_signature["signature"]
-                target_signature = hashlib.sha3_256(data.encode("utf-8") + \
-                    config.get("secret")).hexdigest()
-                if target_signature != signature:
-                    self.logger.warn("[Network.receive_loop] Received but signature mismatch")
+                data, addr = recv_socket.recvfrom(4096)
+                if addr[0] != self.server_ip:
                     continue
-
-                js_data = json.loads(data.strip())
+                data = self._verify_sign(data.decode("utf-8"), config.get("secret"))
+                if data == None:
+                    logger.warn("Signature mismatch!")
+                    continue
+                js_data = json.loads(data)
                 if "command" in js_data:
                     self.agent._command = js_data
                     self.agent._last_command_time = time.time()
@@ -96,59 +116,72 @@ class Network:
                     self.agent._robots_data = js_data["robots_data"]
                     self.agent._last_command_time = time.time()
                 else:
-                    self.logger.warn("[Network.receive_loop]" + \
-                        "Received message does not contain 'command' or 'robots_data'")
+                    logger.warn("Received message does not contain 'command' or 'robots_data'")
             except socket.timeout:
-                self.logger.error(f"[Network.receive_loop] Server lost")
+                logger.error(f"Server lost")
                 self.server_ip = self._find_server_ip()
             except json.JSONDecodeError as e:
-                self.logger.error(f"[Network.receive_loop] JSON decoding error: {e}")
+                logger.error(f"JSON decoding error: {e}")
             except KeyError as e:
-                self.logger.error(f"[Network.receive_loop] Key error: {e}")
+                self.logger.error(f"[receive_loop] Key error: {e}")
             except KeyboardInterrupt:
-                self.logger.info("[Network.receive_loop] Loop break" + \
-                    " due to KeyboradInterrupt")
+                logger.info("Loop break due to KeyboradInterrupt")
                 break
+        recv_socket.close()
         
 
-    def _find_server_ip(self):
+    def _find_server_ip(self) -> str:
         config = self.config.get("find_server_ip")
-        broadcast_port = config.get("broadcast_port")
-        broadcast_token = config.get("broadcast_secret")
+        logger = self.logger.get_child("find_server_ip")
+        port = config.get("port")
         server_ip = config.get("constant_server_ip")
-
         if server_ip != "auto-find":
-            self.logger.info(f"[Network.listen_server_ip] Constant servre ip: {server_ip}")
+            logger.info(f"Constant server ip: {server_ip}")
             return server_ip
-        
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        except Exception as e:
+            self.logger.warn("SO_REUSEPORT are not supported!")
         client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-
-        self.logger.info(f"[Network.listen_server_ip] Listening for server ip on {broadcast_port}")
-        self.logger.debug("[Network.listen_server_ip] Secret = {broadcast_secret}")
-
-        client_socket.bind(('', broadcast_port))
+        logger.info(f"Listening for server ip on {port}")
+        logger.debug("Secret = {broadcast_secret}")
+        client_socket.bind(('', port))
         while True:
             try:
                 data, addr = client_socket.recvfrom(4096)
-                # TODO: change here if you do not want encryption
-                server_ip = addr[0]
-                target = hashlib.sha3_256((server_ip + config.get("secret")).encode("utf-8")).hexdigest()
-                if message == target:
-                    break;
+                data = self._verify_sign(data.decode("utf-8"), config.get("secret"))
+                if data == addr[0]:
+                    server_ip = addr[0]
+                    logger.info(f"Verified server ip: {server_ip}")
+                    break
             except socket.timeout:
-                self.logger.debug("[Network.listen_server_ip] No broadcast" + \
-                    " message received within timeout period.")
+                logger.debug("No broadcast message received within timeout period.")
                 continue
             except KeyboardInterrupt:
-                self.logger.info("[Network.listen_server_ip] Client stopped" + \
-                    " due to KeyboradInterrupt")
+                logger.info("Client stopped due to KeyboradInterrupt")
                 break
             except Exception as e:
-                self.logger.info(f"[Network.listen_server_ip] Client stopped: {e}")
+                logger.info(f"Client stopped: {e}")
                 break
         client_socket.close()
         return server_ip
 
+
+    def _sign_message(self, message: str, secret: str) -> str:
+        hash_str = hashlib.sha3_256((message + secret).encode("utf-8")).hexdigest()
+        ret = {"raw": message, "sign": hash_str}
+        return json.dumps(ret)
     
+
+    def _verify_sign(self, data: str, secret: str) -> str:
+        try:
+            js_data = json.loads(data)
+            message = js_data.get("raw", None)
+            target_hash = hashlib.sha3_256((message + secret).encode("utf-8")).hexdigest()
+            if js_data.get("sign", None) == target_hash:
+                return message
+        except Exception as e:
+            pass
+        return None 

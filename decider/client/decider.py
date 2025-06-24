@@ -52,7 +52,7 @@ class Agent(Node):
 
         # Parse command line arguments
         self.debug_mode = args.debug if args else False
-        self.loop_rate = args.rate if args else 10.0
+        self.loop_rate = args.rate if args else 1.0
         
         # Flags and configuration
         self.if_local_test = False
@@ -76,8 +76,10 @@ class Agent(Node):
         self.get_logger().info("Registering interfaces")
         self._action = interfaces.action.Action(self)
         self._vision = interfaces.vision.Vision(self)
-        self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"]-1, logger=self.get_logger().get_child("receiver"))
+        # self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"]-1, logger=self.get_logger().get_child("receiver"))
         self._robot_client = network.Network(self)
+        self._robot_client.start_send_loop()
+        self._robot_client.start_receive_loop()
         
         # Initialize state machines
         self.get_logger().info("Initializing sub-state machines")
@@ -95,10 +97,11 @@ class Agent(Node):
     def timer_callback(self):
         """定时器回调函数，替代ROS 1中的主循环"""
         try:
-            if self.debug_mode:
-                self.debug_run()
-            else:
-                self.run()
+            self.get_logger().info(f"Command: {self._command}")
+            # if self.debug_mode:
+            #    self.debug_run()
+            # else:
+            #    self.run()
         except Exception as e:
             self.get_logger().error(f"Error in timer callback: {e}")
 
