@@ -16,31 +16,25 @@ The decision-rev of MOS-8.5.
 
 #### 调试启动流程
 
-1. 启动K1视觉
+1. 启动K1-interface
 
 ```sh
-/home/booster/Workspace/robocup_demo/scripts/start_vision.sh
+/usr/bin/python /home/booster/Workspace/THMOS/interface-booster/interface.py
 ```
 
-2. 开新终端启动ZED
+2. 启动headcontrol节点
 
 ```sh
-ros2 launch zed_wrapper zed_camera.launch.py camera_model:='zed2i'
+/usr/bin/python /home/booster/Workspace/THMOS/head-control/head_control.py
 ```
 
-3. 启动interface
+3. 启动视觉
 
 ```sh
-/bin/python /home/booster/Workspace/THMOS/interface-booster/interface.py
+/usr/bin/python /home/booster/Workspace/THMOS/vision/scripts/test_zed_ros2_debug.py
 ```
 
-4. 启动head_tracker
-
-```sh
-/bin/python /home/booster/Workspace/THMOS/head-control/head_control.py
-```
-
-5. 启动决策程序
+1. 启动决策程序
 
 - 情况一：单独测试每个状态机
 
@@ -54,6 +48,12 @@ ros2 launch zed_wrapper zed_camera.launch.py camera_model:='zed2i'
 
 ```sh
 python3 decider_tester.py --ip robotip
+```
+
+- 情况二：测试完整流程
+
+```sh
+/bin/python /home/booster/Workspace/THMOS/MOS-Brain/decider/client/decider.py
 ```
 
 ### Sync
