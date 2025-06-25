@@ -18,7 +18,7 @@ class Network:
         self.config = {
             "send_robot_data": {
                 "port": 8001, 
-                "frequency": 20,     # in Hz
+                "frequency": 10,     # in Hz
                 "secret": "YXdpb3BqeHo7bHas"
             },
             "receive_from_server": {
