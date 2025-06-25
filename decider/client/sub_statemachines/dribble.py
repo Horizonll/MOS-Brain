@@ -116,7 +116,7 @@ class DribbleStateMachine:
         self.aim_yaw = self.agent.get_command().get('data').get('aim_yaw', None)
 
         if self.aim_yaw is None:
-            if self.agent.get_self_pos()[1] > self._config.get("dribble", {}).get("dribble_0_y", 3700):
+            if self.agent.get_self_pos()[1] > self._config.get("dribble", {}).get("dribble_0_y", 3.7):
                 self.aim_yaw = 0.0
             else:
                 self.aim_yaw = self.calc_angle_to_goal_degree()
@@ -132,15 +132,15 @@ class DribbleStateMachine:
         """
         self.logger.info(f"[DRIBBLE FSM] Current state: {self.state}")
 
-    def forward(self):
-        """
-        向前带球
-        """
-        self.logger.info("[DRIBBLE FSM] Moving forward...")
+    # def forward(self):
+    #     """
+    #     向前带球
+    #     """
+    #     self.logger.info("[DRIBBLE FSM] Moving forward...")
 
-        vel_x = self.forward_vel
-        self.agent.cmd_vel(vel_x, 0, (self.agent.get_self_yaw()-self.aim_yaw)/30)
-        self.logger.info("[DRIBBLE FSM] Forward movement done")
+    #     vel_x = self.walk_vel_x
+    #     self.agent.cmd_vel(vel_x, 0, (self.agent.get_self_yaw()-self.aim_yaw)/30)
+    #     self.logger.info("[DRIBBLE FSM] Forward movement done")
 
     def stop_moving(self):
         """
@@ -171,7 +171,7 @@ class DribbleStateMachine:
                 f"[DRIBBLE FSM] ball_distance ({ball_distance}) > 0.8. Moving backward..."
             )
             self.agent.cmd_vel(
-                self.forward_vel,
+                self.walk_vel_x,
                 0,
                 0,
             )
@@ -180,7 +180,7 @@ class DribbleStateMachine:
                 f"[DRIBBLE FSM] ball_distance ({ball_distance}) < 0.35. Moving forward..."
             )
             self.agent.cmd_vel(
-                -self.forward_vel,
+                -self.walk_vel_x,
                 0,
                 0,
             )
@@ -213,7 +213,7 @@ class DribbleStateMachine:
         self.logger.info("[DRIBBLE FSM] Starting horizontal position adjustment...")
 
         # neck_angle = self.agent.get_ball_angle()
-        ball_x = self.agent.get_ball_pos()[0]
+        ball_x = self.agent.get_ball_pos()[0] - 50
         if ball_x > 0:
             self.logger.info(f"[DRIBBLE FSM] Moving left (Ball x: {ball_x})")
             self.agent.cmd_vel(
@@ -315,7 +315,7 @@ class DribbleStateMachine:
         检查是否处于好的位置
         :return: True 表示位置好，False 表示位置不好
         """
-        ball_x = self.agent.get_ball_pos()[0]
+        ball_x = self.agent.get_ball_pos()[0] - 50
         result = abs(ball_x) < self.good_horizontal_position_to_ball_threshold_mm
         self.logger.info(f"[DRIBBLE FSM] Good position: {'Yes' if result else 'No'}")
         return result
@@ -325,7 +325,7 @@ class DribbleStateMachine:
         检查是否处于不好的位置
         :return: True 表示位置不好，False 表示位置好
         """
-        ball_x = self.agent.get_ball_pos()[0]
+        ball_x = self.agent.get_ball_pos()[0] - 50
         result = abs(ball_x) > self.good_horizontal_position_to_ball_threshold_mm
         self.logger.info(f"[DRIBBLE FSM] Bad position: {'Yes' if result else 'No'}")
         return result
@@ -368,7 +368,7 @@ class DribbleStateMachine:
         :return: True 表示丢球，False 表示未丢球
         """
         # neck_angle = self.agent.get_ball_angle()
-        ball_x = self.agent.get_ball_pos()[0]
+        ball_x = self.agent.get_ball_pos()[0] - 50
         ball_x_lost = abs(ball_x) > self.lost_ball_x_threshold_mm  # 80
         result = ball_x_lost
         self.logger.info(f"[DRIBBLE FSM] Lost ball x: {'Yes' if result else 'No'}")
@@ -429,7 +429,7 @@ class DribbleStateMachine:
         向前带球
         """
         self.logger.info("[DRIBBLE FSM] Dribbling forward...")
-        vel_x = self.forward_vel
+        vel_x = self.walk_vel_x
         vel_y = 0.0
         vel_theta = 0.0
 
@@ -449,12 +449,12 @@ class DribbleStateMachine:
         """
         if self.agent.get_self_pos()[0] > 0:
             if self.agent.get_self_pos()[0] > self.goal_center_bias_mm:
-                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_mm) / (5000 - self.agent.get_self_pos()[1]))
+                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_mm) / (5 - self.agent.get_self_pos()[1]))
             else:
                 angle_to_goal_rad = 0.0
         else:
             if self.agent.get_self_pos()[0] < -self.goal_center_bias_mm:
-                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_mm) / (5000 - self.agent.get_self_pos()[1]))
+                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_mm) / (5 - self.agent.get_self_pos()[1]))
             else:
                 angle_to_goal_rad = 0.0
 
@@ -494,7 +494,7 @@ class DribbleStateMachine:
             "lost_ball_distance_threshold_m", 0.6
         )
 
-        self.forward_vel = self._config.get("dribble", {}).get("walk_vel_x", 0.1)
+        self.walk_vel_x = self._config.get("dribble", {}).get("walk_vel_x", 0.1)
         self.backward_vel = self._config.get("dribble", {}).get("back_vel", 0.05)
         self.horizontal_adjust_vel_y = self._config.get("dribble", {}).get("horizontal_adjust_vel_y", 0.03)
         self.horizontal_adjust_vel_theta = self._config.get("dribble", {}).get("horizontal_adjust_vel_theta", 0.2)

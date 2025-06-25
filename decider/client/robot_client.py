@@ -39,7 +39,7 @@ class RobotClient:
         self.logger.info("Started the TCP client thread")
 
     def listen_server_ip_loop(self):
-        while not rospy.is_shutdown():
+        while True:
             if self.config['auto_find_server_ip']:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
@@ -154,9 +154,7 @@ class RobotClient:
         )
         self.logger.info(f"Listening for UDP broadcast on port {port}...")
         try:
-            while not rospy.is_shutdown():
-                # if hasattr(self, 'HOST_IP') and self.HOST_IP:
-                #     break
+            while True:
                 await asyncio.sleep(0.1)
         except asyncio.CancelledError:
             pass
