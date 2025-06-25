@@ -58,12 +58,6 @@ search_ball_head_angle:
   - [0.0, 0.9]
   - [0.9, 0.0]
 # camera is looking around
-field_params:
-  LF: [-1000, -1200]
-  LB: [-1000, -2500]
-  RF: [0, 3000]
-  RB: [1000, -2500]
-  GK: [0, -4000]
 
 # sundry
 team: 1

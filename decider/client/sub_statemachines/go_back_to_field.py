@@ -5,7 +5,7 @@ import numpy as np
 
 
 class GoBackToFieldStateMachine:
-    def __init__(self, agent, aim_x=3300, aim_y=500):
+    def __init__(self, agent, aim_x=3.3, aim_y=0.5):
         """
         初始化返回场地状态机
 
@@ -133,7 +133,7 @@ class GoBackToFieldStateMachine:
         #    self.agent.stop(0.5)
         #    return
         if self.state != "arrived_at_target":
-            self.agent.move_head(-0.3, 0)
+            self.agent.move_head(0, 0)
         else:
             self.agent.move_head(inf, inf)
 

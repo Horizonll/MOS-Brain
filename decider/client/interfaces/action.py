@@ -45,7 +45,7 @@ class Action:
         self._cmd_vel_pub = self.agent.create_publisher(Twist, "/THMOS/walk/move", 1)
         self._head_pose_pub = self.agent.create_publisher(
             JointState,
-            "hardware/set_head_pose",
+            "/THMOS/hardware/set_head_pose",
             qos_profile
         )
             
