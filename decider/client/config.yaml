@@ -106,7 +106,7 @@ go_back_to_field:
   walk_vel_theta: 1
   arrive_trust_time: 20
 chase:
-  close_angle_threshold_rad: 0.4
+  close_angle_threshold_rad: 0.8
   walk_vel_x: 1
   walk_vel_theta: 1
   default_chase_distance: 0.4
