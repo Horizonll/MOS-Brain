@@ -58,12 +58,6 @@ search_ball_head_angle:
   - [0.0, 0.9]
   - [0.9, 0.0]
 # camera is looking around
-field_params:
-  LF: [-1000, -1200]
-  LB: [-1000, -2500]
-  RF: [0, 3000]
-  RB: [1000, -2500]
-  GK: [0, -4000]
 
 # sundry
 team: 1
@@ -106,7 +100,7 @@ go_back_to_field:
   walk_vel_theta: 1
   arrive_trust_time: 20
 chase:
-  close_angle_threshold_rad: 0.4
+  close_angle_threshold_rad: 0.8
   walk_vel_x: 1
   walk_vel_theta: 1
   default_chase_distance: 0.4

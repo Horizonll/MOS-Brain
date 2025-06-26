@@ -84,6 +84,7 @@ class ChaseBallStateMachine:
         if self.agent.get_ball_angle() is None:
             return False
         target_angle_rad = self.agent.get_ball_angle()
+        self.logger.info(f"[CHASE BALL FSM] Large angle check: {abs(target_angle_rad) > self.close_angle_threshold_rad}")
         return abs(target_angle_rad) > self.close_angle_threshold_rad
 
     def small_angle(self):
@@ -132,7 +133,7 @@ class ChaseBallStateMachine:
         self.agent.cmd_vel(
             self.walk_vel_x,
             0,
-            0
+            self.agent.get_ball_angle()/np.pi * self.walk_vel_theta * 5
         )
         self.logger.info("[CHASE BALL FSM] Forward movement step completed.")
 

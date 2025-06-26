@@ -1,0 +1,14 @@
+[Unit]
+Description=interface for booster scripts  
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/booster/Workspace/THMOS/MOS-Brain/decider/scripts/booster_interface.sh
+User=booster
+WorkingDirectory=/home/booster/Workspace/THMOS/MOS-Brain
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

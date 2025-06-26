@@ -98,10 +98,10 @@ class Agent(Node):
         """定时器回调函数，替代ROS 1中的主循环"""
         try:
             self.get_logger().info(f"Command: {self._command}")
-            # if self.debug_mode:
-            #    self.debug_run()
-            # else:
-            #    self.run()
+            if self.debug_mode:
+               self.debug_run()
+            else:
+               self.run()
         except Exception as e:
             self.get_logger().error(f"Error in timer callback: {e}")
 
@@ -237,14 +237,15 @@ class Agent(Node):
     def debug_run(self) -> None:
         """Debug mode execution loop."""
         try:
-            self.get_logger().info(f"ball angle: {self.get_ball_angle()}")
-            self.get_logger().info(f"ball pos: {self.get_ball_pos()}")
+            # self.get_logger().info(f"ball angle: {self.get_ball_angle()}")
+            # self.get_logger().info(f"ball pos: {self.get_ball_pos()}")
             cmd = self._command["command"]
-            self.get_logger().info(f"Debug_mode: {cmd}")
+            # self.get_logger().info(f"Debug_mode: {cmd}")
             
             if cmd in self._state_machine_runners:
-                self.get_logger().info(f"Running: {cmd} (server command)")
-                self._state_machine_runners[cmd]()
+                # self.get_logger().info(f"Running: {cmd} (server command)")
+                # self._state_machine_runners[cmd]()
+                pass
             else:
                 self.get_logger().error(f"Error: State machine {cmd} not found. Stopping.")
                 self.stop()
