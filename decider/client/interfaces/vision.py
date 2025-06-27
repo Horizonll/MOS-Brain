@@ -103,7 +103,7 @@ class Vision(Node):
 
     def _position_callback(self, msg):
         self.self_pos = np.array([msg.x, msg.y])
-        self.self_yaw = msg.theta
+        self.self_yaw = msg.theta * 180 / np.pi
 
 
     def _soccer_real_callback(self, msg):
@@ -163,7 +163,7 @@ class Vision(Node):
             return
 
         # 保存相对坐标
-        self._ball_pos = position_projection
+        self._ball_pos = position_projection / 1000
         
         # 计算到球的距离
         distance = np.linalg.norm(position_projection) / 1000  # 转换为米

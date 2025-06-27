@@ -7,6 +7,7 @@ import argparse
 import os
 import json
 import math
+from pathlib import Path
 import time
 import signal
 import asyncio
@@ -16,11 +17,27 @@ import logging
 import sub_statemachines
 import sys
 from typing import Optional, Dict, Any, Callable, List
+from datetime import datetime
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(levelname)s - %(filename)s:%(funcName)s(): %(message)s'
-)
+# # 确保日志目录存在
+# log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'log')
+# if not os.path.exists(log_dir):
+#     os.makedirs(log_dir)
+
+# # 生成带时间戳的日志文件名
+# timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+# log_filename = f"client_{timestamp}.log"
+# log_filepath = os.path.join(log_dir, log_filename)
+
+# # 配置日志输出到文件和控制台
+# logging.basicConfig(
+#     level=logging.DEBUG,
+#     format='%(asctime)s - %(levelname)s - %(filename)s:%(funcName)s(): %(message)s',
+#     handlers=[
+#         logging.FileHandler(log_filepath),
+#         logging.StreamHandler(sys.stdout)
+#     ]
+# )
 
 # ROS 2
 import rclpy
@@ -243,8 +260,8 @@ class Agent(Node):
             # self.get_logger().info(f"Debug_mode: {cmd}")
             
             if cmd in self._state_machine_runners:
-                # self.get_logger().info(f"Running: {cmd} (server command)")
-                # self._state_machine_runners[cmd]()
+                self.get_logger().info(f"Running: {cmd} (server command)")
+                self._state_machine_runners[cmd]()
                 pass
             else:
                 self.get_logger().error(f"Error: State machine {cmd} not found. Stopping.")
@@ -263,8 +280,8 @@ class Agent(Node):
         self.if_can_kick = self._config.get("if_can_kick", False)
         
         self.start_wait_time = self._config.get("start_wait_time", 3)
-        self.dribble_to_kick = self._config.get("dribble_to_kick", [-2300, 2300])
-        self.kick_to_dribble = self._config.get("kick_to_dribble", [-1700, 1700])
+        self.dribble_to_kick = self._config.get("dribble_to_kick", [-2.3, 2.3])
+        self.kick_to_dribble = self._config.get("kick_to_dribble", [-1.7, 1.7])
         
         self.start_walk_into_field_time = self._config.get("start_walk_into_field_time", 3)
 
@@ -460,6 +477,25 @@ def main(args=None):
     parser.add_argument('--rate', type=float, default=10.0,
                         help='Loop rate in Hz (default: 10.0)')
     cmd_args = parser.parse_args()
+
+    # 获取当前文件所在目录的上级目录
+    current_dir = Path(__file__).resolve().parent
+    parent_dir = current_dir.parent
+    
+    # 创建log目录（如果不存在）
+    log_dir = parent_dir / 'log'
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # 生成带时间戳的日志文件名
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_filename = f"client_{timestamp}.log"
+    log_filepath = log_dir / log_filename
+    
+    # 设置ROS2日志环境变量
+    os.environ['RCUTILS_LOGGING_USE_STDOUT'] = '1'  # 同时输出到控制台
+    os.environ['RCUTILS_LOGGING_AUTO_INIT'] = '0'   # 禁用自动初始化
+    os.environ['RCUTILS_LOGGING_BUFFERED_STREAM'] = '0'  # 禁用缓冲，立即写入
+    os.environ['ROS_LOG_DIR'] = str(log_filepath)  # 设置日志文件路径
     
     # Initialize ROS 2
     rclpy.init(args=args)
@@ -472,9 +508,9 @@ def main(args=None):
         rclpy.spin(agent)
     except KeyboardInterrupt:
         print("Program interrupted by the user")
+        agent.stop()
     finally:
         # Cleanup
-        agent.stop()
         agent.destroy_node()
         rclpy.shutdown()
 

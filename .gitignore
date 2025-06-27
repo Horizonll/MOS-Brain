@@ -11,3 +11,6 @@ decider/test.py
 config_override.json
 *.swp
 agent.log
+*.log
+*.png
+log/*

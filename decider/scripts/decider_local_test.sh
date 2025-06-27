@@ -46,19 +46,22 @@ if ! command -v tmux &> /dev/null; then
     exit 1
 fi
 
+# 如果有现有的tmux会话，先杀掉它
+if tmux has-session -t decider_session 2>/dev/null; then
+    tmux kill-session -t decider_session
+fi
+
 # 创建一个新的tmux会话并水平分屏
-tmux new-session -d -s python_session
+tmux new-session -d -s decider_session
 
 # 在左侧面板运行第一个Python文件
-tmux send-keys -t python_session:0.0 "python3 $DECIDER_DEBUG" Enter
+tmux send-keys -t decider_session:0.0 "python3 $DECIDER_DEBUG --debug" Enter
 
 # 水平分屏
-tmux split-window -h -t python_session:0
+tmux split-window -h -t decider_session:0
 
 # 在右侧面板运行第二个Python文件
-tmux send-keys -t python_session:0.1 "python3 $DECIDER_TESTER" Enter
+tmux send-keys -t decider_session:0.1 "python3 $DECIDER_TESTER --ip 127.0.0.1" Enter
 
 # 切换到这个会话
-tmux attach-session -t python_session
-
-echo "已在分屏终端中启动两个Python文件"
+tmux attach-session -t decider_session
