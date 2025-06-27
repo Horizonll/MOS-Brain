@@ -230,12 +230,24 @@ The structure of messages and statemachines of MOS-8.5.
 
 #### chase_ball
 
+![chase_ball](chase_ball.drawio.png)
+
 #### dribble
+
+![dribble](dribble.drawio.png)
 
 #### find_ball
 
+![find_ball](find_ball.drawio.png)
+
 #### go_back_to_field
+
+![go_back_to_field](go_back_to_field.drawio.png)
 
 #### goalkeeper
 
+暂无
+
 #### kick
+
+![kick](kick.drawio.png)
