@@ -87,7 +87,7 @@ class GoBackToFieldStateMachine:
 
     def read_params(self):
         """从配置中读取所有参数"""
-        self.min_dist = self._config.get("go_back_to_field").get("min_dist_mm", 200)  # 到达目标位置的最小距离阈值（mm）
+        self.min_dist = self._config.get("go_back_to_field").get("min_dist_m", 0.3)  # 到达目标位置的最小距离阈值（m）
         self.coarse_yaw_threshold_degree = self._config.get("go_back_to_field").get("coarse_yaw_threshold_degree", 30)  # 粗略偏航调整阈值（度）
         self.fine_yaw_start_threshold_degree = self._config.get("go_back_to_field").get("fine_yaw_start_threshold_degree", 20)  # 精细偏航开始阈值（度）
         self.fine_yaw_end_threshold_degree = self._config.get("go_back_to_field").get("fine_yaw_end_threshold_degree", 5)  # 精细偏航结束阈值（度）
@@ -95,8 +95,8 @@ class GoBackToFieldStateMachine:
         self.walk_vel_x = self._config.get("go_back_to_field").get("walk_vel_x", 0.3)  # 前进速度（m/s）
         self.walk_vel_theta = self._config.get("go_back_to_field").get("walk_vel_theta", 0.3)  # 旋转速度（rad/s）
         self.arrive_trust_time = self._config.get("go_back_to_field").get("arrive_trust_time", 5)  # 到达目标后信任时间（秒）
-        self.aim_x = self._config.get("go_back_to_field").get("aim_x", 0)  # 目标位置的 x 坐标（mm）
-        self.aim_y = self._config.get("go_back_to_field").get("aim_y", 1000)  # 目标位置的 y 坐标（mm）
+        self.aim_x = self._config.get("go_back_to_field").get("aim_x", 0)  # 目标位置的 x 坐标（m）
+        self.aim_y = self._config.get("go_back_to_field").get("aim_y", 1)  # 目标位置的 y 坐标（m）
         self.aim_yaw = self._config.get("go_back_to_field").get("aim_yaw", 0)  # 目标位置的偏航角（度）
 
     def need_coarse_yaw_adjustment(self):

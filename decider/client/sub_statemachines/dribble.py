@@ -213,7 +213,7 @@ class DribbleStateMachine:
         self.logger.info("[DRIBBLE FSM] Starting horizontal position adjustment...")
 
         # neck_angle = self.agent.get_ball_angle()
-        ball_x = self.agent.get_ball_pos()[0] - 50
+        ball_x = self.agent.get_ball_pos()[0] - 0.05
         if ball_x > 0:
             self.logger.info(f"[DRIBBLE FSM] Moving left (Ball x: {ball_x})")
             self.agent.cmd_vel(
@@ -315,8 +315,8 @@ class DribbleStateMachine:
         检查是否处于好的位置
         :return: True 表示位置好，False 表示位置不好
         """
-        ball_x = self.agent.get_ball_pos()[0] - 50
-        result = abs(ball_x) < self.good_horizontal_position_to_ball_threshold_mm
+        ball_x = self.agent.get_ball_pos()[0] - 0.05
+        result = abs(ball_x) < self.good_horizontal_position_to_ball_threshold_m
         self.logger.info(f"[DRIBBLE FSM] Good position: {'Yes' if result else 'No'}")
         return result
 
@@ -325,8 +325,8 @@ class DribbleStateMachine:
         检查是否处于不好的位置
         :return: True 表示位置不好，False 表示位置好
         """
-        ball_x = self.agent.get_ball_pos()[0] - 50
-        result = abs(ball_x) > self.good_horizontal_position_to_ball_threshold_mm
+        ball_x = self.agent.get_ball_pos()[0] - 0.05
+        result = abs(ball_x) > self.good_horizontal_position_to_ball_threshold_m
         self.logger.info(f"[DRIBBLE FSM] Bad position: {'Yes' if result else 'No'}")
         return result
 
@@ -368,8 +368,8 @@ class DribbleStateMachine:
         :return: True 表示丢球，False 表示未丢球
         """
         # neck_angle = self.agent.get_ball_angle()
-        ball_x = self.agent.get_ball_pos()[0] - 50
-        ball_x_lost = abs(ball_x) > self.lost_ball_x_threshold_mm  # 80
+        ball_x = self.agent.get_ball_pos()[0] - 0.05
+        ball_x_lost = abs(ball_x) > self.lost_ball_x_threshold_m  # 80
         result = ball_x_lost
         self.logger.info(f"[DRIBBLE FSM] Lost ball x: {'Yes' if result else 'No'}")
         return result
@@ -399,24 +399,24 @@ class DribbleStateMachine:
         self.logger.info("[DRIBBLE FSM] Calculating angles...")
 
         if self.agent.get_self_pos()[0] > 0:
-            if self.agent.get_self_pos()[0] > self.goal_center_bias_mm:
-                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_mm) / (5000 - self.agent.get_self_pos()[1]))
+            if self.agent.get_self_pos()[0] > self.goal_center_bias_m:
+                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_m) / (5 - self.agent.get_self_pos()[1]))
             else:
                 angle_to_goal_rad = 0.0
         else:
-            if self.agent.get_self_pos()[0] < -self.goal_center_bias_mm:
-                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_mm) / (5000 - self.agent.get_self_pos()[1]))
+            if self.agent.get_self_pos()[0] < -self.goal_center_bias_m:
+                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_m) / (5 - self.agent.get_self_pos()[1]))
             else:
                 angle_to_goal_rad = 0.0
 
         if self.agent.get_ball_pos_in_map()[0] > 0:
-            if self.agent.get_ball_pos_in_map()[0] > self.goal_center_bias_mm:
-                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] - self.goal_center_bias_mm) / (5000 - self.agent.get_ball_pos_in_map()[1]))
+            if self.agent.get_ball_pos_in_map()[0] > self.goal_center_bias_m:
+                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] - self.goal_center_bias_m) / (5 - self.agent.get_ball_pos_in_map()[1]))
             else:
                 angle_ball_to_goal = 0.0
         else:
-            if self.agent.get_ball_pos_in_map()[0] < -self.goal_center_bias_mm:
-                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] + self.goal_center_bias_mm) / (5000 - self.agent.get_ball_pos_in_map()[1]))
+            if self.agent.get_ball_pos_in_map()[0] < -self.goal_center_bias_m:
+                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] + self.goal_center_bias_m) / (5 - self.agent.get_ball_pos_in_map()[1]))
             else:
                 angle_ball_to_goal = 0.0
 
@@ -448,13 +448,13 @@ class DribbleStateMachine:
         计算朝球门的角度
         """
         if self.agent.get_self_pos()[0] > 0:
-            if self.agent.get_self_pos()[0] > self.goal_center_bias_mm:
-                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_mm) / (5 - self.agent.get_self_pos()[1]))
+            if self.agent.get_self_pos()[0] > self.goal_center_bias_m:
+                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_m) / (5 - self.agent.get_self_pos()[1]))
             else:
                 angle_to_goal_rad = 0.0
         else:
-            if self.agent.get_self_pos()[0] < -self.goal_center_bias_mm:
-                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_mm) / (5 - self.agent.get_self_pos()[1]))
+            if self.agent.get_self_pos()[0] < -self.goal_center_bias_m:
+                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_m) / (5 - self.agent.get_self_pos()[1]))
             else:
                 angle_to_goal_rad = 0.0
 
@@ -468,7 +468,7 @@ class DribbleStateMachine:
         self.good_angle_to_goal_threshold_degree = self._config.get("dribble", {}).get(
             "good_angle_to_goal_threshold_degree", 10
         )
-        self.goal_center_bias_mm = self._config.get("dribble", {}).get("goal_center_bias_mm", 0)
+        self.goal_center_bias_m = self._config.get("dribble", {}).get("goal_center_bias_m", 0)
         
         self.dribble_stop_angle_threshold_rad = 0.2
         self.min_ball_distance_m = self._config.get("dribble", {}).get(
@@ -478,16 +478,16 @@ class DribbleStateMachine:
             "max_ball_distance_m", 0.55
         )
 
-        self.good_horizontal_position_to_ball_threshold_mm = self._config.get("dribble", {}).get(
-            "good_horizontal_position_to_ball_threshold_mm", 50
+        self.good_horizontal_position_to_ball_threshold_m = self._config.get("dribble", {}).get(
+            "good_horizontal_position_to_ball_threshold_m", 0.05
         )
 
         self.lost_angle_to_target_threshold_degree = self._config.get("dribble", {}).get(
             "lost_angle_to_target_threshold_degree", 20
         )
 
-        self.lost_ball_x_threshold_mm = self._config.get("dribble", {}).get(
-            "lost_ball_x_threshold_mm", 80
+        self.lost_ball_x_threshold_m = self._config.get("dribble", {}).get(
+            "lost_ball_x_threshold_m", 0.08
         )
 
         self.lost_ball_distance_threshold_m = self._config.get("dribble", {}).get(
@@ -501,36 +501,3 @@ class DribbleStateMachine:
         self.rotate_vel_theta = self._config.get("dribble", {}).get("rotate_vel_theta", 0.3)
         self.adjust_angle_to_goal_vel_y = self._config.get("dribble", {}).get("adjust_angle_to_goal_vel_y", 0.08)
         self.adjust_angle_to_goal_vel_theta = self._config.get("dribble", {}).get("adjust_angle_to_goal_vel_theta", 0.3)
-    
-    # def good_angle(self):
-    #     """
-    #     检查角度是否合适
-    #     :return: True 表示角度合适，False 表示角度不合适
-    #     """
-    #     rad1 = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_mm) / (5000 - self.agent.get_self_pos()[1]))  # FIXME:球门左侧
-    #     ang_tar1 = rad1 * 180 / math.pi
-    #     rad2 = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_mm) / (5000 - self.agent.get_self_pos()[1]))  # FIXME:球门右侧
-    #     ang_tar2 = rad2 * 180 / math.pi
-    #     result = ang_tar1 < self.agent.get_self_yaw() < ang_tar2
-    #     if not result:
-    #         self.direction = ang_tar1 > self.agent.get_self_yaw()
-    #     print(f"[DRIBBLE FSM] Good angle: {'Yes' if result else 'No'}")
-    #     return result
-
-    # def bad_angle(self):
-    #     """
-    #     检查角度是否不合适
-    #     :return: True 表示角度不合适，False 表示角度合适
-    #     """
-    #     result = not self.good_angle()
-    #     print(f"[DRIBBLE FSM] Bad angle: {'Yes' if result else 'No'}")
-    #     return result
-
-    # def ok_to_forward(self):
-    #     """
-    #     检查是否可以继续向前
-    #     :return: True 表示可以，False 表示不可以
-    #     """
-    #     result = self.agent.get_self_pos()[1] < 4000 and abs(self.agent.get_self_yaw() / math.pi * 180 - self.aim_yaw) < (20 * math.pi / 180)
-    #     print(f"[DRIBBLE FSM] Ok to forward: {'Yes' if result else 'No'}")
-    #     return result

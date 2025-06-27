@@ -184,8 +184,8 @@ class Vision(Node):
         
         # 保存计算结果
         self.ball_distance = distance
-        self._ball_pos_in_map = absolute_coord
-        self._ball_pos_in_vis = curr_coord
+        self._ball_pos_in_map = absolute_coord / 1000
+        self._ball_pos_in_vis = curr_coord / 1000
 
         self._last_ball_time = time.time()
         
