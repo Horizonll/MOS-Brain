@@ -134,7 +134,7 @@ graph LR
    - 服务器维护`roles_to_id`映射（前锋/后卫/守门员）
    - 可通过`switch_players_role()`动态切换角色
 
-## 状态机
+## 状态机转换说明
 
 ### chase_ball
 
@@ -159,3 +159,152 @@ graph LR
 ### kick
 
 ![kick](kick.drawio.png)
+
+## 决策逻辑说明
+
+### 核心逻辑（`decider.py`）
+
+1. **初始化阶段**：
+   - 创建 `Agent` 实例
+   - 加载所有状态机：
+
+     ```python
+     self.chase_ball_state_machine = sub_statemachines.ChaseBallStateMachine(self)
+     self.find_ball_state_machine = sub_statemachines.FindBallStateMachine(self)
+     self.kick_state_machine = sub_statemachines.KickStateMachine(self)
+     self.go_back_to_field_state_machine = sub_statemachines.GoBackToFieldStateMachine(self)
+     self.dribble_state_machine = sub_statemachines.DribbleStateMachine(self)
+     self.goalkeeper_state_machine = sub_statemachines.GoalkeeperStateMachine(self)
+     ```
+
+2. **状态机执行映射**：
+
+   ```python
+   self._state_machine_runners = {
+       "chase_ball": self.chase_ball_state_machine.run,
+       "find_ball": self.find_ball_state_machine.run,
+       "kick": self.kick_state_machine.run,
+       "go_back_to_field": self.go_back_to_field_state_machine.run,
+       "dribble": self.dribble_state_machine.run,
+       "goalkeeper": self.goalkeeper_state_machine.run,
+       "stop": self.stop,
+   }
+   ```
+
+3. **决策流程**：
+
+   ```python
+   def run(self):
+       state = self.receiver.game_state
+       if state != "STATE_PLAYING":
+           self.stop()
+       elif state == 'STATE_READY':
+           self._state_machine_runners['go_back_to_field']()  # 返回场地
+       else:
+           if time.time() - self._last_command_time > self.offline_time:
+               if not self.get_if_ball():
+                   self._state_machine_runners['find_ball']()  # 找球
+               elif self.get_ball_distance() > 0.6:
+                   self._state_machine_runners['chase_ball']()  # 追球
+               else:
+                   self._state_machine_runners['dribble']()  # 带球
+           else:
+               cmd = self._command["command"]
+               if cmd in self._state_machine_runners:
+                   self._state_machine_runners[cmd]()  # 执行服务器指令
+   ```
+
+### 状态机间调用关系
+
+```mermaid
+graph TD
+    A[decider.py] -->|游戏状态| B{决策}
+    B -->|STATE_READY| C[go_back_to_field]
+    B -->|离线状态| D{球状态}
+    D -->|无球| E[find_ball]
+    D -->|远球| F[chase_ball]
+    D -->|近球| G[dribble]
+    B -->|在线状态| H[执行服务器指令]
+    H --> I[kick]
+    H --> J[dribble]
+    H --> K[goalkeeper]
+    
+    F -->|靠近球| G
+    E -->|找到球| F
+    G -->|可踢球| I
+    C -->|返回场地| B
+```
+
+### 关键状态机逻辑
+
+1. **追球 (`chase_ball.py`)**:
+   - 状态：`rotate` → `forward` → `arrived`
+   - 条件：
+     - `close_to_ball()` → 停止移动
+     - `large_angle()` → 旋转
+     - `small_angle()` → 前进
+
+2. **带球 (`dribble.py`)**:
+   - 状态：`forward` ↔ `pos_to_ball_adjust` ↔ `yaw_adjust` ↔ `horizontal_position_adjust`
+   - 条件：
+     - `lost_ball()` → 位置调整
+     - `good_yaw_angle()` → 水平调整
+     - `good_horizontal_position()` → 前进
+
+3. **返回场地 (`go_back_to_field.py`)**:
+   - 状态：`moving_to_target` ↔ `coarse_yaw_adjusting` ↔ `fine_yaw_adjusting` → `arrived_at_target`
+   - 条件：
+     - `need_coarse_yaw_adjustment()` → 粗调角度
+     - `good_position()` → 精调角度
+
+4. **踢球 (`kick.py`)**:
+   - 状态：`angle_adjust` → `horizontal_adjust` → `back_forth_adjust` → `finished`
+   - 完成时执行 `self.agent.kick()`
+
+### 执行特点
+
+1. **优先级**：
+   - 游戏状态 > 服务器指令 > 自主决策
+   - 返回场地（`STATE_READY`）优先级最高
+
+2. **状态机切换条件**：
+
+   ```python
+   # 追球 → 带球
+   if self.get_ball_distance() <= 0.6:
+       self._state_machine_runners['dribble']()
+   
+   # 带球 → 踢球
+   if self.if_can_kick and good_back_forth():
+       self._state_machine_runners['kick']()
+   ```
+
+3. **异常处理**：
+
+   ```python
+   try:
+       # 主逻辑
+   except Exception as e:
+       self._state_machine_runners['find_ball']()  # 异常时默认找球
+   ```
+
+### 配置文件依赖
+
+所有状态机通过 `self._config = self.agent.get_config()` 获取参数，例如：
+
+```python
+# chase_ball.py
+self.close_angle_threshold_rad = chase_config.get("close_angle_threshold_rad", 0.1)
+self.walk_vel_x = chase_config.get("walk_vel_x", 0.3)
+
+# dribble.py
+self.forward_vel = self._config.get("dribble", {}).get("walk_vel_x", 0.1)
+```
+
+这样的设计使系统具备：
+
+- 模块化状态机
+- 基于游戏状态的优先级调度
+- 离线自主决策能力
+- 参数化配置驱动
+- 异常恢复机制
