@@ -2,245 +2,137 @@
 
 The structure of messages and statemachines of MOS-8.5.
 
-## 消息
+## 消息传递逻辑分类及说明
 
-### decider.py
+### 1. 机器人向服务器发送的消息
 
-#### 核心控制模块
+**发出方**：机器人（客户端）  
+**接收方**：决策服务器  
+**消息内容**：
 
-- **启动与终止**  
-  - Decider started  
-  - User interrupted  
-- **状态管理**  
-  - Penalized_time  
-  - Stopping  
-  - Running  
-  - Debug_mode  
-- **指令执行**  
-  - =======================> cmd = {cmd}  
-  - Setting the robot's speed {vel_x} {vel_y} {vel_theta}  
-  - Executing the kicking action  
-- **球位置计算**  
-  - Calculating ball position in map from other robots  
-  - Ball position relative to self: {ball_pos_relative}  
-  - Ball angle in radians: {angle_rad}  
-  - Ball angle from other robots: {angle_relative}  
-- **错误处理**  
-  - State machine {cmd} not found  
-  - Error in decider run  
+```json
+{
+  "id": 机器人ID,
+  "data": {
+    "x": 机器人x坐标,
+    "y": 机器人y坐标,
+    "ballx": 球x坐标（若无则为null）,
+    "bally": 球y坐标（若无则为null）,
+    "yaw": 机器人偏航角,
+    "ball_distance": 到球距离,
+    "if_ball": 是否看到球
+  },
+  "info": 当前执行的命令,
+  "timestamp": 时间戳
+}
+```
 
-### local_decider_tester.py
+**关键代码位置**：
 
-#### 测试工具模块
+- `robot_client.py`中的`send_robot_data()`方法
+- 通过TCP发送到服务器8001端口
 
-- **心跳监控**  
-  - 心跳监听已启动 @ {local_ip}:{HEARTBEAT_PORT}  
-  - 心跳服务器异常  
-  - 超过{HEARTBEAT_TIMEOUT}秒未收到心跳！  
-  - 心跳恢复  
-- **指令传输**  
-  - 指令发送成功: {command}  
-  - 指令发送失败: {command} ({e})  
-- **程序状态**  
-  - 执行过程中出现错误  
-  - 程序已终止  
+---
 
-### robot_client.py
+### 2. 服务器向机器人发送该机器人的消息
 
-#### 机器人通信模块
+**发出方**：决策服务器  
+**接收方**：特定机器人  
+**消息内容**：
 
-- **网络连接**  
-  - Default Host ip + self.HOST_IP  
-  - Host ip updated to + self.HOST_IP  
-  - Started listening for TCP command messages at address: {addr}  
-  - Listening for UDP broadcast on port {port}  
-  - Host IP found: {self.client.HOST_IP}  
-- **线程管理**  
-  - Started the server IP listening thread  
-  - Started the sending loop thread  
-  - Started the TCP client thread  
-- **中断处理**  
-  - User interrupted  
-  - Server has been closed  
-  - UDP listener stopped  
-- **消息异常**  
-  - Not contain 'command' or 'robots_data' (警告)  
-  - Unexpected message (警告)  
-- **错误处理**  
-  - Error listening for server IP  
-  - Error in send_loop  
-  - Error sending robot data  
-  - JSON decoding error  
-  - Key error  
-  - Error handling connection: {addr}  
+```json
+{
+  "command": "指令名称",
+  "data": {
+    // 指令专用参数（示例）：
+    "aim_x": 目标x坐标,    // go_back_to_field专用
+    "aim_y": 目标y坐标,    // go_back_to_field专用
+    "aim_yaw": 目标角度,   // go_back_to_field专用
+    "chase_distance": 追踪距离 // chase_ball专用
+  },
+  "send_time": 发送时间戳
+}
+```
 
-### receiver.py
+**支持的指令**：
 
-#### 数据接收模块
+- `dribble`（带球）
+- `stop`（停止）
+- `find_ball`（找球）
+- `chase_ball`（追球）
+- `kick`（踢球）
+- `go_back_to_field`（返回场地）
+- `goalkeeper`（守门）
 
-- **初始化**  
-  - Initialized, break  
-- **网络异常**  
-  - Socket timeout (警告)  
-  - Parse Error: Probably using an old protocol! (错误)  
+**关键代码位置**：
 
-### network.py
+- `decider_server_new.py`中的`publish_command()`方法
+- 通过TCP发送到机器人8002端口
 
-#### 网络配置模块
+---
 
-- **网络监听**  
-  - listening tcp on + str(self._server_addr)  
-  - listening for server on port + str(self._config["auto_find_server_ip_listen_port"] + token = self._config["auto_find_server_ip_token"]  
+### 3. 服务器向机器人发送其他机器人的消息
 
-### tcp_host_test_receiver.py
+**发出方**：决策服务器  
+**接收方**：所有连接的机器人  
+**消息内容**：
 
-#### TCP测试模块
+```json
 
-- **连接管理**  
-  - 正在监听 {ip}:{port}  
-  - 已连接到 {client_address}  
-  - 收到消息: {message}  
-- **中断处理**  
-  - 按下了 Ctrl+C，程序即将退出  
-  - 接收到中断信号，程序即将退出  
-- **错误处理**  
-  - 获取本机 IP 地址时出错  
-  - 接收消息时出错  
-  - 监听时出错  
-  - 服务器正在关闭  
-  - 发生错误  
+{
+  "robots_data": {
+    "机器人ID1": {
+      "last_seen": 最后可见时间,
+      "status": "connected/disconnected",
+      "data": { /* 同机器人上报的数据结构 */ }
+    },
+    "机器人ID2": { ... },
+    // ... 所有其他机器人的状态
+  }
+}
+```
 
-### read.py
+**关键特性**：
 
-#### 数据读取模块
+- 包含场上所有机器人的最新状态
+- 每0.5秒广播一次（可配置）
+- 机器人用此数据计算全局球位置
 
-- **数据接收**  
-  - Received: {received_data}  
-  - Connection closed  
-  - Connection refused  
-- **解析错误**  
-  - JSON decode error  
+**关键代码位置**：
 
-### decider_tester.py
+- `robot_server.py`中的`send_all_robots_data_loop()`方法
+- 通过TCP广播到所有机器人的8002端口
 
-#### 决策测试模块
+---
 
-- **程序状态**  
-  - Program exited  
-- **服务器通信**  
-  - Server response  
-  - No response  
-  - Sent successfully  
-  - Failed to send  
-  - Server IP: {server_ip}, Port: {server_port}  
+### 消息流向示意图
 
-### action.py
+```mermaid
+graph LR
+    A[机器人] -- 状态数据 --> B[服务器]
+    B -- 个体指令 --> A
+    B -- 全局状态 --> C[所有机器人]
+    C[机器人1] -- 状态更新 --> B
+    D[机器人2] -- 状态更新 --> B
+```
 
-#### 动作执行模块
+### 关键设计说明
 
-- **踢球动作**  
-  - Send kick  
-  - Kick goal init  
-  - Kick done  
+1. **双端口通信**：
+   - 8001端口：机器人→服务器（状态上报）
+   - 8002端口：服务器→机器人（指令/全局状态下发）
 
-### chase_ball.py
+2. **状态同步机制**：
+   - 服务器用`robots_data`字段聚合所有机器人状态
+   - 机器人通过`get_ball_pos_in_map_from_other_robots()`计算全局球位置
 
-#### 追球行为模块
+3. **超时处理**：
+   - 5秒未收到更新标记为`disconnected`
+   - 指令发送超时0.5秒（可配置）
 
-- **状态检测**  
-  - Close to ball? Distance: {distance_close}, Angle: {angle_close}, Result: {result}  
-  - Agent.command: {command}, state: {self.state}  
-  - Current state: {self.state}  
-- **动作执行**  
-  - Starting to rotate towards the ball  
-  - Starting to move forward towards the ball  
-  - Movement stopped  
-  - Setting head position  
-- **异常检测**  
-  - No ball in sight (警告)  
-
-### dribble.py
-
-#### 带球行为模块
-
-- **位置校准**  
-  - Adjusting position to ball (多步骤调整逻辑)  
-  - Starting horizontal position adjustment  
-  - Starting yaw angle adjustment  
-- **状态检测**  
-  - Calculated aim_yaw: {self.aim_yaw:.2f}°  
-  - Good position to ball: {'Yes' if result else 'No'}  
-  - Ball distance: {ball_distance:.2f}  
-  - Lost ball: {'Yes' if result else 'No'}  
-- **动作控制**  
-  - Moving forward  
-  - Stopping  
-  - Dribbling forward  
-- **异常检测**  
-  - No ball in sight (警告)  
-
-### find_ball.py
-
-#### 寻球行为模块
-
-- **寻球逻辑**  
-  - Ball in sight: {'Yes' if result else 'No'}  
-  - Starting rotation (含其他机器人角度判断)  
-  - Facing to ball (角度阈值控制)  
-- **状态检测**  
-  - Rotation timeout: {'Yes' if result else f'No ({elapsed:.1f}s)'}  
-  - Ball lost: {'Yes' if result else 'No'}  
-- **异常检测**  
-  - No ball in sight (警告)  
-
-### go_back_to_field.py
-
-#### 回场行为模块
-
-- **位置校准**  
-  - Starting coarse yaw adjustment (大角度纠偏)  
-  - Starting fine yaw adjustment (小角度微调)  
-- **状态检测**  
-  - Need coarse yaw adjustment? {'Yes' if result else 'No'}  
-  - Arrived at target? {'Yes' if result else 'No'}  
-  - Updated status: dist: {self.go_back_to_field_dist:.1f}, yaw_diff: {self.go_back_to_field_yaw_diff:.1f}°  
-- **动作控制**  
-  - Moving forward  
-  - Stopping moving  
-
-### kick.py
-
-#### 踢球行为模块
-
-- **踢球流程**  
-  - Starting kick sequence (状态机控制)  
-  - Positioning complete! Executing kick  
-- **位置校准**  
-  - Starting angle adjustment (旋转控制)  
-  - Starting lateral adjustment (横向移动)  
-  - Starting forward adjustment (前后移动)  
-- **条件判断**  
-  - Ball is too far. Stopping robot  
-  - Large angle delta: {abs(ang_delta):.2f}° (Bad? {'Yes' if result else 'No'})  
-  - Ball Distance: {ball_distance:.2f}m (OK? {'Yes' if result else 'No'})  
-
-### imu_test.py
-
-#### IMU测试模块
-
-- **数据输出**  
-  - [1] Yaw/Pitch 弧度/角度值输出  
-  - [2] Yaw: {yaw_deg:.2f} degrees, Pitch: {pitch_deg:.2f} degrees  
-- **错误处理**  
-  - Error processing IMU data: %s  
-
-### test_decider.py
-
-#### 决策器测试模块
-
-- **程序状态**  
-  - Decider started  
-  - User interrupted  
+4. **角色管理**：
+   - 服务器维护`roles_to_id`映射（前锋/后卫/守门员）
+   - 可通过`switch_players_role()`动态切换角色
 
 ## 状态机
 
