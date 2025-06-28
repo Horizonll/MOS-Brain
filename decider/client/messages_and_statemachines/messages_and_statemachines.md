@@ -142,6 +142,32 @@ graph LR
 
 ### 总体框架
 
+1. **程序入口：`main()`函数**
+2. **解析命令行参数：支持`--debug`和`--rate`参数，分别用于启用调试模式和设置循环频率（默认10Hz）**
+3. **创建Agent实例：`agent = Agent()`**
+   - 初始化ROS节点，节点名为"decider"。
+   - 加载配置文件（`configuration.load_config()`）。
+   - 读取一些参数（通过`read_params`方法）。
+   - 初始化一些状态变量，如命令、上次命令时间、机器人数据等。
+   - 注册接口：
+     - `interfaces.action.Action`：用于控制机器人（行走、踢球等）。
+     - `interfaces.vision.Vision`：用于获取视觉信息（自身位置、球位置等）。
+   - 创建`Receiver`实例：用于接收来自服务器的信息（如游戏状态、处罚时间等）。
+   - 创建`RobotClient`实例：用于与服务器通信。
+   - 初始化各个状态机（位于sub_statemachines模块中）。
+   - 构建状态机运行器字典（`_state_machine_runners`），将命令字符串映射到对应的状态机运行函数。
+   - 记录开始时间等。
+
+4. **设置信号处理：捕获SIGINT信号（Ctrl+C）以退出**
+5. **根据设定的频率（由`--rate`指定，默认10Hz）进入循环：**
+   - 如果启用调试模式（`--debug`），则调用`agent.debug_run()`。
+   - 否则，调用`agent.run()`。
+   - 每次循环后睡眠以维持频率（间隔为1/rate秒）。
+6. **捕获KeyboardInterrupt异常（用户中断）时，打印信息并退出**
+7. **最后，无论是否发生异常，都会调用`agent.stop()`停止机器人**
+
+### 循环部分框架
+
 ```mermaid
 graph TD
     A[开始循环] --> B[获取比赛状态]
