@@ -138,7 +138,60 @@ graph LR
    - 服务器维护`roles_to_id`映射（前锋/后卫/守门员）
    - 可通过`switch_players_role()`动态切换角色
 
-## 状态机转换说明
+## 决策逻辑说明
+
+### 总体框架
+
+```mermaid
+graph TD
+    A[开始循环] --> B[获取比赛状态]
+    B --> C{比赛状态}  
+    %% 非比赛状态处理
+    C -->|STATE_SET/STATE_FINISHED/STATE_INITIAL| D[停止机器人]
+    C -->|STATE_READY| E[执行回场状态机]
+    %% 比赛状态处理
+    C -->|STATE_PLAYING| F{是否在初始等待期?}
+    F -->|是| E
+    F -->|否| G{是否在惩罚后等待期?}
+    G -->|是| E
+    G -->|否| H{是否比赛恢复10秒内?}
+    H -->|是| I[执行具体决策逻辑]
+    H -->|否| J{指令是否超时?}
+    J -->|是| I[执行具体决策逻辑]
+    J -->|否| Q[获取服务器指令]
+    Q --> R{是否有效指令?}
+    R -->|否| D
+    R -->|是| I[执行具体决策逻辑]
+    %% 结束循环
+    D --> U[结束本次循环]
+    E --> U
+    I --> U
+    U -->|等待 1/rate 秒| A
+```
+
+### 配置文件依赖
+
+所有状态机通过 `self._config = self.agent.get_config()` 获取参数
+
+## 状态机说明
+
+### 状态机间转换关系
+
+```mermaid
+graph TD
+    A[decider.py] -->|游戏状态| B{决策}
+    B -->|STATE_READY| C[go_back_to_field]
+    B -->|比赛状态| D{球状态}
+    D -->|无球| E[find_ball]
+    D -->|远球| F[chase_ball]
+    D -->|近球| G[dribble]
+    B -->|调试状态| H[执行服务器指令]
+    
+    F -->|靠近球| G
+    E -->|找到球| F
+    G -->|可踢球| I[kick]
+    C -->|返回场地| B
+```
 
 ### 关键状态机逻辑
 
@@ -189,122 +242,3 @@ graph LR
 ### kick
 
 ![kick](kick.drawio.png)
-
-## 决策逻辑说明
-
-### 核心逻辑（`decider.py`）
-
-1. **初始化阶段**：
-   - 创建 `Agent` 实例
-   - 加载所有状态机：
-
-     ```python
-     self.chase_ball_state_machine = sub_statemachines.ChaseBallStateMachine(self)
-     self.find_ball_state_machine = sub_statemachines.FindBallStateMachine(self)
-     self.kick_state_machine = sub_statemachines.KickStateMachine(self)
-     self.go_back_to_field_state_machine = sub_statemachines.GoBackToFieldStateMachine(self)
-     self.dribble_state_machine = sub_statemachines.DribbleStateMachine(self)
-     self.goalkeeper_state_machine = sub_statemachines.GoalkeeperStateMachine(self)
-     ```
-
-2. **状态机执行映射**：
-
-   ```python
-   self._state_machine_runners = {
-       "chase_ball": self.chase_ball_state_machine.run,
-       "find_ball": self.find_ball_state_machine.run,
-       "kick": self.kick_state_machine.run,
-       "go_back_to_field": self.go_back_to_field_state_machine.run,
-       "dribble": self.dribble_state_machine.run,
-       "goalkeeper": self.goalkeeper_state_machine.run,
-       "stop": self.stop,
-   }
-   ```
-
-3. **决策流程**：
-
-   ```python
-   def run(self):
-       state = self.receiver.game_state
-       if state != "STATE_PLAYING":
-           self.stop()
-       elif state == 'STATE_READY':
-           self._state_machine_runners['go_back_to_field']()  # 返回场地
-       else:
-           if time.time() - self._last_command_time > self.offline_time:
-               if not self.get_if_ball():
-                   self._state_machine_runners['find_ball']()  # 找球
-               elif self.get_ball_distance() > 0.6:
-                   self._state_machine_runners['chase_ball']()  # 追球
-               else:
-                   self._state_machine_runners['dribble']()  # 带球
-           else:
-               cmd = self._command["command"]
-               if cmd in self._state_machine_runners:
-                   self._state_machine_runners[cmd]()  # 执行服务器指令
-   ```
-
-### 状态机间调用关系
-
-```mermaid
-graph TD
-    A[decider.py] -->|游戏状态| B{决策}
-    B -->|STATE_READY| C[go_back_to_field]
-    B -->|比赛状态| D{球状态}
-    D -->|无球| E[find_ball]
-    D -->|远球| F[chase_ball]
-    D -->|近球| G[dribble]
-    B -->|调试状态| H[执行服务器指令]
-    H --> C
-    H --> E
-    H --> F
-    H --> G
-    H --> I[kick]
-    H --> J[dribble]
-    H --> K[goalkeeper]
-    
-    F -->|靠近球| G
-    E -->|找到球| F
-    G -->|可踢球| I
-    C -->|返回场地| B
-```
-
-### 执行特点
-
-1. **优先级**：
-   - 游戏状态 > 服务器指令 > 自主决策
-   - 返回场地（`STATE_READY`）优先级最高
-
-2. **状态机切换条件**：
-
-   ```python
-   # 追球 → 带球
-   if self.get_ball_distance() <= 0.6:
-       self._state_machine_runners['dribble']()
-   
-   # 带球 → 踢球
-   if self.if_can_kick and good_back_forth():
-       self._state_machine_runners['kick']()
-   ```
-
-3. **异常处理**：
-
-   ```python
-   try:
-       # 主逻辑
-   except Exception as e:
-       self._state_machine_runners['find_ball']()  # 异常时默认找球
-   ```
-
-### 配置文件依赖
-
-所有状态机通过 `self._config = self.agent.get_config()` 获取参数，例如：
-
-```python
-# chase_ball.py
-self.close_angle_threshold_rad = chase_config.get("close_angle_threshold_rad", 0.1)
-self.walk_vel_x = chase_config.get("walk_vel_x", 0.3)
-
-# dribble.py
-self.forward_vel = self._config.get("dribble", {}).get("walk_vel_x", 0.1)
-```
