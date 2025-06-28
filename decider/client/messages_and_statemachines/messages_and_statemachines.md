@@ -82,9 +82,13 @@ The structure of messages and statemachines of MOS-8.5.
 {
   "robots_data": {
     "机器人ID1": {
+      "id": 机器人ID,
       "last_seen": 最后可见时间,
       "status": "connected/disconnected",
-      "data": { /* 同机器人上报的数据结构 */ }
+      "data": { 
+        "ballx": 球x坐标（若无则为null）,
+        "bally": 球y坐标（若无则为null）,
+      }
     },
     "机器人ID2": { ... },
     // ... 所有其他机器人的状态
@@ -135,6 +139,32 @@ graph LR
    - 可通过`switch_players_role()`动态切换角色
 
 ## 状态机转换说明
+
+### 关键状态机逻辑
+
+1. **追球 (`chase_ball.py`)**:
+   - 状态：`rotate` → `forward` → `arrived`
+   - 条件：
+     - `close_to_ball()` → 停止移动
+     - `large_angle()` → 旋转
+     - `small_angle()` → 前进
+
+2. **带球 (`dribble.py`)**:
+   - 状态：`forward` ↔ `pos_to_ball_adjust` ↔ `yaw_adjust` ↔ `horizontal_position_adjust`
+   - 条件：
+     - `lost_ball()` → 位置调整
+     - `good_yaw_angle()` → 水平调整
+     - `good_horizontal_position()` → 前进
+
+3. **返回场地 (`go_back_to_field.py`)**:
+   - 状态：`moving_to_target` ↔ `coarse_yaw_adjusting` ↔ `fine_yaw_adjusting` → `arrived_at_target`
+   - 条件：
+     - `need_coarse_yaw_adjustment()` → 粗调角度
+     - `good_position()` → 精调角度
+
+4. **踢球 (`kick.py`)**:
+   - 状态：`angle_adjust` → `horizontal_adjust` → `back_forth_adjust` → `finished`
+   - 完成时执行 `self.agent.kick()`
 
 ### chase_ball
 
@@ -220,11 +250,15 @@ graph LR
 graph TD
     A[decider.py] -->|游戏状态| B{决策}
     B -->|STATE_READY| C[go_back_to_field]
-    B -->|离线状态| D{球状态}
+    B -->|比赛状态| D{球状态}
     D -->|无球| E[find_ball]
     D -->|远球| F[chase_ball]
     D -->|近球| G[dribble]
-    B -->|在线状态| H[执行服务器指令]
+    B -->|调试状态| H[执行服务器指令]
+    H --> C
+    H --> E
+    H --> F
+    H --> G
     H --> I[kick]
     H --> J[dribble]
     H --> K[goalkeeper]
@@ -234,32 +268,6 @@ graph TD
     G -->|可踢球| I
     C -->|返回场地| B
 ```
-
-### 关键状态机逻辑
-
-1. **追球 (`chase_ball.py`)**:
-   - 状态：`rotate` → `forward` → `arrived`
-   - 条件：
-     - `close_to_ball()` → 停止移动
-     - `large_angle()` → 旋转
-     - `small_angle()` → 前进
-
-2. **带球 (`dribble.py`)**:
-   - 状态：`forward` ↔ `pos_to_ball_adjust` ↔ `yaw_adjust` ↔ `horizontal_position_adjust`
-   - 条件：
-     - `lost_ball()` → 位置调整
-     - `good_yaw_angle()` → 水平调整
-     - `good_horizontal_position()` → 前进
-
-3. **返回场地 (`go_back_to_field.py`)**:
-   - 状态：`moving_to_target` ↔ `coarse_yaw_adjusting` ↔ `fine_yaw_adjusting` → `arrived_at_target`
-   - 条件：
-     - `need_coarse_yaw_adjustment()` → 粗调角度
-     - `good_position()` → 精调角度
-
-4. **踢球 (`kick.py`)**:
-   - 状态：`angle_adjust` → `horizontal_adjust` → `back_forth_adjust` → `finished`
-   - 完成时执行 `self.agent.kick()`
 
 ### 执行特点
 
@@ -300,11 +308,3 @@ self.walk_vel_x = chase_config.get("walk_vel_x", 0.3)
 # dribble.py
 self.forward_vel = self._config.get("dribble", {}).get("walk_vel_x", 0.1)
 ```
-
-这样的设计使系统具备：
-
-- 模块化状态机
-- 基于游戏状态的优先级调度
-- 离线自主决策能力
-- 参数化配置驱动
-- 异常恢复机制
