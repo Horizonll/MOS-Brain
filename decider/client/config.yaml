@@ -73,18 +73,20 @@ dribble:
   goal_center_bias_m: 0.5
   walk_vel_x: 1
   back_vel: 0.05
-  horizontal_adjust_vel_y: 0.5
+  horizontal_adjust_vel_y: 0.6
   horizontal_adjust_vel_theta: 0.5
   walk_vel_theta: 1
   adjust_angle_to_goal_vel_y: 0.5
-  adjust_angle_to_goal_vel_theta: 0.8
+  adjust_angle_to_goal_vel_theta: 0.5
   min_ball_distance_m: 0.0
-  max_ball_distance_m: 0.55
-  good_horizontal_position_to_ball_threshold_m: 0.1
+  max_ball_distance_m: 0.40
+  good_horizontal_position_to_ball_threshold_m: 0.4
   lost_angle_to_target_threshold_degree: 30
   lost_ball_x_threshold_m: 0.08
-  lost_ball_distance_threshold_m: 2.0
+  lost_ball_distance_threshold_m: 0.8
   dribble_0_y: 3.7
+  dribble_forward_vel_y: 0.5
+  camera_bias: 0.06  # camera bias in x direction
 find_ball:
   angle_threshold_degrees: 10
   rotation_vel_theta: 1
@@ -94,7 +96,7 @@ go_back_to_field:
   aim_x: 1.5
   aim_y: 2.0
   aim_yaw: 0
-  min_dist: 0.3
+  min_dist: 0.5
   coarse_yaw_threshold_degree: 30
   fine_yaw_start_threshold_degree: 20
   fine_yaw_end_threshold_degree: 5

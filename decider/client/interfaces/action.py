@@ -36,17 +36,11 @@ class Action:
         self.logger = agent.get_logger().get_child("action_node")
         self._config = self.agent._config
 
-        qos_profile = QoSProfile(
-            reliability=ReliabilityPolicy.BEST_EFFORT,
-            history=HistoryPolicy.KEEP_LAST,
-            depth=1
-        )
-
         self._cmd_vel_pub = self.agent.create_publisher(Twist, "/THMOS/walk/move", 1)
         self._head_pose_pub = self.agent.create_publisher(
             JointState,
-            "/THMOS/hardware/set_head_pose",
-            qos_profile
+            "/THMOS/head_control",
+            1
         )
             
     def _move_head(self, pitch, yaw):

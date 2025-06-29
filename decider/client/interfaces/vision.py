@@ -88,7 +88,7 @@ class Vision(Node):
         # Create subscribers
         self._location_sub = self.agent.create_subscription(
             Pose2D,
-            "/THMOS/location",
+            "/THMOS/location_fake",
             self._position_callback,
             qos_profile
         )
