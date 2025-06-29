@@ -15,6 +15,7 @@ import numpy as np
 import threading
 import logging
 import sub_statemachines
+import policy_statemachines
 import sys
 from typing import Optional, Dict, Any, Callable, List
 from datetime import datetime
@@ -141,7 +142,8 @@ class Agent(Node):
         self.kick_state_machine = sub_statemachines.KickStateMachine(self)
         self.go_back_to_field_state_machine = sub_statemachines.GoBackToFieldStateMachine(self)
         self.dribble_state_machine = sub_statemachines.DribbleStateMachine(self)
-        
+        self.goalkeeper_state_machine = policy_statemachines.GoalkeeperStateMachine(self)
+
         self._state_machine_runners = {
             "chase_ball": self.chase_ball_state_machine.run,
             "find_ball": self.find_ball_state_machine.run,
@@ -149,6 +151,7 @@ class Agent(Node):
             "go_back_to_field": self.go_back_to_field_state_machine.run,
             "dribble": self.dribble_state_machine.run,
             "stop": self.stop,
+            "goalkeeper": self.goalkeeper_state_machine.run,
         }
 
     def run(self) -> None:
@@ -367,7 +370,7 @@ class Agent(Node):
     def get_if_close_to_ball(self) -> bool:
         """Return whether robot is close to the ball."""
         if self.get_if_ball():
-            return 0.1 <= self.get_ball_distance() <= 0.4
+            return self.get_ball_distance() < self._config.get("close_to_ball_threshold", 0.5)
         else:
             return False
 
@@ -377,6 +380,30 @@ class Agent(Node):
             return self._vision.ball_distance
         else:
             return 1e6
+        
+    def get_angle_to_our_goal(self) -> float:
+        """Calculate angle to our goal based on self position."""
+        self_pos = self.get_self_pos()
+        goal_x = 0.0
+        goal_y = - self._config["field_size"][0] / 2
+
+        if self_pos is not None:
+            angle_rad = math.atan2(goal_x - self_pos[0], goal_y - self_pos[1])
+            return angle_rad
+        else:
+            return 0.0
+        
+    def get_distance_to_our_goal(self) -> float:
+        """Calculate distance to our goal based on self position."""
+        self_pos = self.get_self_pos()
+        goal_x = 0.0
+        goal_y = - self._config["field_size"][0] / 2
+
+        if self_pos is not None:
+            distance = math.sqrt((goal_x - self_pos[0]) ** 2 + (goal_y - self_pos[1]) ** 2)
+            return distance
+        else:
+            return float('inf')
 
     def get_neck(self) -> angle:
         """Return neck angle."""

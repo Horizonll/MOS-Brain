@@ -107,7 +107,7 @@ class DribbleStateMachine:
         self.direction = True  # FIXME: True: right, False: left
         self.logger.info(f"[DRIBBLE FSM] Initialized. Starting state: {self.state}")
 
-    def run(self):
+    def run(self, aim_yaw=None):
         """
         运行状态机
         """
@@ -129,6 +129,10 @@ class DribbleStateMachine:
             else:
                 self.aim_yaw = self.calc_angle_to_goal_degree()
             self.logger.info(f"[DRIBBLE FSM] Calculated aim_yaw: {self.aim_yaw:.2f}°")
+
+        if aim_yaw is not None:
+            self.aim_yaw = aim_yaw
+            self.logger.info(f"[DRIBBLE FSM] Using provided aim_yaw: {self.aim_yaw:.2f}°")
 
         self.machine.model.trigger("dribble")
         self.logger.info("[DRIBBLE FSM] Running...")

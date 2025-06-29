@@ -58,14 +58,11 @@ class ChaseBallStateMachine:
         self.close_angle_threshold_rad = chase_config.get("close_angle_threshold_rad", 0.1)
         self.walk_vel_x = chase_config.get("walk_vel_x", 0.3)
         self.walk_vel_theta = chase_config.get("walk_vel_theta", 0.3)
-        self.default_chase_distance = chase_config.get("default_chase_distance", 0.45)
+        self.default_chase_distance = self._config.get("close_to_ball_threshold", 0.5) - 0.05
 
     def close_to_ball(self):
         """Check if the agent is close to the ball (距离+角度检查)"""
-        if self.chase_distance is not None:
-            distance_close = self.chase_distance > self.agent.get_ball_distance()
-        else:
-            distance_close = self.agent.get_if_close_to_ball()
+        distance_close = self.chase_distance > self.agent.get_ball_distance()
         if self.agent.get_ball_angle() is None:
             return False
         angle_close = abs(self.agent.get_ball_angle()) < self.close_angle_threshold_rad
@@ -107,7 +104,7 @@ class ChaseBallStateMachine:
             self.stop_moving()
             return
 
-        self.chase_distance = self.agent.get_command().get("data", {}).get("chase_distance", 0.45)
+        self.chase_distance = self.agent.get_command().get("data", {}).get("chase_distance", self.default_chase_distance)
 
         self.logger.info(f"\n[CHASE BALL FSM] Current state: {self.state}")
         self.logger.info(f"[CHASE BALL FSM] Triggering 'chase_ball' transition")

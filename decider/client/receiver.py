@@ -127,16 +127,14 @@ ReturnData = Struct(
 
 
 class Receiver:
-    def __init__(self, team, player, goal_keeper=False, debug=True, logger=None):
+    def __init__(self, team, player, goal_keeper=False, debug=True):
         self.ip = "0.0.0.0"  # 本地ip
         self.listen_port = 3838  # 本地端口
         self.answer_port = 3939  # 服务器端口
 
         self.debug = debug
         self.kick_off = False  # 是否开球
-        self.team_input = team  # 来自初始化的team序号，用于改变上下半场team序号
-        self.team = team  # 队伍序号（0或1）
-        self.opposite_team = 1 - team  # 对面球队编号
+        self.team = team  # 队伍序号
         self.player = player  # 球员序号（0-10，上场只有4个）
         self.game_state = None  # 比赛状态
         self.kick_off = None  # 是否开球
@@ -145,13 +143,13 @@ class Receiver:
         self.penalized_time = 0  # 罚时倒计时
         self.red_card = 0  # 是否红牌(0或1)
         self.team_color = None  # 队员颜色
-        self.opposite_team_color = None  # 对面队员颜色
+        # self.opposite_team_color = None  # 对面队员颜色
 
         self.man_penalize = True  #
         self.is_goalkeeper = goal_keeper  # 守门员
         self.peer = None  # 服务器（ip， 端口）
 
-        self.logger = logger or logging.getLogger(__name__)
+        # logging = logging.getLogger("game_controller")  # 创建logger
 
         self.socket1 = socket.socket(
             socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP
@@ -176,30 +174,34 @@ class Receiver:
             )  # 收消息 sizeof()函数是占内存的大小
             self.data = GameState.parse(data)  # 解析消息
             self.game_state = self.data.game_state  # 比赛状态
-            if not self.data.first_half:
-                self.team = 1 - self.team_input
-                self.opposite_team = 1 - self.team
+            # if not self.data.first_half:
+            #     self.team_input = 1 - self.team_input
+                # self.opposite_team = 1 - self.team
             self.kick_of_team = self.data.kick_of_team  # 开球队
             self.kick_off = (
                 True if self.kick_of_team == 12 else False
             )  # 是否开球
-            self.player_info = self.data.teams[self.team].players[
+            teaminfo_bool = 0
+            if self.data.teams[1].team_number == 12:
+                teaminfo_bool = 1
+            self.player_info = self.data.teams[teaminfo_bool].players[
                 self.player
             ]  # player信息
             self.penalized_time = self.player_info.secs_till_unpenalized  # 罚时信息
-            self.team_color = self.data.teams[self.team].team_color  # 队员颜色
-            self.opposite_team_color = self.data.teams[
-                self.opposite_team
-            ].team_color  # 对面队员颜色
+            self.team_color = self.data.teams[teaminfo_bool].team_color  # 队员颜色
+            # self.opposite_team_color = self.data.teams[
+            #     self.opposite_team
+            # ].team_color  # 对面队员颜色
             
         # 解释报错
         except AssertionError as ae:
             logging.error(ae.message)
         except socket.timeout:
             pass
-            self.logger.warn("Socket timeout")
+            # rospy.logwarn("Socket timeout")
         except ConstError:
-            self.logger.warn("Parse Error: Probably using an old protocol!")
+            # rospy.logwarn("Parse Error: Probably using an old protocol!")
+            pass
         except Exception as e:
             logging.exception(e)
             pass
@@ -215,9 +217,9 @@ class Receiver:
                 self.debug_print()
 
     def debug_print(self):
-        # print("-----------message-----------")
-        # # print(self.data)
-        # print(self.game_state)
+        print("-----------message-----------")
+        # print(self.data.teams[1].team_number)
+        print(self.game_state)
         # print(self.penalized_time)
         # print(self.red_card)
         # print(self.player_info)
@@ -226,8 +228,8 @@ class Receiver:
         # print(self.data.first_half)
         # print(self.team)
         # print(self.opposite_team)
-        #print(self.kick_off)
-        pass
+        # print(self.kick_off)
+        # pass
 
     def initialize(self):
         # 初始化
@@ -257,4 +259,5 @@ class Receiver:
 
 
 if __name__ == "__main__":
-    receive = Receiver(team=1, player=0, goal_keeper=False, debug=True)
+    receiver = Receiver(team=70, player=0, goal_keeper=False, debug=True)
+    receiver.receive()

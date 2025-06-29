@@ -9,6 +9,9 @@ kick_to_dribble: [-1.7, 1.7]
 # field
 field_size: [9, 6] # kid [9, 6] adult:[14, 9]
 
+# ball
+close_to_ball_threshold: 0.5
+
 # velocities
 walk_vel_x: 0.5
 walk_vel_y: 0.5
@@ -122,3 +125,5 @@ kick:
   rotate_vel_theta: 0.5
   horizontal_adjust_forward_vel: 0.05
   rotate_vel_y: 0.05
+goalkeeper:
+  safe_area_threshold: -1
