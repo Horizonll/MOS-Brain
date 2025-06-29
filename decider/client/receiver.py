@@ -174,15 +174,12 @@ class Receiver:
             )  # 收消息 sizeof()函数是占内存的大小
             self.data = GameState.parse(data)  # 解析消息
             self.game_state = self.data.game_state  # 比赛状态
-            # if not self.data.first_half:
-            #     self.team_input = 1 - self.team_input
-                # self.opposite_team = 1 - self.team
             self.kick_of_team = self.data.kick_of_team  # 开球队
             self.kick_off = (
-                True if self.kick_of_team == 12 else False
+                True if self.kick_of_team == self.team else False
             )  # 是否开球
             teaminfo_bool = 0
-            if self.data.teams[1].team_number == 12:
+            if self.data.teams[1].team_number == self.team:
                 teaminfo_bool = 1
             self.player_info = self.data.teams[teaminfo_bool].players[
                 self.player
