@@ -1,6 +1,6 @@
 # MOS-Brain
 
-The structure of messages and statemachines of MOS-8.5.
+The structure of decisions of MOS-8.5, including messages and statemachines.
 
 ## 消息传递逻辑分类及说明
 
