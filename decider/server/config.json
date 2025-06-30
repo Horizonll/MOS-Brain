@@ -13,7 +13,7 @@
         "no_control_chase_distance": 1.2
     },
     "attacking": {
-        "ball_in_control_threshold_m": 0.6,
+        "ball_in_control_threshold_m": 0.5,
         "ball_out_of_control_threshold_m": 1.2,
         "close_to_ball_threshold_m": 1.0,
         "no_control_chase_distance": 1.2
@@ -27,5 +27,22 @@
     },
     "backfield_machine": "run_attack",
     "midfield_machine": "run_attack",
-    "frontfield_machine": "run_attack"
+    "frontfield_machine": "run_attack",
+    "robot_server": {
+        "send_robot_data": {
+            "port": 8001, 
+            "frequency": 10,
+            "secret": "YXdpb3BqeHo7bHas"
+        },
+        "receive_from_server": {
+            "port": 8002,
+            "timeout": 10,
+            "secret": "PIDcvpasdvfpIFES"
+        }, 
+        "find_server_ip": {
+            "constant_server_ip": "auto-find", 
+            "port": 8003, 
+            "secret": "a2xzYXZoO29hd2pp"
+        }
+    }
 }

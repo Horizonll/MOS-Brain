@@ -1,3 +1,4 @@
+import hashlib
 import socket
 import time
 import json
@@ -24,6 +25,23 @@ COMMANDS_DATA = {
     "go_back_to_field": {'aim_x': 0.0, 'aim_y': 2.0, 'aim_yaw': 0},
     "exit": {},
 }
+
+def sign_message(self, message: str, secret: str) -> str:
+    hash_str = hashlib.sha3_256((message + secret).encode("utf-8")).hexdigest()
+    ret = {"raw": message, "sign": hash_str}
+    return json.dumps(ret)
+
+
+def verify_sign(self, data: str, secret: str) -> str:
+    try:
+        js_data = json.loads(data)
+        message = js_data.get("raw", None)
+        target_hash = hashlib.sha3_256((message + secret).encode("utf-8")).hexdigest()
+        if js_data.get("sign", None) == target_hash:
+            return message
+    except Exception as e:
+        pass
+    return None 
 
 def send_command(cmd, server_ip, server_port=8002, protocol='udp'):
     """
@@ -67,16 +85,9 @@ def send_command(cmd, server_ip, server_port=8002, protocol='udp'):
             # Create UDP socket
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client_socket:
                 client_socket.settimeout(2.0)  # Set timeout
-                
-                # Send data
+                message = sign_message(message, "PIDcvpasdvfpIFES")
                 client_socket.sendto(message, (server_ip, server_port))
-                
-                # # Try to receive response (UDP is connectionless)
-                # try:
-                #     response, addr = client_socket.recvfrom(1024)
-                #     print(f"Server response: {response.decode('utf-8')}")
-                # except socket.timeout:
-                #     print("Sent successfully, but no response from server")
+
         else:
             print(f"Unsupported protocol: {protocol}. Please use 'tcp' or 'udp'.")
             return True
@@ -87,6 +98,7 @@ def send_command(cmd, server_ip, server_port=8002, protocol='udp'):
         print(f"Failed to send command using {protocol.upper()}: {e}")
         
     return True
+
 
 def main():
     # Parse command line arguments to get server IP and protocol

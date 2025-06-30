@@ -98,8 +98,10 @@ class Network:
             }
             if not self.agent.get_if_ball():
                 robot_data["ballx"] = robot_data["bally"] = None
-            signed_msg = self._sign_message(json.dumps(robot_data), \
-                                            config.get("secret"))
+            signed_msg = self._sign_message(
+                json.dumps(robot_data),
+                config.get("secret")
+            )
             try:
                 address = (self.server_ip, config.get("port"))
                 send_socket.sendto(signed_msg.encode("utf-8"), address)
@@ -123,12 +125,10 @@ class Network:
         while True:
             try:
                 data, addr = recv_socket.recvfrom(4096)
-                # if addr[0] != self.server_ip:
-                #     continue
-                # data = self._verify_sign(data.decode("utf-8"), config.get("secret"))
-                # if data == None:
-                #     logger.warn("Signature mismatch!")
-                #     continue
+                data = self._verify_sign(data.decode("utf-8"), config.get("secret"))
+                if data == None:
+                    logger.warn("Signature mismatch!")
+                    continue
                 logger.info(f"Received data from {addr[0]}:{addr[1]}")
                 js_data = json.loads(data)
                 if "command" in js_data:
