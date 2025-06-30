@@ -80,7 +80,8 @@ dribble:
   adjust_angle_to_goal_vel_theta: 0.5
   min_ball_distance_m: 0.0
   max_ball_distance_m: 0.40
-  good_horizontal_position_to_ball_threshold_m: 0.4
+  good_horizontal_position_to_ball_upper_threshold_m: 0.15
+  good_horizontal_position_to_ball_lower_threshold_m: 0.05
   lost_angle_to_target_threshold_degree: 30
   lost_ball_x_threshold_m: 0.08
   lost_ball_distance_threshold_m: 0.8
