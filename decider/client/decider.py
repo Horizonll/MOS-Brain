@@ -94,7 +94,7 @@ class Agent(Node):
         self.get_logger().info("Registering interfaces")
         self._action = interfaces.action.Action(self)
         self._vision = interfaces.vision.Vision(self)
-        # self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"]-1, logger=self.get_logger().get_child("receiver"))
+        self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"]-1, logger=self.get_logger().get_child("receiver"))
         self._robot_client = network.Network(self)
         self._robot_client.start_send_loop()
         self._robot_client.start_receive_loop()

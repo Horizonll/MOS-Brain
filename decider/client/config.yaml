@@ -66,7 +66,7 @@ search_ball_head_angle:
 # camera is looking around
 
 # sundry
-team: 1
+team: 12
 if_can_kick: false
 
 # statemachines params
@@ -85,10 +85,10 @@ dribble:
   max_ball_distance_m: 0.40
   good_horizontal_position_to_ball_upper_threshold_m: 0.15
   good_horizontal_position_to_ball_lower_threshold_m: 0.05
-  lost_angle_to_target_threshold_degree: 30
+  lost_angle_to_target_threshold_degree: 20
   lost_ball_x_threshold_m: 0.08
   lost_ball_distance_threshold_m: 0.8
-  dribble_0_y: 3.7
+  dribble_0_y: 7
   dribble_forward_vel_y: 0.5
   camera_bias: 0.06  # camera bias in x direction
 find_ball:

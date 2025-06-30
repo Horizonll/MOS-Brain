@@ -3,6 +3,7 @@ import socket
 import time
 import json
 import argparse
+import traceback
 
 # Command dictionary (using first letters as shortcuts)
 COMMANDS = {
@@ -16,23 +17,23 @@ COMMANDS = {
 }
 
 COMMANDS_DATA = {
-    "dribble": {'aim_yaw': 0},
+    "dribble": {},
     "forward": {},
     "stop": {},
     "find_ball": {},
     "chase_ball": {},
     "kick": {},
-    "go_back_to_field": {'aim_x': 0.0, 'aim_y': 2.0, 'aim_yaw': 0},
+    "go_back_to_field": {'aim_x': 0.0, 'aim_y': 0, 'aim_yaw': 0},
     "exit": {},
 }
 
-def sign_message(self, message: str, secret: str) -> str:
+def sign_message(message: str, secret: str) -> str:
     hash_str = hashlib.sha3_256((message + secret).encode("utf-8")).hexdigest()
     ret = {"raw": message, "sign": hash_str}
     return json.dumps(ret)
 
 
-def verify_sign(self, data: str, secret: str) -> str:
+def verify_sign(data: str, secret: str) -> str:
     try:
         js_data = json.loads(data)
         message = js_data.get("raw", None)
@@ -63,7 +64,7 @@ def send_command(cmd, server_ip, server_port=8002, protocol='udp'):
             "data": COMMANDS_DATA[cmd],
             "send_time": time.time()
         }
-        message = json.dumps(cmd_data).encode('utf-8')
+        message = json.dumps(cmd_data)
         
         if protocol.lower() == 'tcp':
             # Create and connect TCP socket
@@ -85,8 +86,8 @@ def send_command(cmd, server_ip, server_port=8002, protocol='udp'):
             # Create UDP socket
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client_socket:
                 client_socket.settimeout(2.0)  # Set timeout
-                message = sign_message(message, "PIDcvpasdvfpIFES")
-                client_socket.sendto(message, (server_ip, server_port))
+                message = sign_message(message=message, secret="PIDcvpasdvfpIFES")
+                client_socket.sendto(message.encode(), (server_ip, server_port))
 
         else:
             print(f"Unsupported protocol: {protocol}. Please use 'tcp' or 'udp'.")
@@ -96,6 +97,7 @@ def send_command(cmd, server_ip, server_port=8002, protocol='udp'):
         
     except Exception as e:
         print(f"Failed to send command using {protocol.upper()}: {e}")
+        traceback.print_exc()
         
     return True
 

@@ -444,23 +444,23 @@ class DribbleStateMachine:
 
         if self.agent.get_self_pos()[0] > 0:
             if self.agent.get_self_pos()[0] > self.goal_center_bias_m:
-                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_m) / (5 - self.agent.get_self_pos()[1]))
+                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_m) / (8 - self.agent.get_self_pos()[1]))
             else:
                 angle_to_goal_rad = 0.0
         else:
             if self.agent.get_self_pos()[0] < -self.goal_center_bias_m:
-                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_m) / (5 - self.agent.get_self_pos()[1]))
+                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_m) / (8 - self.agent.get_self_pos()[1]))
             else:
                 angle_to_goal_rad = 0.0
 
         if self.agent.get_ball_pos_in_map()[0] > 0:
             if self.agent.get_ball_pos_in_map()[0] > self.goal_center_bias_m:
-                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] - self.goal_center_bias_m) / (5 - self.agent.get_ball_pos_in_map()[1]))
+                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] - self.goal_center_bias_m) / (8 - self.agent.get_ball_pos_in_map()[1]))
             else:
                 angle_ball_to_goal = 0.0
         else:
             if self.agent.get_ball_pos_in_map()[0] < -self.goal_center_bias_m:
-                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] + self.goal_center_bias_m) / (5 - self.agent.get_ball_pos_in_map()[1]))
+                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] + self.goal_center_bias_m) / (8 - self.agent.get_ball_pos_in_map()[1]))
             else:
                 angle_ball_to_goal = 0.0
 
@@ -499,12 +499,12 @@ class DribbleStateMachine:
         """
         if self.agent.get_self_pos()[0] > 0:
             if self.agent.get_self_pos()[0] > self.goal_center_bias_m:
-                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_m) / (5 - self.agent.get_self_pos()[1]))
+                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_m) / (8 - self.agent.get_self_pos()[1]))
             else:
                 angle_to_goal_rad = 0.0
         else:
             if self.agent.get_self_pos()[0] < -self.goal_center_bias_m:
-                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_m) / (5 - self.agent.get_self_pos()[1]))
+                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_m) / (8 - self.agent.get_self_pos()[1]))
             else:
                 angle_to_goal_rad = 0.0
 
