@@ -54,40 +54,92 @@ class GoalkeeperStateMachine:
 
     def read_params(self):
         """从配置中读取参数"""
-        chase_config = self._config.get("goalkeeper", {})
-        self.close_to_ball_threshold = chase_config.get("close_to_ball_threshold", 0.45)
-        
+        goalkeeper_config = self._config.get("goalkeeper", {})
+        self.close_to_ball_threshold = goalkeeper_config.get("close_to_ball_threshold", 0.45)
+        self.rotate_vel_theta = goalkeeper_config.get("rotate_vel_theta", 1)
+        self.walk_vel_x = goalkeeper_config.get("walk_vel_x", 1)
+        self.walk_vel_y = goalkeeper_config.get("walk_vel_y", 1)
 
     def close_to_ball(self):
-        """Check if the agent is close to the ball (距离+角度检查)"""
-
-        if self.agent.get_ball_angle() is None:
+        """Check if the agent is close to the ball"""
+        if self.agent.get_ball_distance() is None:
             return False
-        angle_close = abs(self.agent.get_ball_angle()) < self.close_angle_threshold_rad
-        result = distance_close and angle_close
-        self.logger.info(
-            f"[CHASE BALL FSM] Close to ball? Distance: {distance_close}, Angle: {angle_close}, Result: {result}"
-        )
-        return result
+        distance_close = self.agent.get_if_close_to_ball()
+
+        return distance_close
 
     def not_close_to_ball(self):
         """Check if the agent is NOT close to the ball"""
         return not self.close_to_ball()
-
-    def large_angle(self):
-        """Check if the angle to the ball is large"""
-        if self.agent.get_ball_angle() is None:
+    
+    def ball_in_safe_area(self):
+        """Check if the ball is in a safe area (not close to the goal)"""
+        ball_pos_in_map = self.agent.get_ball_position_in_map()
+        if ball_pos_in_map is None:
+            return True
+        safe_area_threshold = self._config.get("safe_area_threshold", -1) + 0.3
+        safe_area = ball_pos_in_map[1] > safe_area_threshold
+        return safe_area
+    
+    def ball_in_dangerous_area(self):
+        """Check if the ball is in a dangerous area (close to the goal)"""
+        ball_pos_in_map = self.agent.get_ball_position_in_map()
+        if ball_pos_in_map is None:
             return False
-        target_angle_rad = self.agent.get_ball_angle()
-        self.logger.info(f"[CHASE BALL FSM] Large angle check: {abs(target_angle_rad) > self.close_angle_threshold_rad}")
-        return abs(target_angle_rad) > self.close_angle_threshold_rad
+        safe_area_threshold = self._config.get("safe_area_threshold", -1)
+        dangerous_area = ball_pos_in_map[1] <= safe_area_threshold
+        return dangerous_area
+    
+    def keep_the_goal(self):
+        """Return to the goal"""
+        angle_to_our_goal = self.agent.get_angle_to_our_goal()
+        reversed_angle = (angle_to_our_goal + math.pi) % (2 * math.pi) - math.pi
 
-    def small_angle(self):
-        """Check if the angle to the ball is small"""
-        if self.agent.get_ball_angle() is None:
-            return False
-        target_angle_rad = self.agent.get_ball_angle()
-        return abs(target_angle_rad) < self.close_angle_threshold_rad * 0.5
+        # Normalize angle difference to [-pi, pi]
+        yaw = self.agent.get_self_yaw()
+        angle_diff = reversed_angle - yaw
+        angle_diff = (angle_diff + math.pi) % (2 * math.pi) - math.pi
+
+        if abs(angle_diff) > math.pi/6:
+            theta = np.sign(angle_diff) * self.rotate_vel_theta
+        elif abs(angle_diff) > math.pi/8:
+            theta = np.sign(angle_diff) * self.rotate_vel_theta * 0.3
+        else:
+            theta = 0
+
+        if self.agent.get_distance_to_our_goal() > self.close_to_our_goal_threshold:
+            x_vel = -self.walk_vel_x
+        else:
+            x_vel = 0
+            if abs(yaw) > math.pi / 15:
+                theta = -self.rotate_vel_theta if yaw > 0 else self.rotate_vel_theta
+            else:
+                theta = 0
+
+        self.agent.cmd_vel(
+            x_vel,
+            0,
+            theta
+        )
+
+    def do_charge_out(self):
+        """Charge out towards the ball"""
+        self.logger.info("[GOALKEEPER FSM] Charging out towards the ball...")
+        self.agent._state_machine_runners['chase_ball']()
+
+    def do_clearance(self):
+        """Perform a clearance action"""
+        self.logger.info("[GOALKEEPER FSM] Performing clearance action...")
+        
+        yaw = self.agent.get_self_yaw()
+        if yaw < math.pi / 2 and yaw > -math.pi / 2:
+            pass
+        elif yaw >= math.pi / 2:
+            yaw = math.pi / 2
+        elif yaw <= -math.pi / 2:
+            yaw = -math.pi / 2
+
+        self.agent._state_machine_runners['dribble'](aim_yaw=yaw)
 
     def run(self):
         """Main execution loop for the state machine"""
@@ -107,30 +159,6 @@ class GoalkeeperStateMachine:
         self.logger.info(f"\n[CHASE BALL FSM] Current state: {self.state}")
         self.logger.info(f"[CHASE BALL FSM] Triggering 'chase_ball' transition")
         self.machine.model.trigger("chase_ball")
-
-    def rotate_to_ball(self):
-        """Rotate the agent towards the ball"""
-        self.logger.info("[CHASE BALL FSM] Starting to rotate towards the ball...")
-        target_angle_rad = self.agent.get_ball_angle()
-        if self.agent.get_if_ball() == False:
-            self.logger.warn("[CHASE BALL FSM] Noball,cant rotate")
-            return
-        self.agent.cmd_vel(
-            0,
-            0,
-            np.sign(target_angle_rad) * self.walk_vel_theta
-        )
-        self.logger.info("[CHASE BALL FSM] Rotation step completed.")
-
-    def move_forward_to_ball(self):
-        """Move the agent forward towards the ball"""
-        self.logger.info("[CHASE BALL FSM] Starting to move forward towards the ball...")
-        self.agent.cmd_vel(
-            self.walk_vel_x,
-            0,
-            self.agent.get_ball_angle()/np.pi * self.walk_vel_theta * 5
-        )
-        self.logger.info("[CHASE BALL FSM] Forward movement step completed.")
 
     def stop_moving(self):
         """Stop the agent's movement"""
