@@ -9,6 +9,9 @@ import socket
 import traceback
 import netifaces
 import re
+import fcntl
+import struct
+import subprocess
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -19,6 +22,7 @@ class RobotServer:
         self.agent = agent
         self.robot_ips = {}
         self.robots_data = self.agent.robots_data
+        self.config = agent.get_config().get("robot_server", {})
         self.send_robot_data_port = self.config.get("send_robot_data", {}).get("port", 8001)
         self.send_robot_data_secret = self.config.get("send_robot_data", {}).get("secret", "YXdpb3BqeHo7bHas")
         self.receive_from_server_port = self.config.get("receive_from_server", {}).get("port", 8002)
@@ -28,8 +32,8 @@ class RobotServer:
         self.client_udp_port = 8003  # UDP端口用于与机器人通信
         self.update_interval = 0.5  # 默认更新间隔
         self.discovery_interval = 1  # 发现广播间隔
-        self.config = self.agent.get_config().get("robot_server", {})
         self.broadcast_address = self.get_wireless_broadcast()
+        self.ip = self.get_wireless_ip()[1]  # 获取当前无线网卡的IP地址
 
         # 网络初始化
         self._init_udp_socket()
@@ -46,18 +50,37 @@ class RobotServer:
     def _init_udp_server(self):
         """初始化UDP服务器socket"""
         self.udp_server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.udp_server_socket.bind(('0.0.0.0', self.receive_from_server_port))
+        self.udp_server_socket.bind(('0.0.0.0', self.send_robot_data_port))
         self.udp_server_socket.setblocking(False)  # 设置为非阻塞模式
 
-    def _detect_self_ip(self):
-        """自动检测服务器IP地址"""
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                s.connect(("8.8.8.8", 80))
-                return s.getsockname()[0]
-        except Exception as e:
-            logging.error(f"IP detection failed: {e}")
-            return '127.0.0.1'
+    def get_wireless_ip(self):
+        """获取当前无线网卡的IP地址"""
+        # 获取所有网络接口
+        interfaces = subprocess.check_output("ls /sys/class/net/", shell=True).decode().strip().split('\n')
+        
+        # 检查每个接口是否为无线接口并获取IP
+        for interface in interfaces:
+            # 检查是否为无线接口
+            try:
+                subprocess.check_output(f"iwconfig {interface} 2>/dev/null | grep -i ESSID", shell=True)
+                is_wireless = True
+            except subprocess.CalledProcessError:
+                is_wireless = False
+            
+            if is_wireless:
+                try:
+                    # 使用socket获取IP地址
+                    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    ip = socket.inet_ntoa(fcntl.ioctl(
+                        s.fileno(),
+                        0x8915,  # SIOCGIFADDR
+                        struct.pack('256s', interface[:15].encode())
+                    )[20:24])
+                    return interface, ip
+                except Exception as e:
+                    print(f"获取接口 {interface} 的IP地址时出错: {e}")
+        
+        return None, None
 
     def get_wireless_broadcast(self):
         """获取无线网络的广播地址"""
@@ -123,6 +146,7 @@ class RobotServer:
                 
                 try:
                     data, addr = self.udp_server_socket.recvfrom(1024)
+                    logging.debug(f"Received UDP data: {data} from {addr}")
                     robot_ip = addr[0]
                     self._process_incoming_data(data, robot_ip)
                 except BlockingIOError:
@@ -137,8 +161,9 @@ class RobotServer:
     def _process_incoming_data(self, data, robot_ip):
         """处理接收到的数据并更新机器人状态"""
         try:
-            robot_data = json.loads(data.decode("utf-8"))
-            robot_data = self._verify_sign(robot_data, self.receive_from_server_secret)
+            robot_data = data.decode("utf-8")
+            robot_data = self._verify_sign(robot_data, self.send_robot_data_secret)
+            robot_data = json.loads(robot_data)
             robot_id = robot_data["id"]
 
             # 更新机器人元数据
@@ -154,7 +179,7 @@ class RobotServer:
             # 更新球检测状态
             ball_data = robot_data.get('data', {}).get('ballx')
             self.agent.ball_x = ball_data
-            logging.info(f"Robot {robot_id} data: {robot_data}")
+            logging.debug(f"Robot {robot_id} data: {robot_data}")
 
             # 存储机器人IP
             self.robot_ips[robot_id] = robot_ip
@@ -163,6 +188,10 @@ class RobotServer:
         except (json.JSONDecodeError, KeyError) as e:
             logging.error(f"Data processing error: {e}")
             return None
+        except Exception as e:
+            logging.error(f"Unexpected error processing data: {e}")
+            logging.error(traceback.format_exc())
+            return None
 
     def send_to_robot(self, robot_id, data):
         """向特定机器人发送数据"""
@@ -170,8 +199,8 @@ class RobotServer:
             try:
                 # 将数据转换为JSON并发送
                 message = json.dumps(data)
-                message = self._sign_message(message, self.send_robot_data_secret).encode("utf-8")
-                self.udp_server_socket.sendto(message, (robot_ip, self.send_robot_data_port))
+                message = self._sign_message(message, self.receive_from_server_secret).encode("utf-8")
+                self.udp_server_socket.sendto(message, (robot_ip, self.receive_from_server_port))
                 logging.debug(f"Data sent to {robot_id}")
             except Exception as e:
                 logging.error(f"Failed to send to {robot_id}: {e}")
@@ -225,7 +254,7 @@ class RobotServer:
             logging.debug("Connection status updated")
             # 列出所有机器人数据
             for robot_id, data in self.agent.robots_data.items():
-                logging.debug(f"Robot {robot_id}: {data}")
+                logging.info(f"Robot {robot_id}: {data}")
             await asyncio.sleep(5)
 
     async def run(self):

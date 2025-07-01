@@ -11,9 +11,11 @@ from pathlib import Path
 import time
 import signal
 import asyncio
+import traceback
 import numpy as np
 import threading
 import logging
+import rclpy.logging
 import sub_statemachines
 import policy_statemachines
 import sys
@@ -55,7 +57,7 @@ import interfaces.vision
 
 # Network
 import network
-from receiver_new import Receiver
+from receiver import Receiver
 
 class Agent(Node):
     """
@@ -94,7 +96,7 @@ class Agent(Node):
         self.get_logger().info("Registering interfaces")
         self._action = interfaces.action.Action(self)
         self._vision = interfaces.vision.Vision(self)
-        self.receiver = Receiver(self.get_config()["team"], self.get_config()["id"]-1, logger=self.get_logger().get_child("receiver"))
+        self.receiver = Receiver(self.get_config()["team_id"], self.get_config()["id"]-1, logger=self.get_logger().get_child("receiver"))
         self._robot_client = network.Network(self)
         self._robot_client.start_send_loop()
         self._robot_client.start_receive_loop()
@@ -158,7 +160,8 @@ class Agent(Node):
         """Main decision-making loop based on game state and commands."""
         try:
             state = self.receiver.game_state
-            penalized_time = self.receiver.penalized_time
+            # penalized_time = self.receiver.penalized_time
+            penalized_time = 0
             self.get_logger().info(f"penalized_time = {penalized_time}")
             
             # Handle penalized state
@@ -201,6 +204,7 @@ class Agent(Node):
                 
         except Exception as e:
             self.get_logger().error(f"Error in decider run: {e}")
+            traceback.print_exc()
 
     def _handle_offline_state(self) -> None:
         """Handle state when command is offline based on ball detection."""
@@ -220,6 +224,7 @@ class Agent(Node):
     def _handle_server_command(self) -> None:
         """Handle state based on server command and ball detection."""
         cmd = self._command["command"]
+        print("================server cmd = ", cmd)
         
         if not self.get_if_ball() and cmd in ['chase_ball', 'kick', 'dribble']:
             self.get_logger().info(f"Running: find_ball (server cmd {cmd}, no ball)")
@@ -503,6 +508,8 @@ def main(args=None):
     parser = argparse.ArgumentParser(description='Decider program arguments')
     parser.add_argument('--debug', action='store_true',
                         help='Enable debug mode')
+    parser.add_argument('--debuglog', action='store_true',
+                        help='Enable debug logging')
     parser.add_argument('--rate', type=float, default=10.0,
                         help='Loop rate in Hz (default: 10.0)')
     cmd_args = parser.parse_args()
@@ -525,6 +532,10 @@ def main(args=None):
     os.environ['RCUTILS_LOGGING_AUTO_INIT'] = '0'   # 禁用自动初始化
     os.environ['RCUTILS_LOGGING_BUFFERED_STREAM'] = '0'  # 禁用缓冲，立即写入
     os.environ['ROS_LOG_DIR'] = str(log_filepath)  # 设置日志文件路径
+
+    # 设置日志等级
+    if cmd_args.debuglog:
+        rclpy.logging.set_logger_level('decider', rclpy.logging.LoggingSeverity.DEBUG)
     
     # Initialize ROS 2
     rclpy.init(args=args)

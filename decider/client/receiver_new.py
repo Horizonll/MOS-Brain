@@ -2,6 +2,7 @@
 #   @description:   Utilities to connect with the game controller
 import socket
 import logging
+import time
 import threading
 from construct import Container, ConstError
 from construct import (
@@ -143,7 +144,9 @@ ReturnData = Struct(
 
 # 裁判盒接收器类
 class Receiver:
-    def __init__(self, team, player, goal_keeper=False, debug=True):
+    def __init__(self, team, player, goal_keeper=False, debug=True, logger=logging.getLogger(__name__)):
+        self.logger = logger
+
         self.ip = "0.0.0.0"  # 本地ip
         self.listen_port = 3838  # 本地端口
         self.answer_port = 3939  # 服务器端口
@@ -202,13 +205,13 @@ class Receiver:
             self.player_penalty_name = PENALTY_NAMES.get(self.player_info.penalty, "UNKNOWN")
             
         except AssertionError as ae:
-            logging.error(ae.message)
+            self.logger.error(ae.message)
         except socket.timeout:
             pass
         except ConstError:
             pass
         except Exception as e:
-            logging.exception(e)
+            self.logger.exception(e)
 
     def receive(self):
         self.initialize()
@@ -218,12 +221,19 @@ class Receiver:
                 self.debug_print()
 
     def debug_print(self):
-        print("-----------message-----------")
-        print(f"Game State: {self.game_state}")
-        print(f"Kicking Team: {self.kicking_team}")
-        print(f"Penalized Time: {self.penalized_time}s")
-        print(f"Team Color: {self.team_color_name}")
-        print(f"Player Penalty: {self.player_penalty_name}")
+        """记录当前比赛状态信息"""
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        log_separator = "=" * 50
+        
+        self.logger.debug(log_separator)
+        self.logger.debug(f"[GameController] [{timestamp}] Game Status")
+        self.logger.debug(log_separator)
+        self.logger.debug(f"Game State      : {self.game_state}")
+        self.logger.debug(f"Kicking Team    : {self.kicking_team}")
+        self.logger.debug(f"Penalized Time  : {self.penalized_time}s")
+        self.logger.debug(f"Team Color      : {self.team_color_name}")
+        self.logger.debug(f"Player Penalty  : {self.player_penalty_name}")
+        self.logger.debug(log_separator)
 
     def initialize(self):
         while True:
@@ -252,5 +262,5 @@ class Receiver:
 
 if __name__ == "__main__":
     # 注意：球员序号范围应与MAX_NUM_PLAYERS(20)匹配
-    receiver = Receiver(team=70, player=3, goal_keeper=False, debug=True)
+    receiver = Receiver(team=0, player=3, goal_keeper=False, debug=True)
     receiver.receive()

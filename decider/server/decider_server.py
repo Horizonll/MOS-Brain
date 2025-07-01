@@ -11,6 +11,8 @@ import logging
 import asyncio
 import os
 import sys
+
+import yaml
 from robot_server import RobotServer
 from sub_statemachines import DefendBallStateMachine
 from sub_statemachines import DribbleBallStateMachine
@@ -285,7 +287,7 @@ class Agent:
 
             cmd_str = cmd if isinstance(cmd, str) else cmd.get("name", str(cmd))
             self.logger.debug(f"[CMD] Sending command -> Player {player_id}: {cmd_str}")
-
+            start_time = time.time()
             # Construct the command data
             cmd_data = {
                 "command": cmd,

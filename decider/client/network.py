@@ -40,6 +40,7 @@ class Network:
         try:
             self._send_loop_thread.stop()
         except Exception as e:
+            self.logger.warn(f"Error stopping send_loop thread: {e}")
             pass
         self.logger.info("Starting the send_loop thread")
         self._send_loop_thread = threading.Thread(target=self._send_loop)
@@ -105,6 +106,7 @@ class Network:
             try:
                 address = (self.server_ip, config.get("port"))
                 send_socket.sendto(signed_msg.encode("utf-8"), address)
+                self.logger.debug(f"[SEND LOOP]Sent robot data to {self.server_ip}:{config.get('port')}")
             except Exception as e:
                 logger.error(f"Error sending robot data: {e}")
         send_socket.close()
@@ -121,7 +123,7 @@ class Network:
         except Exception as e:
             logger.warn("SO_REUSEPORT are not supported!")
         recv_socket.settimeout(config.get("timeout"))
-        recv_socket.bind(("", config.get("port")))
+        recv_socket.bind(("0.0.0.0", config.get("port")))
         while True:
             try:
                 data, addr = recv_socket.recvfrom(4096)
@@ -175,11 +177,15 @@ class Network:
         while True:
             try:
                 data, addr = client_socket.recvfrom(4096)
+                logger.debug(f"[FIND SERVER] Received data: {data} from {addr[0]}:{addr[1]}")
                 data = self._verify_sign(data.decode("utf-8"), config.get("secret"))
-                if data == addr[0]:
+                if data != None:
                     server_ip = addr[0]
                     logger.info(f"Verified server ip: {server_ip}")
-                    break
+                    self.server_ip = server_ip
+                else:
+                    logger.warn(f"Signature mismatch for broadcast message from {addr[0]}:{addr[1]}")
+                    continue
             except socket.timeout:
                 logger.debug("No broadcast message received within timeout period.")
                 continue

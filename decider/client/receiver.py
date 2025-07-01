@@ -1,260 +1,172 @@
-# receiver.py
-#   @description:   Utilities to connect with the game controller
 import socket
-import logging
 import threading
-from construct import Container, ConstError
-from construct import (
-    Byte,
-    Struct,
-    Enum,
-    Bytes,
-    Const,
-    Array,
-    Int16ul,
-    Int32ul,
-    PaddedString,
-    Flag,
-    Int16sl,
-)
+import struct
+from construct import ConstError, Byte, Struct, Enum, Bytes, Const, Array, Int16ul
+import logging
 
-
-# 以下是 GameState
 Short = Int16ul
 
-RobotInfo = "robot_info" / Struct(
-    # define NONE                        0
-    # define HL_BALL_MANIPULATION                30
-    # define HL_PHYSICAL_CONTACT                 31
-    # define HL_ILLEGAL_ATTACK                   32
-    # define HL_ILLEGAL_DEFENSE                  33
-    # define HL_PICKUP_OR_INCAPABLE              34
-    # define HL_SERVICE                          35
+FieldPlayerColour = Enum(
+    Byte,
+    CYAN=0,
+    MAGENTA=1,
+    BLUE=0,
+    RED=1,
+    YELLOW=2,
+    BLACK=3,
+    WHITE=4,
+    GREEN=5,
+    ORANGE=6,
+    PURPLE=7,
+    BROWN=8,
+    GRAY=9,
+)
+
+GameStateEnum = Enum(
+    Byte, STATE_INITIAL=0, STATE_READY=1, STATE_SET=2, STATE_PLAYING=3, STATE_FINISHED=4
+)
+
+SecondaryStateEnum = Enum(
+    Byte,
+    STATE2_NORMAL=0,
+    STATE2_PENALTYSHOOT=1,
+    STATE2_OVERTIME=2,
+    STATE2_TIMEOUT=3,
+    STATE2_DIRECT_FREEKICK=4,
+    STATE2_INDIRECT_FREEKICK=5,
+    STATE2_PENALTYKICK=6,
+    STATE2_CORNER_KICK=7,
+    STATE2_GOAL_KICK=8,
+    STATE2_THROW_IN=9,
+    DROPBALL=128,
+    UNKNOWN=255,
+)
+
+RobotInfo = Struct(
     "penalty" / Byte,
     "secs_till_unpenalized" / Byte,
     "number_of_warnings" / Byte,
     "number_of_yellow_cards" / Byte,
     "number_of_red_cards" / Byte,
-    "goalkeeper" / Flag,
+    "goalkeeper" / Byte,
 )
 
-TeamInfo = "team" / Struct(
+TeamInfo = Struct(
     "team_number" / Byte,
-    "team_color"
-    / Enum(
-        Byte,
-        BLUE=0,
-        RED=1,
-        YELLOW=2,
-        BLACK=3,
-        WHITE=4,
-        GREEN=5,
-        ORANGE=6,
-        PURPLE=7,
-        BROWN=8,
-        GRAY=9,
-    ),
+    "field_player_colour" / FieldPlayerColour,
     "score" / Byte,
-    "penalty_shot" / Byte,  # penalty shot counter
-    "single_shots" / Short,  # bits represent penalty shot success
+    "penalty_shot" / Byte,
+    "single_shots" / Short,
     "coach_sequence" / Byte,
-    "coach_message" / PaddedString(253, "utf8"),
+    "coach_message" / Bytes(253),
     "coach" / RobotInfo,
     "players" / Array(11, RobotInfo),
 )
 
-GameState = "gamedata" / Struct(
+GameState = Struct(
     "header" / Const(b"RGme"),
     "version" / Const(12, Short),
     "packet_number" / Byte,
     "players_per_team" / Byte,
     "game_type" / Byte,
-    "game_state"
-    / Enum(
-        Byte,
-        STATE_INITIAL=0,
-        STATE_READY=1,
-        STATE_SET=2,
-        STATE_PLAYING=3,
-        STATE_FINISHED=4,
-    ),
-    "first_half" / Flag,
-    "kick_of_team" / Byte,
-    "secondary_state"
-    / Enum(
-        Byte,
-        STATE_NORMAL=0,
-        STATE_PENALTYSHOOT=1,
-        STATE_OVERTIME=2,
-        STATE_TIMEOUT=3,
-        STATE_DIRECT_FREEKICK=4,
-        STATE_INDIRECT_FREEKICK=5,
-        STATE_PENALTYKICK=6,
-        STATE_CORNERKICK=7,
-        STATE_GOALKICK=8,
-        STATE_THROWIN=9,
-        DROPBALL=128,
-        UNKNOWN=255,
-    ),
+    "state" / GameStateEnum,
+    "first_half" / Byte,
+    "kick_off_team" / Byte,
+    "secondary_state" / SecondaryStateEnum,
     "secondary_state_info" / Bytes(4),
-    "drop_in_team" / Flag,
+    "drop_in_team" / Byte,
     "drop_in_time" / Short,
-    "seconds_remaining" / Int16sl,
-    "secondary_seconds_remaining" / Int16sl,
-    "teams" / Array(2, "team" / TeamInfo),
+    "seconds_remaining" / Short,
+    "secondary_seconds_remaining" / Short,
+    "teams" / Array(2, TeamInfo),
 )
-
-GAME_CONTROLLER_RESPONSE_VERSION = 2
-
-ReturnData = Struct(
-    "header" / Const(b"RGrt"),
-    "version" / Const(2, Byte),
-    "team" / Byte,
-    "player" / Byte,
-    "message" / Byte,
-)
-
-
-# 以下是裁判盒 receiver
-
-"""
-    STATE_INITIAL   : 什么都没有
-    STATE_READY     ：走进球场（动起来）
-    STATE_SET       ：放球（走进去）
-    STATE_PLAYING   ：开始比赛
-    STATE_FINISHED  ：结束比赛
-"""
 
 
 class Receiver:
-    def __init__(self, team, player, goal_keeper=False, debug=True):
-        self.ip = "0.0.0.0"  # 本地ip
-        self.listen_port = 3838  # 本地端口
-        self.answer_port = 3939  # 服务器端口
+    def __init__(self, team=12, player=0, debug=False, logger=logging.getLogger("Receiver")):
+        self.logger = logger
 
-        self.debug = debug
-        self.kick_off = False  # 是否开球
-        self.team = team  # 队伍序号
+        # 基本设置
+        self.team = team  # 队伍序号（0或1）
         self.player = player  # 球员序号（0-10，上场只有4个）
-        self.game_state = None  # 比赛状态
-        self.kick_off = None  # 是否开球
-        self.data = None  # 获取消息数据
-        self.player_info = None  # 球员信息
-        self.penalized_time = 0  # 罚时倒计时
-        self.red_card = 0  # 是否红牌(0或1)
-        self.team_color = None  # 队员颜色
-        # self.opposite_team_color = None  # 对面队员颜色
+        self.debug = debug
 
-        self.man_penalize = True  #
-        self.is_goalkeeper = goal_keeper  # 守门员
-        self.peer = None  # 服务器（ip， 端口）
+        # 网络设置
+        self.ip = "0.0.0.0"
+        self.listen_port = 3838
+        self.answer_port = 3939
+        self.peer = None
 
-        # logging = logging.getLogger("game_controller")  # 创建logger
+        # 比赛状态
+        self.game_state = None
+        self.kick_off = None
+        self.data = None
+        self.player_info = None
+        self.penalty = 0
+        self.team_id = None
 
+        # 创建socket
         self.socket1 = socket.socket(
             socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP
-        )  # UDP协议
-        self.socket1.setsockopt(
-            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1
-        )  # 设定选项的值
-        self.addr = (self.ip, self.listen_port)  # 本地（ip， 端口）
-        self.socket1.bind(self.addr)  # 主机、端口绑定到socket上
-        self.socket1.settimeout(2)  # 阻塞时间(2s收不到就警告timeout)
+        )
+        self.socket1.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.socket1.bind((self.ip, self.listen_port))
+        self.socket1.settimeout(1)
 
-        # self.initialize()  # 初始化
-
-        self.t = threading.Thread(target=self.receive, daemon=True)  # 设置线程，持续接收信息
-        self.t.start()  # 开启线程
+        # 启动接收线程
+        threading.Thread(target=self.receive, daemon=not self.debug).start()
 
     def receive_once(self):
-        # 接收一次消息
+        """接收一次消息并解析"""
         try:
-            data, self.peer = self.socket1.recvfrom(
-                GameState.sizeof()
-            )  # 收消息 sizeof()函数是占内存的大小
-            self.data = GameState.parse(data)  # 解析消息
-            self.game_state = self.data.game_state  # 比赛状态
-            self.kick_of_team = self.data.kick_of_team  # 开球队
-            self.kick_off = (
-                True if self.kick_of_team == self.team else False
-            )  # 是否开球
-            teaminfo_bool = 0
-            if self.data.teams[1].team_number == self.team:
-                teaminfo_bool = 1
-            self.player_info = self.data.teams[teaminfo_bool].players[
-                self.player
-            ]  # player信息
-            self.penalized_time = self.player_info.secs_till_unpenalized  # 罚时信息
-            self.team_color = self.data.teams[teaminfo_bool].team_color  # 队员颜色
-            # self.opposite_team_color = self.data.teams[
-            #     self.opposite_team
-            # ].team_color  # 对面队员颜色
-            
-        # 解释报错
-        except AssertionError as ae:
-            logging.error(ae.message)
+            data, self.peer = self.socket1.recvfrom(GameState.sizeof())
+            self.data = GameState.parse(data)
+            self.game_state = self.data.state
+            self.kick_off = self.data.kick_off_team == self.team
+
+            # 确定队伍ID
+            if self.data.teams[0].team_number == self.team:
+                self.team_id = 0
+            elif self.data.teams[1].team_number == self.team:
+                self.team_id = 1
+            else:
+                raise AssertionError("Team number does not match!")
+
+            self.player_info = self.data.teams[self.team_id].players[self.player]
+            self.penalty = self.player_info.penalty
+
         except socket.timeout:
             pass
-            # rospy.logwarn("Socket timeout")
+            self.logger.warning("Socket timeout")
         except ConstError:
-            # rospy.logwarn("Parse Error: Probably using an old protocol!")
-            pass
+            self.logger.error("ConstError")
         except Exception as e:
-            logging.exception(e)
-            pass
+            self.logger.error("Exception: %s", e)
 
     def receive(self):
-        self.initialize()
-
-        # 持续接收消息，单开线程
         while True:
             self.receive_once()
-            # 输出debug信息
+            self.send_status_to_gamecontroller()
             if self.debug:
                 self.debug_print()
 
     def debug_print(self):
         print("-----------message-----------")
-        # print(self.data.teams[1].team_number)
-        print(self.game_state)
-        # print(self.penalized_time)
-        # print(self.red_card)
-        # print(self.player_info)
-        # print(self.team_color == "RED")
-        # print(self.opposite_team_color)
-        # print(self.data.first_half)
-        # print(self.team)
-        # print(self.opposite_team)
-        # print(self.kick_off)
-        # pass
+        print("Game State:", self.game_state)
+        print("Kick Off:", self.kick_off)
+        print("Penalty:", self.penalty)
+        print("Player Info:", self.player_info)
 
-    def initialize(self):
-        # 初始化
-        while True:
-            self.receive_once()  # 持续接收消息，直到获取服务器地址
-            if self.peer:
-                for i in range(5):
-                    self.answer_to_gamecontroller()  # 给服务器发送5次信息
-                print("initialized, break")
-                break
-
-    def answer_to_gamecontroller(self):
-        # 给服务器发送信息
-        return_message = 0 if self.man_penalize else 2
-        if self.is_goalkeeper:
-            return_message = 3
-        # 发送的消息
-        data = Container(
-            header=b"RGrt",
-            version=GAME_CONTROLLER_RESPONSE_VERSION,
-            team=self.team,
-            player=self.player,
-            message=return_message,
-        )
-        destination = (self.peer[0], self.answer_port)  # 服务器（ip， 端口）
-        self.socket1.sendto(ReturnData.build(data), destination)  # 给服务器发消息
+    def send_status_to_gamecontroller(self):
+        header = b"RGrt"
+        version = 2
+        player_num = self.player + 1
+        message = 2
+        packed = struct.pack("<4sBBBB", header, version, self.team, player_num, message)
+        dest_ip = self.peer[0] if self.peer else "127.0.0.1"
+        dest = (dest_ip, self.answer_port)
+        self.socket1.sendto(packed, dest)
 
 
 if __name__ == "__main__":
-    receiver = Receiver(team=70, player=0, goal_keeper=False, debug=True)
-    receiver.receive()
+    receive = Receiver(team=12, player=0, debug=True)
