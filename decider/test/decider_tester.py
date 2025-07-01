@@ -13,7 +13,8 @@ COMMANDS = {
     'c': {'name': 'chase_ball', 'shortcut': 'c', 'description': 'Chase Ball'},
     'k': {'name': 'kick', 'shortcut': 'k', 'description': 'Kick Ball'},
     'g': {'name': 'go_back_to_field', 'shortcut': 'g', 'description': 'Return to Field'},
-    'q': {'name': 'exit', 'shortcut': 'q', 'description': 'Exit Program'}
+    'q': {'name': 'exit', 'shortcut': 'q', 'description': 'Exit Program'},
+    'gk': {'name': 'goalkeeper', 'shortcut': 'gk', 'description': 'Goalkeeper Mode'}
 }
 
 COMMANDS_DATA = {
@@ -25,6 +26,7 @@ COMMANDS_DATA = {
     "kick": {},
     "go_back_to_field": {'aim_x': 0.0, 'aim_y': 0, 'aim_yaw': 0},
     "exit": {},
+    "goalkeeper": {}
 }
 
 def sign_message(message: str, secret: str) -> str:

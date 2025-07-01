@@ -121,18 +121,29 @@ class Agent:
         """
         Read the configuration file.
         """
-        # Read the local JSON configuration file
+        # 获取当前脚本所在目录
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # 构建配置文件路径
+        yaml_path = os.path.join(script_dir, "config.yaml")
+        json_path = os.path.join(script_dir, "config.json")
+        
         try:
-            with open("/home/thmos/MOS-Brain/decider/server/config.json", "r") as f:
-                self._config = json.load(f)
-
-            # # Check if automatic player detection is enabled
-            # self.auto_detect_players = config.get("auto_detect_players", False)
-
-            # # Check if static IP is used
-            # self.use_static_ip = config.get("use_static_ip", False)
-        except FileNotFoundError:
-            logging.error("Configuration file not found.")
+            # 优先尝试YAML配置
+            if os.path.exists(yaml_path):
+                with open(yaml_path, "r") as f:
+                    self._config = yaml.safe_load(f)
+                logging.info(f"Configuration loaded from YAML file: {yaml_path}")
+            # 如果YAML不存在，尝试JSON
+            elif os.path.exists(json_path):
+                with open(json_path, "r") as f:
+                    self._config = json.load(f)
+                logging.info(f"Configuration loaded from JSON file: {json_path}")
+            else:
+                raise FileNotFoundError("Both YAML and JSON configuration files not found in script directory")
+                
+        except Exception as e:
+            logging.error(f"Error loading configuration: {str(e)}")
 
     def get_config(self):
         """
@@ -276,7 +287,6 @@ class Agent:
             self.logger.debug(f"[CMD] Sending command -> Player {player_id}: {cmd_str}")
 
             # Construct the command data
-            start_time = time.time()
             cmd_data = {
                 "command": cmd,
                 "data": data,
@@ -284,11 +294,9 @@ class Agent:
             }
 
             # Send the command asynchronously
-            asyncio.run(self.robot_server.send_to_robot(player_id, cmd_data))
+            self.robot_server.send_to_robot(player_id, cmd_data)
 
-            # Log the performance metric
-            latency = (time.time() - start_time) * 1000  # in milliseconds
-            self.logger.debug(f"[CMD] Command sent successfully | Player {player_id} | Time taken: {latency:.2f}ms")
+            self.logger.debug(f"[CMD] Command sent successfully | Player {player_id}")
 
         except asyncio.TimeoutError:
             self.logger.error(f"[CMD] Command sending timed out | Player {player_id} | Command: {cmd_str}")

@@ -124,7 +124,7 @@ class DribbleStateMachine:
         self.aim_yaw = self.agent.get_command().get('data').get('aim_yaw', None)
 
         if self.aim_yaw is None:
-            if self.agent.get_self_pos()[1] > self._config.get("dribble", {}).get("dribble_0_y", 3.7):
+            if self.agent.get_self_pos()[1] > self._config.get("field_size", [9,6])[0] * 4 / 5:
                 self.aim_yaw = 0.0
             else:
                 self.aim_yaw = self.calc_angle_to_goal_degree()
@@ -442,25 +442,27 @@ class DribbleStateMachine:
         """
         self.logger.info("[DRIBBLE FSM] Calculating angles...")
 
+        goal_y_coord = 1 + self._config.get("field_size", {}).get(self.agent.league, [9, 6])[1] / 2
+
         if self.agent.get_self_pos()[0] > 0:
             if self.agent.get_self_pos()[0] > self.goal_center_bias_m:
-                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_m) / (8 - self.agent.get_self_pos()[1]))
+                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_m) / (goal_y_coord - self.agent.get_self_pos()[1]))
             else:
                 angle_to_goal_rad = 0.0
         else:
             if self.agent.get_self_pos()[0] < -self.goal_center_bias_m:
-                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_m) / (8 - self.agent.get_self_pos()[1]))
+                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_m) / (goal_y_coord - self.agent.get_self_pos()[1]))
             else:
                 angle_to_goal_rad = 0.0
 
         if self.agent.get_ball_pos_in_map()[0] > 0:
             if self.agent.get_ball_pos_in_map()[0] > self.goal_center_bias_m:
-                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] - self.goal_center_bias_m) / (8 - self.agent.get_ball_pos_in_map()[1]))
+                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] - self.goal_center_bias_m) / (goal_y_coord - self.agent.get_ball_pos_in_map()[1]))
             else:
                 angle_ball_to_goal = 0.0
         else:
             if self.agent.get_ball_pos_in_map()[0] < -self.goal_center_bias_m:
-                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] + self.goal_center_bias_m) / (8 - self.agent.get_ball_pos_in_map()[1]))
+                angle_ball_to_goal = math.atan((self.agent.get_ball_pos_in_map()[0] + self.goal_center_bias_m) / (goal_y_coord - self.agent.get_ball_pos_in_map()[1]))
             else:
                 angle_ball_to_goal = 0.0
 
@@ -497,14 +499,16 @@ class DribbleStateMachine:
         """
         计算朝球门的角度
         """
+        goal_y_coord = 1 + self._config.get("field_size", {}).get(self.agent.league, [9, 6])[1] / 2
+        
         if self.agent.get_self_pos()[0] > 0:
             if self.agent.get_self_pos()[0] > self.goal_center_bias_m:
-                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_m) / (8 - self.agent.get_self_pos()[1]))
+                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] - self.goal_center_bias_m) / (goal_y_coord - self.agent.get_self_pos()[1]))
             else:
                 angle_to_goal_rad = 0.0
         else:
             if self.agent.get_self_pos()[0] < -self.goal_center_bias_m:
-                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_m) / (8 - self.agent.get_self_pos()[1]))
+                angle_to_goal_rad = math.atan((self.agent.get_self_pos()[0] + self.goal_center_bias_m) / (goal_y_coord - self.agent.get_self_pos()[1]))
             else:
                 angle_to_goal_rad = 0.0
 

@@ -55,7 +55,7 @@ import interfaces.vision
 
 # Network
 import network
-from receiver import Receiver
+from receiver_new import Receiver
 
 class Agent(Node):
     """
@@ -283,8 +283,10 @@ class Agent(Node):
         self.if_can_kick = self._config.get("if_can_kick", False)
         
         self.start_wait_time = self._config.get("start_wait_time", 3)
-        self.dribble_to_kick = self._config.get("dribble_to_kick", [-2.3, 2.3])
-        self.kick_to_dribble = self._config.get("kick_to_dribble", [-1.7, 1.7])
+
+        self.league = self._config.get("league", "kid")
+        self.dribble_to_kick = self._config.get("dribble_to_kick", {}).get(self.league, [-2.3, 2.3])
+        self.kick_to_dribble = self._config.get("kick_to_dribble", {}).get(self.league, [-1.7, 1.7])
         
         self.start_walk_into_field_time = self._config.get("start_walk_into_field_time", 3)
 

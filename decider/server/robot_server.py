@@ -169,8 +169,8 @@ class RobotServer:
         if robot_ip := self.robot_ips.get(robot_id):
             try:
                 # 将数据转换为JSON并发送
-                message = json.dumps(data).encode("utf-8")
-                message = self._sign_message(message, self.send_robot_data_secret)
+                message = json.dumps(data)
+                message = self._sign_message(message, self.send_robot_data_secret).encode("utf-8")
                 self.udp_server_socket.sendto(message, (robot_ip, self.send_robot_data_port))
                 logging.debug(f"Data sent to {robot_id}")
             except Exception as e:
@@ -181,13 +181,13 @@ class RobotServer:
     def broadcast(self, data):
         """向所有机器人广播数据"""
         if isinstance(data, str):
-            encoded_data = data.encode("utf-8")
+            data = data
         else:
-            encoded_data = str(data).encode("utf-8")
+            data = str(data)
 
-        encoded_data = self._sign_message(encoded_data, self.find_server_ip_secret)
+        data = self._sign_message(data, self.find_server_ip_secret)
         self.udp_socket.sendto(
-            encoded_data,
+            data.encode("utf-8"),
             (self.broadcast_address, self.find_server_ip_port)
         )
         logging.debug(f"Broadcasted: {data}")

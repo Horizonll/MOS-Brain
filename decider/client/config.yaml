@@ -3,11 +3,19 @@ team_id: 12
 
 # kick
 kick_key_is_y: true
-dribble_to_kick: [-2.3, 2.3]
-kick_to_dribble: [-1.7, 1.7]
+dribble_to_kick: 
+  kid: [-2.3, 2.3]
+  adult: [-3.3, 3.3]
+kick_to_dribble: 
+  kid: [-1.7, 1.7]
+  adult: [-2.7, 2.7]
 
 # field
-field_size: [9, 6] # kid [9, 6] adult:[14, 9]
+field_size:
+  kid: [9, 6] 
+  adult: [14, 9]
+
+league: "adult" # "kid"
 
 # ball
 close_to_ball_threshold: 0.5
@@ -66,7 +74,6 @@ search_ball_head_angle:
 # camera is looking around
 
 # sundry
-team: 12
 if_can_kick: false
 
 # statemachines params
