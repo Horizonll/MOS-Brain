@@ -1,11 +1,10 @@
 [Unit]
-Description=Head control service
+Description=vision service
 After=network.target
 
 [Service]
 Type=simple
 ExecStart=/home/booster/Workspace/THMOS/MOS-Brain/decider/scripts/vision.sh
-User=booster
 WorkingDirectory=/home/booster/Workspace/THMOS/MOS-Brain
 Restart=on-failure
 RestartSec=5s

@@ -1,120 +1,68 @@
 # MOS-Brain
 
-The decision-rev of MOS-8.5.
+K1 机器人决策代码库
 
 ### 调试及启动方法
 
 #### 硬件准备
 
-1. 确认电池有电，电压大于等于16.5V，否则需要充电，充电器操作方法问李老师
+1. 按电源键启动时，注意不要移动机器人，头最好看向前方，使ZED视觉里程计正常初始化
 
-2. 电池紧贴泡沫板安装牢固，拧紧舱盖，电池线从机器人底部走
+#### 各模块文件说明
 
-3. 电池接口用魔术贴固定在背箱侧面，防止运动时脱落，切勿放在箱内导致短路
+| 文件名称                | 所属类型       | systemd service名称       | 位置                                                         |
+| ----------------------- | -------------- | ------------------------- | ------------------------------------------------------------ |
+| interface.py            | 混合（转接层） | booster_interface.service | /home/booster/Workspace/THMOS/interface-booster/interface.py |
+| test_zed_ros2_debug.py  | 视觉           | vision.service            | /home/booster/Workspace/THMOS/vision/scripts/test_zed_ros2_debug.py |
+| particle_filter_ros2.py | 视觉（定位）   | 暂未实现                  | /home/booster/Workspace/THMOS/vision/scripts/particle_filter_ros2.py |
+| head_control.py         | 决策           | head_control.service      | /home/booster/Workspace/THMOS/head-control/head_control.py   |
+| decider.py              | 决策主模块     | 暂未实现                  | /home/booster/Workspace/THMOS/MOS-Brain/decider/client/decider.py |
+| decider_tester.py       | 决策测试程序   | 不需要                 | /home/booster/Workspace/THMOS/MOS-Brain/decider/test/decider_tester.py |
 
-4. 启动时确认肩部关节位置正常没有过度旋转
 
-#### 调试启动流程
+#### 启动流程（调试）
 
-1. 启动K1-interface
+1. systemd自动启动模块说明
 
+目前，大部分模块已经实现开机自启，正常情况下无需额外操作，如果需要调试参照下面的说明
+
+    - interface.py：用于将ROS消息转换为Booster接口消息
+    - vision.service：用于启动视觉模块，包含ZED相机的ROS2节点
+    - head_control.service：用于控制机器人的头部动作
+
+有用的命令：
 ```sh
-/usr/bin/python /home/booster/Workspace/THMOS/interface-booster/interface.py
+# 查看服务状态
+systemctl --user status vision.service
+# 停止服务
+systemctl --user stop vision.service
+# 重启服务
+systemctl --user restart vision.service
+# 禁用开机自启
+systemctl --user disable vision.service
+# 查看日志
+journalctl --user-unit vision.service -f
 ```
 
-2. 启动headcontrol节点
+2. 启动粒子滤波
 
+根据机器人位置更改particle_filter_ros2.py中20行的坐标（单位为m，rad），然后启动粒子滤波
 ```sh
-/usr/bin/python /home/booster/Workspace/THMOS/head-control/head_control.py
+python3 /home/booster/Workspace/THMOS/vision/scripts/particle_filter_ros2.py
 ```
 
-3. 启动视觉
+3. 启动decider的debug模式
 
+脚本使用tmux分屏，ctrl+b 然后按方向键切换终端，左边是决策输出，右边发送指令
 ```sh
-/usr/bin/python /home/booster/Workspace/THMOS/vision/scripts/test_zed_ros2_debug.py
+python3 /home/booster/Workspace/THMOS/MOS-Brain/decider/scripts/decider_local_test.sh
 ```
 
-1. 启动决策程序
 
-- 情况一：单独测试每个状态机
+#### 启动流程（比赛）
 
-以debug模式启动单机决策
 
-```sh
-/bin/python /home/booster/Workspace/THMOS/MOS-Brain/decider/client/decider.py --debug
-```
-
-拿到本机ip后，在同一子网内的设备上（如笔记本）运行测试程序
-
-```sh
-python3 decider_tester.py --ip robotip
-```
-
-- 情况二：测试完整流程
-
-```sh
-/bin/python /home/booster/Workspace/THMOS/MOS-Brain/decider/client/decider.py
-```
-
-### Sync
-
-command:
-
-```sh
-rsync -av <path-on-your-computer>/MOS-Brain/ thmos@david:<path-on-robot>/MOS-Brain/ --delete
-```
-
-### 快速开始
-
-1. 将机器人放置在场上(2600,500,90)处
-2. 启动nomachine连接机器人
-3. 为防止识别不到ZED相机，插拔相机一次
-4. 打开终端，运行`python3 ~/MOS-brain/decider/client/local_decider_tester.py`，该操作将启动roscore、视觉、步态、决策程序，需要将机器人平放或提起来防止受损。
-5. 等待步态和视觉程序启动
-6. 在终端中输入指令，机器人将执行相应动作。
-
-- chase_ball：追球，离得近时会停下
-- shoot：射门，离得近时再执行
-- go_back_to_field：回场，离得近时会停下，默认去(0,2000,0)，可以在local_decider_tester.py中修改
-- find_ball：逆时针转身找球
-- stop：停止，停止所有动作
-
-#### 现存问题
-
-1. 杂物太多会导致不面朝球门时定位不准，进而导致go_back_to_field动作失败。
-2. 踢球不够精准高效
-
-### 逐模块启动
-
-1. 将机器人放置在场上(2600,500,90)处
-2. 启动nomachine连接机器人
-3. 为防止识别不到ZED相机，插拔相机一次
-4. 打开终端
-5. 运行步态程序
-
-```
-roslaunch thmos_bringup mos_run.launch
-```
-
-6. 运行视觉程序
-
-```
-cd ~/thmos_ws/src/thmos_code/vision/scripts && python3 vision_with_local.py
-```
-
-7. 在`client/config.json`中配置`"server_ip"`地址为你想要运行主机决策设备的ip
-8. 运行从机决策程序
-
-```
-python3 /home/thmos/MOS-Brain/decider/client/decider.py
-```
-
-9. 运行主机决策程序
-
-- 测试时（手动发送指令）用`client/tester/tcp_host_test_reciever.py`接收心跳包，用`client/tester/decider_tester.py`发送指令。
-- 主机决策，运行`server_v1_2.py`
-
-### 目录结构
+#### 目录结构
 
 目前项目用到的所有文件都在decider文件夹下。
 
@@ -122,42 +70,14 @@ python3 /home/thmos/MOS-Brain/decider/client/decider.py
   - client # 存放机器人（从机）决策代码
     - subStateMachines # 所有动作的子状态机类
     - \_\_init\_\_.py
-    - config.json # 机器人配置文件，暂未使用
-    - configuration.py # 机器人配置类，暂未使用
+    - config.yaml # 机器人配置文件
     - decider.py # **机器人决策主程序**
-    - receiver.py # 接收ROS消息的类
-    - subscriber.py # ROS订阅者类
-  - server # 存放决策主机代码，开发中
+    - receiver.py # 裁判盒接收器
+    - network.py # 网络通信相关
+  - server # 多机决策相关
   - statemachine_readme # 决策主机状态机说明文档
   - test # 决策主机测试代码
     - decider_tester.py # 机器人控制指令发送程序
-    - tcp_host_test_reciever.py # 机器人心跳包接收程序
   - README.md # 参数和接口说明
   - requirements.txt
   - transitions.md
-
-### Players / Clients
-
-```client/decider.py``` is run on the robot. It sent its locations and the ball position to the server, and execute the commands from server.
-
-##### Arch
-
-- subscriber.py / publisher.py
-    The interface of ROS. ```subscriber.py``` reads ```/pos_in_map``` and ```/obj_pos```, ```publisher.py``` publish topic ```/kick```, ```/head_goal``` and ```/cmd_vel```.
-
-- decider.py
-    The main file, where the project entry.
-    Object Agent has attribute ```(pos_x, pos_y), (ball_x_in_map, ball_y_in_map), self_yaw, self_info, self.ip```
-
-- subStateMachines/
-    The directory containing sub-statemachines such as, chase_ball, go_back_to_field.
-
-### Controller / Server
-
-The code in dir server/ is run on server.  
-
-### 关于端口
-
-- server端tcp端口：8001
-- client端tcp端口：8002
-- client端udp端口：8003
