@@ -4,10 +4,10 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/home/booster/Workspace/THMOS/MOS-Brain/decider/scripts/booster_interface.sh
-WorkingDirectory=/home/booster/Workspace/THMOS/MOS-Brain
+ExecStart=%h/Workspace/THMOS/MOS-Brain/decider/scripts/booster_interface.sh
+WorkingDirectory=%h/Workspace/THMOS/MOS-Brain
 Restart=on-failure
 RestartSec=5s
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
