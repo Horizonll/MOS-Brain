@@ -83,13 +83,15 @@ class Network:
             time.sleep(1.0 / config.get("frequency"))
             if self.server_ip == None:
                 continue
+            ball_pos = self.agent.get_ball_pos_in_map()
+
             robot_data = {
                 "id": self.agent.get_config()["id"],
                 "data": {
                     "x": float(self.agent.get_self_pos()[0]),
                     "y": float(self.agent.get_self_pos()[1]),
-                    "ballx": float(self.agent.get_ball_pos_in_map()[0]),
-                    "bally": float(self.agent.get_ball_pos_in_map()[1]),
+                    "ballx": float(ball_pos[0]) if ball_pos is not None else 0.0,
+                    "bally": float(ball_pos[1]) if ball_pos is not None else 0.0,
                     "yaw": float(self.agent.get_self_yaw()),
                     "ball_distance": float(self.agent.get_ball_distance()),
                     "if_ball": bool(self.agent.get_if_ball()),

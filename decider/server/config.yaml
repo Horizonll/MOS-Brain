@@ -19,8 +19,8 @@ attacking:
   no_control_chase_distance: 1.2
 
 roles_to_id:
-  forward_1: 0
-  forward_2: 3
+  forward_1: 21
+  forward_2: 17
   defender_1: 1
   defender_2: 4
   goalkeeper: 6

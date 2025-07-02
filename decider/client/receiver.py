@@ -114,7 +114,7 @@ class Receiver:
         self.socket1.settimeout(1)
 
         # 启动接收线程
-        threading.Thread(target=self.receive, daemon=not self.debug).start()
+        threading.Thread(target=self.receive, daemon=True).start()
 
     def receive_once(self):
         """接收一次消息并解析"""
