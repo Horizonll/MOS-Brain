@@ -36,8 +36,8 @@ class GoalkeeperStateMachine:
             },
             {
                 "trigger": "keepgoal",
-                "source": ["goalkeep", "forward", "arrived"],
-                "dest": "forward",
+                "source": ["goalkeep", "clearance", "charge_out"],
+                "dest": "clearance",
                 "conditions": ["close_to_ball", "ball_in_dangerous_area"],
                 "after": "do_clearance",
             },
@@ -55,7 +55,9 @@ class GoalkeeperStateMachine:
     def read_params(self):
         """从配置中读取参数"""
         goalkeeper_config = self._config.get("goalkeeper", {})
+        self.logger.info(f"[GOALKEEPER FSM] Reading goalkeeper parameters: {goalkeeper_config}")
         self.close_to_ball_threshold = goalkeeper_config.get("close_to_ball_threshold", 0.45)
+        self.close_to_our_goal_threshold = goalkeeper_config.get("close_to_our_goal_threshold", 1.0)
         self.rotate_vel_theta = goalkeeper_config.get("rotate_vel_theta", 1)
         self.walk_vel_x = goalkeeper_config.get("walk_vel_x", 1)
         self.walk_vel_y = goalkeeper_config.get("walk_vel_y", 1)
@@ -64,7 +66,7 @@ class GoalkeeperStateMachine:
         """Check if the agent is close to the ball"""
         if self.agent.get_ball_distance() is None:
             return False
-        distance_close = self.agent.get_if_close_to_ball()
+        distance_close = self.agent.get_ball_distance() < 1.0
 
         return distance_close
 
@@ -74,51 +76,63 @@ class GoalkeeperStateMachine:
     
     def ball_in_safe_area(self):
         """Check if the ball is in a safe area (not close to the goal)"""
-        ball_pos_in_map = self.agent.get_ball_position_in_map()
+        ball_pos_in_map = self.agent.get_ball_pos_in_map()
         if ball_pos_in_map is None:
+            self.logger.warning("[GOALKEEPER FSM] Ball position in map is None, assuming safe area.")
             return True
+        self.logger.info(f"[GOALKEEPER FSM] Ball position in map: {ball_pos_in_map}")
         safe_area_threshold = self._config.get("safe_area_threshold", -1) + 0.3
         safe_area = ball_pos_in_map[1] > safe_area_threshold
         return safe_area
     
     def ball_in_dangerous_area(self):
         """Check if the ball is in a dangerous area (close to the goal)"""
-        ball_pos_in_map = self.agent.get_ball_position_in_map()
+        ball_pos_in_map = self.agent.get_ball_pos_in_map()
         if ball_pos_in_map is None:
+            self.logger.warning("[GOALKEEPER FSM] Ball position in map is None, assuming not dangerous area.")
             return False
+        self.logger.info(f"[GOALKEEPER FSM] Ball position in map: {ball_pos_in_map}")
         safe_area_threshold = self._config.get("safe_area_threshold", -1)
         dangerous_area = ball_pos_in_map[1] <= safe_area_threshold
         return dangerous_area
     
     def keep_the_goal(self):
         """Return to the goal"""
+        self.logger.info("[GOALKEEPER FSM] Keeping the goal...")
+
         angle_to_our_goal = self.agent.get_angle_to_our_goal()
-        reversed_angle = (angle_to_our_goal + math.pi) % (2 * math.pi) - math.pi
+        reversed_angle = self.agent.angle_normalize(angle_to_our_goal + math.pi)
 
         # Normalize angle difference to [-pi, pi]
-        yaw = self.agent.get_self_yaw()
+        yaw = self.agent.get_self_yaw() / 180 * math.pi
         angle_diff = reversed_angle - yaw
-        angle_diff = (angle_diff + math.pi) % (2 * math.pi) - math.pi
+        angle_diff = self.agent.angle_normalize(angle_diff)
+
+        self.logger.info(f"[GOALKEEPER FSM] Angle to our goal: {angle_to_our_goal}, Reversed angle: {reversed_angle}, Yaw: {yaw}, Angle diff: {angle_diff}")
 
         if abs(angle_diff) > math.pi/6:
-            theta = np.sign(angle_diff) * self.rotate_vel_theta
+            theta = np.sign(angle_diff) * self.rotate_vel_theta * 0.5
         elif abs(angle_diff) > math.pi/8:
             theta = np.sign(angle_diff) * self.rotate_vel_theta * 0.3
         else:
             theta = 0
 
+        y_vel = 0
+
         if self.agent.get_distance_to_our_goal() > self.close_to_our_goal_threshold:
-            x_vel = -self.walk_vel_x
+            x_vel = -self.walk_vel_x * 0.7
         else:
             x_vel = 0
             if abs(yaw) > math.pi / 15:
                 theta = -self.rotate_vel_theta if yaw > 0 else self.rotate_vel_theta
             else:
                 theta = 0
+                if abs(self.agent.get_self_pos()[0]) > 0.5:
+                    y_vel = self.walk_vel_y if self.agent.get_self_pos()[0] > 0 else -self.walk_vel_y
 
         self.agent.cmd_vel(
             x_vel,
-            0,
+            y_vel,
             theta
         )
 
@@ -133,7 +147,7 @@ class GoalkeeperStateMachine:
         
         yaw = self.agent.get_self_yaw()
         if yaw < math.pi / 2 and yaw > -math.pi / 2:
-            pass
+            yaw = 0
         elif yaw >= math.pi / 2:
             yaw = math.pi / 2
         elif yaw <= -math.pi / 2:
@@ -146,30 +160,25 @@ class GoalkeeperStateMachine:
         self.agent.move_head(inf, inf)
         command = self.agent.get_command()["command"]
         self.logger.info(
-            f"[CHASE BALL FSM] agent.command: {command}, state: {self.state}"
+            f"[GK FSM] agent.command: {command}, state: {self.state}"
         )
-        # if no ball, then stop
-        if not self.agent.get_if_ball():
-            self.logger.warn("[CHASE BALL FSM] No ball in sight. Stopping.")
-            self.stop_moving()
-            return
 
         self.chase_distance = self.agent.get_command().get("data", {}).get("chase_distance", 0.45)
 
-        self.logger.info(f"\n[CHASE BALL FSM] Current state: {self.state}")
-        self.logger.info(f"[CHASE BALL FSM] Triggering 'chase_ball' transition")
-        self.machine.model.trigger("chase_ball")
+        self.logger.info(f"\n[GK FSM] Current state: {self.state}")
+        self.logger.info(f"[GK FSM] Triggering 'keepgoal' transition")
+        self.machine.model.trigger("keepgoal")
 
     def stop_moving(self):
         """Stop the agent's movement"""
-        self.logger.info("[CHASE BALL FSM] Stopping movement...")
+        self.logger.info("[GK FSM] Stopping movement...")
         self.agent.cmd_vel(0, 0, 0)
-        self.logger.info("[CHASE BALL FSM] Movement stopped.")
+        self.logger.info("[GK FSM] Movement stopped.")
 
     def stop_moving_and_set_head(self):
         """Stop the agent's movement and set head position"""
-        self.logger.info("[CHASE BALL FSM] Stopping movement and setting head position...")
+        self.logger.info("[GK FSM] Stopping movement and setting head position...")
         self.agent.cmd_vel(0, 0, 0)
-        self.logger.info("[CHASE BALL FSM] Movement stopped and head position set.")
+        self.logger.info("[GK FSM] Movement stopped and head position set.")
 
     

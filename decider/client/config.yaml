@@ -118,7 +118,7 @@ go_back_to_field:
 chase:
   close_angle_threshold_rad: 0.8
   walk_vel_x: 1
-  walk_vel_theta: 1
+  walk_vel_theta: 2
   default_chase_distance: 0.4
 kick:
   good_angle_threshold_degree: 10
@@ -134,4 +134,9 @@ kick:
   horizontal_adjust_forward_vel: 0.05
   rotate_vel_y: 0.05
 goalkeeper:
-  safe_area_threshold: -1
+  safe_area_threshold: -3
+  close_to_ball_threshold: 0.5
+  close_to_our_goal_threshold: 2.0
+  rotate_vel_theta: 1.0
+  walk_vel_x: 1.0
+  walk_vel_y: 1.0

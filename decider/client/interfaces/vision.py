@@ -172,15 +172,15 @@ class Vision(Node):
         # 创建旋转矩阵 (假设机器人坐标系与全局坐标系的转换)
         # 注意: 这里假设self_yaw是绕z轴的旋转角（符合ROS惯例）
         rotation_matrix = np.array([
-            [np.cos(self.self_yaw), -np.sin(self.self_yaw)],
-            [np.sin(self.self_yaw), np.cos(self.self_yaw)]
+            [np.cos(self.self_yaw/180*math.pi), -np.sin(self.self_yaw/180*math.pi)],
+            [np.sin(self.self_yaw/180*math.pi), np.cos(self.self_yaw/180*math.pi)]
         ])
         
         # 将相对坐标旋转到全局坐标系
-        rotated_relative = rotation_matrix @ position_projection
+        rotated_relative = rotation_matrix @ self._ball_pos
         
         # 计算绝对坐标（全局坐标系）
-        absolute_coord = self.self_pos + rotated_relative
+        absolute_coord = self.self_pos * 1000 + rotated_relative * 1000
         
         # 保存计算结果
         self.ball_distance = distance
@@ -190,9 +190,10 @@ class Vision(Node):
         self._last_ball_time = time.time()
         
         # 输出信息
-        # self.logger.info(f"Ball relative coordinates: ({position_projection[0]:.2f}, {position_projection[1]:.2f})")
-        # self.logger.info(f"Estimated distance to ball: {distance:.2f} meters")
-        # self.logger.info(f"Ball absolute coordinates on field: ({absolute_coord[0]:.2f}, {absolute_coord[1]:.2f})")
+        self.logger.info(f"self position: ({self.self_pos[0]:.2f}, {self.self_pos[1]:.2f}, {self.self_yaw:.2f})")
+        self.logger.info(f"Ball relative coordinates: ({self._ball_pos[0]:.2f}, {self._ball_pos[1]:.2f})")
+        self.logger.info(f"Estimated distance to ball: {distance:.2f} meters")
+        self.logger.info(f"Ball absolute coordinates on field: ({self._ball_pos_in_map[0]:.2f}, {self._ball_pos_in_map[1]:.2f})")
 
     def get_ball_pos(self):
         return self._ball_pos

@@ -264,6 +264,8 @@ class Agent(Node):
         try:
             # self.get_logger().info(f"ball angle: {self.get_ball_angle()}")
             # self.get_logger().info(f"ball pos: {self.get_ball_pos()}")
+            self.get_logger().info(f"self_pos: {self.get_self_pos()}")
+            self.get_logger().info(f"self_yaw: {self.get_self_yaw()}")
             cmd = self._command["command"]
             # self.get_logger().info(f"Debug_mode: {cmd}")
             
@@ -280,7 +282,7 @@ class Agent(Node):
             import traceback
             traceback.print_exc()
 
-            self.get_logger().error(f"Error in decider debug run: {e}")  
+            self.get_logger().error(f"Error in decider debug run: {e}, traceback: {traceback.format_exc()}")  
 
     def read_params(self) -> None:
         """Read configuration parameters with default values."""
@@ -322,6 +324,21 @@ class Agent(Node):
         """Execute the kicking action."""
         self._action.do_kick()
         self.get_logger().info("Executing the kicking action")
+
+    # 归一化角度(-pi,pi)
+    def angle_normalize(self, angle: float) -> float:
+        """Normalize angle to the range (-pi, pi)."""
+        self.get_logger().info("Normalizing angle")
+        if angle is None:
+            return None
+        angle = angle % (2 * math.pi)
+        if angle > math.pi:
+            angle -= 2 * math.pi
+        elif angle < -math.pi:
+            angle += 2 * math.pi
+        self.get_logger().debug(f"Normalized angle: {angle}")
+        return angle
+        
 
     # Data retrieval methods
     def get_robots_data(self) -> Dict:
@@ -368,6 +385,9 @@ class Agent(Node):
 
     def get_ball_pos_in_map(self) -> np.ndarray:
         """Return ball position in global map coordinates."""
+        if not self.get_if_ball():
+            self.get_logger().warning("Ball not detected, returning None")
+            return None
         return self._vision.get_ball_pos_in_map()
 
     def get_if_ball(self) -> bool:
@@ -392,10 +412,11 @@ class Agent(Node):
         """Calculate angle to our goal based on self position."""
         self_pos = self.get_self_pos()
         goal_x = 0.0
-        goal_y = - self._config["field_size"][0] / 2
+        goal_y = - self._config["field_size"].get(self.league,[9,6])[0] / 2
+        self.get_logger().info(f"Calculating angle to our goal: self_pos={self_pos}, goal_x={goal_x}, goal_y={goal_y}")
 
         if self_pos is not None:
-            angle_rad = math.atan2(goal_x - self_pos[0], goal_y - self_pos[1])
+            angle_rad = math.atan2(self_pos[0] - goal_x, goal_y - self_pos[1])
             return angle_rad
         else:
             return 0.0
@@ -404,7 +425,7 @@ class Agent(Node):
         """Calculate distance to our goal based on self position."""
         self_pos = self.get_self_pos()
         goal_x = 0.0
-        goal_y = - self._config["field_size"][0] / 2
+        goal_y = - self._config["field_size"].get(self.league, [9, 6])[0] / 2
 
         if self_pos is not None:
             distance = math.sqrt((goal_x - self_pos[0]) ** 2 + (goal_y - self_pos[1]) ** 2)
