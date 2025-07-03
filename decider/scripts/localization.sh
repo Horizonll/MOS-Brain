@@ -24,4 +24,5 @@ export CUDA_HOME=$CUDA_HOME:/usr/local/cuda
 source /home/booster/Workspace/THMOS/thmos-msgs/install/setup.sh
 
 source ~/Workspace/booster_ros2_interface/install/setup.bash
-/usr/bin/python /home/booster/Workspace/THMOS/vision/scripts/vision.py
+
+/usr/bin/python /home/booster/Workspace/THMOS/vision/scripts/localization.py

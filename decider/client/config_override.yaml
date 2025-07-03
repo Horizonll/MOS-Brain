@@ -1,1 +1,11 @@
-id: 21
+id: 9
+
+go_back_to_field:
+  aim_x: 1.5
+  aim_y: 2.0
+  aim_yaw: 0
+
+initial_pos:
+  x: 3.0
+  y: 2.0
+  theta: 90

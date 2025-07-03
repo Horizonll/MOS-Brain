@@ -96,7 +96,12 @@ class Agent(Node):
         self.get_logger().info("Registering interfaces")
         self._action = interfaces.action.Action(self)
         self._vision = interfaces.vision.Vision(self)
-        self.receiver = Receiver(self.get_config()["team_id"], self.get_config()["id"]-1, logger=self.get_logger().get_child("receiver"))
+        self.receiver = Receiver(
+            team=self.get_config()["team_id"], 
+            player=self.get_config()["id"]-1, 
+            logger=self.get_logger().get_child("receiver")
+        )
+        self.receiver.start()
         self._robot_client = network.Network(self)
         self._robot_client.start_send_loop()
         self._robot_client.start_receive_loop()
@@ -109,6 +114,9 @@ class Agent(Node):
         
         self.decider_start_time = time.time()
         self.penalize_end_time = self._get_initial_time()
+
+        # relocalization
+        self.relocalize()
         
         # 创建定时器，替代ROS 1中的while循环
         timer_period = 1.0 / self.loop_rate  # 默认10Hz
@@ -159,14 +167,17 @@ class Agent(Node):
     def run(self) -> None:
         """Main decision-making loop based on game state and commands."""
         try:
-            state = self.receiver.game_state
+            state = self.receiver._game_state
             # penalized_time = self.receiver.penalized_time
-            penalized_time = 0
-            self.get_logger().info(f"penalized_time = {penalized_time}")
+            penalty = self.receiver._penalty
+            self.get_logger().info(f"penalized = {penalty}")
+
+            if state == "STATE_INITIAL":
+                self.relocalize()
             
             # Handle penalized state
-            if penalized_time > 0:
-                self.get_logger().info(f"Stopping: Player is penalized for {penalized_time} seconds")
+            if penalty == 34:
+                self.get_logger().info(f"Stopping: Player is penalized for {penalty} seconds")
                 self.stop()
                 self.penalize_end_time = time.time()
                 return
@@ -296,6 +307,17 @@ class Agent(Node):
         self.kick_to_dribble = self._config.get("kick_to_dribble", {}).get(self.league, [-1.7, 1.7])
         
         self.start_walk_into_field_time = self._config.get("start_walk_into_field_time", 3)
+
+    def relocalize(self):
+        """Perform relocalization to reset vision data."""
+        x = self._config.get("initial_pos", {}).get("x", 0.0)
+        y = self._config.get("initial_pos", {}).get("y", 0.0)
+        theta = self._config.get("initial_pos", {}).get("theta", 0.0)
+
+        self.get_logger().info(f"Relocalizing to position: x={x}, y={y}, theta={theta}")
+        
+        # Reset vision data
+        self._vision.relocal(x, y, theta)
 
     # Control interface methods
     def cmd_vel(self, vel_x: float, vel_y: float, vel_theta: float) -> None:

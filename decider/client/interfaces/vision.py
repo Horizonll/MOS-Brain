@@ -100,6 +100,12 @@ class Vision(Node):
             qos_profile
         )
 
+        self._relocal_pub = self.agent.create_publisher(
+            Pose2D,
+            "/THMOS/relocalization",
+            1
+        )
+
 
     def _position_callback(self, msg):
         self.self_pos = np.array([msg.x, msg.y])
@@ -224,6 +230,16 @@ class Vision(Node):
         # 如果所有检查都通过，返回True表示检测到球
         return True
 
+    def relocal(self, x=0, y=0, theta=0):
+        """
+        重新定位，重置视觉数据
+        """
+        msg = Pose2D()
+        msg.x = float(x)
+        msg.y = float(y) # m
+        msg.theta = float(theta) # degree
+        
+        self._relocal_pub.publish(msg)
 
 def main(args=None):
     rclpy.init(args=args)

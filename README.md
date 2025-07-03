@@ -51,11 +51,17 @@ journalctl --user-unit vision.service -f
 python3 /home/booster/Workspace/THMOS/vision/scripts/particle_filter_ros2.py
 ```
 
-3. 启动decider的debug模式
+3. 启动decider
 
+- debug模式（测试单独动作）
 脚本使用tmux分屏，ctrl+b 然后按方向键切换终端，左边是决策输出，右边发送指令
 ```sh
-python3 /home/booster/Workspace/THMOS/MOS-Brain/decider/scripts/decider_local_test.sh
+bash /home/booster/Workspace/THMOS/MOS-Brain/decider/scripts/decider_local_test.sh
+```
+
+- 运行模式（测试比赛逻辑）
+```sh
+bash /home/booster/Workspace/THMOS/MOS-Brain/decider/client/decider.py
 ```
 
 

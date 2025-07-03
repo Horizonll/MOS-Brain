@@ -15,6 +15,12 @@ field_size:
   kid: [9, 6] 
   adult: [14, 9]
 
+# initial position
+initial_pos:
+  x: 0
+  y: 0
+  theta: 0
+
 league: "adult" # "kid"
 
 # ball

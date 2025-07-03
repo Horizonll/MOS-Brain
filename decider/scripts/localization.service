@@ -4,8 +4,8 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=%h/Workspace/THMOS/MOS-Brain/decider/scripts/vision.sh
-WorkingDirectory=%h/Workspace/THMOS/MOS-Brain
+ExecStart=%h/Workspace/THMOS/MOS-Brain/decider/scripts/localization.sh
+WorkingDirectory=%h/Workspace/THMOS/vision/scripts
 Restart=on-failure
 RestartSec=5s
 
