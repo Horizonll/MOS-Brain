@@ -173,7 +173,8 @@ class Agent(Node):
             self.get_logger().info(f"penalized = {penalty}")
 
             if state == "STATE_INITIAL":
-                self.relocalize()
+                # self.relocalize()
+                pass
             
             # Handle penalized state
             if penalty == 34:

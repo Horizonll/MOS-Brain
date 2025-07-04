@@ -104,6 +104,7 @@ dribble:
   dribble_0_y: 7
   dribble_forward_vel_y: 0.5
   camera_bias: 0.06  # camera bias in x direction
+  blind_dribble_thres_percent: 1.0
 find_ball:
   angle_threshold_degrees: 10
   rotation_vel_theta: 1
@@ -118,7 +119,7 @@ go_back_to_field:
   fine_yaw_start_threshold_degree: 20
   fine_yaw_end_threshold_degree: 5
   good_yaw_threshold_degree: 10
-  walk_vel_x: 0.5
+  walk_vel_x: 1.0
   walk_vel_theta: 1
   arrive_trust_time: 20
 chase:

@@ -124,7 +124,7 @@ class DribbleStateMachine:
         self.aim_yaw = self.agent.get_command().get('data').get('aim_yaw', None)
 
         if self.aim_yaw is None:
-            if self.agent.get_self_pos()[1] > self._config.get("field_size", [9,6]).get(self.agent.league)[0] * 4 / 5:
+            if self.agent.get_self_pos()[1] > self._config.get("field_size", [9,6]).get(self.agent.league)[0] * self.blind_dribble_thres_percent / 2:
                 self.aim_yaw = 0.0
             else:
                 self.aim_yaw = self.calc_angle_to_goal_degree()
@@ -442,7 +442,7 @@ class DribbleStateMachine:
         """
         self.logger.info("[DRIBBLE FSM] Calculating angles...")
 
-        goal_y_coord = 1 + self._config.get("field_size", {}).get(self.agent.league, [9, 6])[1] / 2
+        goal_y_coord = self._config.get("field_size", {}).get(self.agent.league, [9, 6])[0] / 2
 
         if self.agent.get_self_pos()[0] > 0:
             if self.agent.get_self_pos()[0] > self.goal_center_bias_m:
@@ -499,7 +499,7 @@ class DribbleStateMachine:
         """
         计算朝球门的角度
         """
-        goal_y_coord = 1 + self._config.get("field_size", {}).get(self.agent.league, [9, 6])[1] / 2
+        goal_y_coord = self._config.get("field_size", {}).get(self.agent.league, [9, 6])[0] / 2
         
         if self.agent.get_self_pos()[0] > 0:
             if self.agent.get_self_pos()[0] > self.goal_center_bias_m:
@@ -562,3 +562,4 @@ class DribbleStateMachine:
         self.adjust_angle_to_goal_vel_theta = self._config.get("dribble", {}).get("adjust_angle_to_goal_vel_theta", 1.0)
         self.drrible_forward_vel_y = self._config.get("dribble", {}).get("drrible_forward_vel_y", 0.5)
         self.camera_bias = self._config.get("dribble", {}).get("camera_bias", 0.06)
+        self.blind_dribble_thres_percent = self._config.get("dribble", {}).get("blind_dribble_thres_percent", 1.0)
