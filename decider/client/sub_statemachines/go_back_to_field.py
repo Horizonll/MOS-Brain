@@ -133,7 +133,8 @@ class GoBackToFieldStateMachine:
         #    self.agent.stop(0.5)
         #    return
         if self.state != "arrived_at_target":
-            self.agent.move_head(0, 0)
+            # self.agent.move_head(0, 0)
+            self.agent.move_head(inf, inf)
         else:
             self.agent.move_head(inf, inf)
 
