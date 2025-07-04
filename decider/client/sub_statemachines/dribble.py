@@ -341,7 +341,6 @@ class DribbleStateMachine:
         target_angle_deg = self.aim_yaw
         current_yaw = self.agent.get_self_yaw()
         yaw_delta = target_angle_deg - current_yaw
-        yaw_delta = self.agent.angle_normalize(yaw_delta * math.pi/180) * 180 / math.pi  # Convert to degrees
 
         self.logger.info(
             f"[DRIBBLE FSM] Target yaw: {target_angle_deg:.2f}°, Current yaw: {current_yaw:.2f}°, Delta: {yaw_delta:.2f}°"

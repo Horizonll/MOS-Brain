@@ -130,7 +130,7 @@ class ChaseBallStateMachine:
         self.agent.cmd_vel(
             self.walk_vel_x,
             0,
-            self.agent.get_ball_angle()/np.pi * self.walk_vel_theta * 2
+            self.agent.get_ball_angle()/np.pi * self.walk_vel_theta * 5
         )
         self.logger.info("[CHASE BALL FSM] Forward movement step completed.")
 
