@@ -1,5 +1,5 @@
 control_interval_s: 0.2
-broadcast_address: "192.168.15.255"
+broadcast_address: "192.168.30.255"
 
 shooting:
   ball_in_control_threshold_m: 0.5
@@ -19,10 +19,10 @@ attacking:
   no_control_chase_distance: 1.2
 
 roles_to_id:
-  forward_1: 21
-  forward_2: 17
-  defender_1: 1
-  defender_2: 4
+  forward_1: 1
+  forward_2: 4
+  defender_1: 2
+  defender_2: 3
   goalkeeper: 6
 
 backfield_machine: "run_attack"

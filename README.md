@@ -61,7 +61,7 @@ bash /home/booster/Workspace/THMOS/MOS-Brain/decider/scripts/decider_local_test.
 
 - 运行模式（测试比赛逻辑）
 ```sh
-bash /home/booster/Workspace/THMOS/MOS-Brain/decider/client/decider.py
+python3 /home/booster/Workspace/THMOS/MOS-Brain/decider/client/decider.py
 ```
 
 

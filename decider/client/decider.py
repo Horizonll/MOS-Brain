@@ -223,7 +223,7 @@ class Agent(Node):
         if not self.get_if_ball():
             self.get_logger().info("Running: find_ball (lost command, no ball)")
             self._state_machine_runners['find_ball']()
-        elif self.get_ball_distance() > 0.6:
+        elif self.get_ball_distance() > 0.45:
             self.get_logger().info("Running: chase_ball (lost command, far ball)")
             self._state_machine_runners['chase_ball']()
         else:
