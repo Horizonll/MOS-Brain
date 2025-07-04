@@ -1,11 +1,11 @@
-id: 9
+id: 4
 
 go_back_to_field:
-  aim_x: 1
+  aim_x: 2
   aim_y: -1
   aim_yaw: 0
 
 initial_pos:
-  x: 0
+  x: -4.5
   y: 0
-  theta: 0
+  theta: -90
