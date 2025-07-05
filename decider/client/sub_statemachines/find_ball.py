@@ -1,3 +1,4 @@
+import math
 from transitions import Machine
 from sensor_msgs.msg import JointState
 import time
@@ -30,7 +31,7 @@ class FindBallStateMachine:
                 "source": ["protecting", "rotating"],
                 "dest": "rotating",
                 "conditions": ["protection_done", "no_ball"],
-                "after": "start_rotation"
+                "after": "start_rotation_and_forwarding"
             },
             {
                 "trigger": "step",
@@ -51,7 +52,7 @@ class FindBallStateMachine:
                 "source": "found",
                 "dest": "protecting",
                 "conditions": "no_ball",
-                "after": "start_rotation"
+                "after": "start_rotation_and_forwarding"
             }
         ]
 
@@ -83,6 +84,12 @@ class FindBallStateMachine:
         # 保护姿势保持时间（秒）（当前逻辑未使用，预留参数）
         self.protection_pose_duration = self._config.get("find_ball", {}).get(
             "protection_pose_duration", 0.5
+        )
+        self.walk_vel_x = self._config.get("find_ball", {}).get(
+            "walk_vel_x", 1
+        )
+        self.walk_vel_theta = self._config.get("find_ball", {}).get(
+            "walk_vel_theta", 1
         )
 
 
@@ -119,7 +126,7 @@ class FindBallStateMachine:
         # self.agent.joint_goal_publisher.publish(protect_pose)
         self.logger.info("[FIND BALL FSM] Protect pose set")
 
-    def start_rotation(self, event=None):
+    def start_rotation_and_forwarding(self, event=None):
         """开始旋转身体寻找球"""
         self.logger.info("[FIND BALL FSM] Starting rotation...")
         ball_angle_from_other_robots = self.agent.get_ball_angle_from_other_robots()
@@ -128,6 +135,12 @@ class FindBallStateMachine:
             self.logger.info(f"[FIND BALL FSM] Other robots see the ball at angle: {ball_angle_from_other_robots}")
             target_angle_rad = ball_angle_from_other_robots
             if abs(target_angle_rad) < 0.7:
+                self.agent.cmd_vel(
+                    self.walk_vel_x,
+                    0,
+                    ball_angle_from_other_robots/np.pi * self.walk_vel_theta * 2
+                )
+            elif abs(target_angle_rad) > math.pi * 0.8:
                 rotate_vel = self.last_rotaion * self.rotation_vel_theta
             else:
                 rotate_vel = np.sign(target_angle_rad) * self.rotation_vel_theta

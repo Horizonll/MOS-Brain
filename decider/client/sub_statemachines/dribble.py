@@ -134,6 +134,10 @@ class DribbleStateMachine:
             self.aim_yaw = aim_yaw
             self.logger.info(f"[DRIBBLE FSM] Using provided aim_yaw: {self.aim_yaw:.2f}°")
 
+        if self.obstacle_avoidance:
+            self_yaw = self.agent.get_self_yaw()
+            self.aim_yaw = self_yaw + self.agent.get_obstacle_avoidance_angle_degree(self.aim_yaw-self_yaw)
+
         self.machine.model.trigger("dribble")
         self.logger.info("[DRIBBLE FSM] Running...")
         self.logger.info(f"[DRIBBLE FSM] Current state: {self.state}")
@@ -413,7 +417,7 @@ class DribbleStateMachine:
         :return: True 表示丢球，False 表示未丢球
         """
         # neck_angle = self.agent.get_ball_angle()
-        ball_x = self.agent.get_ball_pos()[0] - 0.05
+        ball_x = self.agent.get_ball_pos()[0] - self.camera_bias
         ball_x_lost = abs(ball_x) > self.lost_ball_x_threshold_m  # 80
         result = ball_x_lost
         self.logger.info(f"[DRIBBLE FSM] Lost ball x: {'Yes' if result else 'No'}")
@@ -478,23 +482,25 @@ class DribbleStateMachine:
         """
         self.logger.info("[DRIBBLE FSM] Dribbling forward...")
         vel_x = self.walk_vel_x
-        if self.agent.get_ball_pos()[0] > 0.2:
-            vel_y = -self.drrible_forward_vel_y
-        elif self.agent.get_ball_pos()[0] < -0.2:
-            vel_y = self.drrible_forward_vel_y
+        ball_x = self.agent.get_ball_pos()[0] - self.camera_bias
+        feet_center = (self.good_horizontal_position_to_ball_upper_threshold_m + self.good_horizontal_position_to_ball_lower_threshold_m) / 2
+        if ball_x > 0:
+            if ball_x > feet_center:
+                vel_y = -self.horizontal_adjust_vel_y
+            else:
+                vel_y = self.horizontal_adjust_vel_y * 0.3
+        elif ball_x < 0:
+            if ball_x < -feet_center:
+                vel_y = self.horizontal_adjust_vel_y
+            else:
+                vel_y = -self.horizontal_adjust_vel_y * 0.3
         else:
             vel_y = 0.0
         vel_theta = 0.0
 
-        # if self.direction:
-        #     vel_y = -self._config.get("walk_vel_y", 0.05)
-        #     vel_theta = -self._config.get("walk_vel_theta", 0.3)
-        # else:
-        #     vel_y = self._config.get("walk_vel_y", 0.05)
-        #     vel_theta = self._config.get("walk_vel_theta", -0.3)
-
         self.agent.cmd_vel(vel_x, vel_y, vel_theta)
         self.logger.info("[DRIBBLE FSM] Dribbling forward done")
+
 
     def calc_angle_to_goal_degree(self):
         """
@@ -564,3 +570,4 @@ class DribbleStateMachine:
         self.drrible_forward_vel_y = self._config.get("dribble", {}).get("drrible_forward_vel_y", 0.5)
         self.camera_bias = self._config.get("dribble", {}).get("camera_bias", 0.06)
         self.blind_dribble_thres_percent = self._config.get("dribble", {}).get("blind_dribble_thres_percent", 1.0)
+        self.obstacle_avoidance = self._config.get("dribble", {}).get("obstacle_avoidance", True)

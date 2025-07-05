@@ -515,7 +515,7 @@ class Agent:
                     self.play()  # Run the state machine logic
 
                 elif not self.has_connected_robots():
-                    self.stop_playing()
+                    # self.stop_playing()
                     self.running = False
                     logging.warning("Warning: All robots are offline, system has been automatically stopped")
 

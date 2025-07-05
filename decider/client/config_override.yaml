@@ -1,5 +1,7 @@
 id: 2
 
+if_goalkeeper: true
+
 go_back_to_field:
   aim_x: 2
   aim_y: -1

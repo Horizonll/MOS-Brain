@@ -14,7 +14,7 @@ logging.basicConfig(
 
 Short = Int16ul
 
-# 颜色枚举（整合SPL和HL定义）
+# 颜色枚举
 FieldPlayerColour = Enum(
     Byte,
     # SPL定义
@@ -44,7 +44,7 @@ GameStateEnum = Enum(
     STATE_FINISHED=4
 )
 
-# 次要状态枚举（补充DROPBALL定义）
+# 次要状态枚举
 SecondaryStateEnum = Enum(
     Byte,
     STATE2_NORMAL=0,
@@ -103,23 +103,25 @@ GameState = Struct(
     "teams" / Array(2, TeamInfo),    # 两队信息
 )
 
-# 比赛控制返回数据结构（匹配RoboCupGameControlReturnData）
+# 修改后的比赛控制返回数据结构（新增is_goalkeeper字段）
 ReturnData = Struct(
-    "header" / Const(b"RGrt"),      # 结构头
-    "version" / Const(2, Byte),     # 结构版本
-    "team" / Byte,                  # 队伍编号
-    "player" / Byte,                # 球员编号（从1开始）
-    "message" / Byte,               # 消息类型
+    "header" / Const(b"RGrt"),
+    "version" / Const(3, Byte),      # 升级版本号以支持新字段
+    "team" / Byte,
+    "player" / Byte,
+    "message" / Byte,
+    "is_goalkeeper" / Byte,          # 新增：是否为守门员（1=是，0=否）
 )
 
 class Receiver:
     """比赛状态接收器类，负责接收和处理比赛控制器发送的信息"""
     
-    def __init__(self, team=12, player=0, debug=False, logger=None):
+    def __init__(self, team=12, player=0, is_goalkeeper=False, debug=False, logger=None):
         # 基本设置
         self.logger = logger or logging.getLogger(__name__)
         self.team = team  # 队伍序号
         self.player = player  # 球员序号(0-10)
+        self.is_goalkeeper = is_goalkeeper  # 是否为守门员
         self.debug = debug
         self.running = False  # 控制线程运行的标志
         
@@ -136,7 +138,6 @@ class Receiver:
         self._player_info = None
         self._penalty = 0
         self._team_id = None
-        self._return_data = None
         
         # 创建socket
         self.socket = socket.socket(
@@ -225,17 +226,21 @@ class Receiver:
             print(f"[DEBUG] 游戏状态: {self._game_state}")
             print(f"[DEBUG] 队伍ID: {self._team_id}, 开球权: {self._kick_off}")
             print(f"[DEBUG] 球员惩罚: {self._penalty}")
+            print(f"[DEBUG] 球员信息: {self.player_info}")
+            print(f"[DEBUG] 二级状态: {self._data.secondary_state}")
+            print(f"[DEBUG] 是否为守门员: {self.is_goalkeeper}")
     
     def _send_status_to_gamecontroller(self):
-        """向比赛控制器发送状态信息（使用完整结构）"""
+        """向比赛控制器发送状态信息（包含守门员状态）"""
         try:
             # 构建返回数据结构
             return_data = {
                 "header": b"RGrt",
-                "version": 2,
+                "version": 3,  # 使用新版本以支持is_goalkeeper字段
                 "team": self.team,
                 "player": self.player + 1,  # 球员编号从1开始
                 "message": 2,  # 状态消息类型（ALIVE）
+                "is_goalkeeper": 1 if self.is_goalkeeper else 0,  # 发送守门员状态
             }
             
             # 使用construct打包数据
@@ -245,7 +250,7 @@ class Receiver:
             dest = (dest_ip, self.answer_port)
             
             self.socket.sendto(packed, dest)
-            self.logger.debug(f"已发送状态到 {dest}，消息类型: {return_data['message']}")
+            self.logger.debug(f"已发送状态到 {dest}，消息类型: {return_data['message']}，守门员: {return_data['is_goalkeeper']}")
         except Exception as e:
             self.logger.error(f"发送状态消息失败: {e}")
     
@@ -278,10 +283,16 @@ class Receiver:
             }
         return None
 
+    def set_goalkeeper_status(self, is_goalkeeper: bool):
+        """动态设置守门员状态"""
+        self.is_goalkeeper = is_goalkeeper
+        self.logger.info(f"已设置守门员状态为: {is_goalkeeper}")
+
 
 if __name__ == "__main__":
     try:
-        receiver = Receiver(team=12, player=0, debug=True)
+        # 初始化时指定是否为守门员
+        receiver = Receiver(team=12, player=0, is_goalkeeper=False, debug=True)
         receiver.start()
         
         print("接收器已启动，按Ctrl+C停止...")

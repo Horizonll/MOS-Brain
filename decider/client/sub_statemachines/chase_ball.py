@@ -59,6 +59,7 @@ class ChaseBallStateMachine:
         self.walk_vel_x = chase_config.get("walk_vel_x", 0.3)
         self.walk_vel_theta = chase_config.get("walk_vel_theta", 0.3)
         self.default_chase_distance = self._config.get("close_to_ball_threshold", 0.5) - 0.05
+        self.obstacle_avoidance = chase_config.get("obstacle_avoidance", True)
 
     def close_to_ball(self):
         """Check if the agent is close to the ball (距离+角度检查)"""
@@ -127,9 +128,22 @@ class ChaseBallStateMachine:
     def move_forward_to_ball(self):
         """Move the agent forward towards the ball"""
         self.logger.info("[CHASE BALL FSM] Starting to move forward towards the ball...")
+
+        if self.obstacle_avoidance:
+            # Check for obstacles and adjust y velocity accordingly
+            x_vel, y_vel = self.agent.get_obstacle_avoidance_velocity()
+            if x_vel > self.walk_vel_x or x_vel is None:
+                x_vel = self.walk_vel_x
+            if y_vel is None:
+                self.logger.warn("[CHASE BALL FSM] Obstacle avoidance failed, using default y velocity.")
+                y_vel = 0.0
+        else:
+            # No obstacle avoidance, use default y velocity
+            y_vel = 0.0
+
         self.agent.cmd_vel(
-            self.walk_vel_x,
-            0,
+            x_vel,
+            y_vel,
             self.agent.get_ball_angle()/np.pi * self.walk_vel_theta * 2
         )
         self.logger.info("[CHASE BALL FSM] Forward movement step completed.")

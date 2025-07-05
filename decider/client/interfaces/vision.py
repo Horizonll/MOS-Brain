@@ -117,10 +117,10 @@ class Vision(Node):
 
     def _vision_callback(self, msg: VisionDetections):
         """
-        处理机器人位置信息并结合视觉检测计算球的绝对坐标
+        处理机器人位置信息并结合视觉检测计算各种物体的绝对坐标
         
         Args:
-            msg (RobotPosition): 包含机器人位置和朝向的消息
+            msg (VisionDetections): 包含检测到的物体信息的消息
         """
         # 更新视觉数据时间戳
         self._vision_last_frame_time = time.time()
@@ -128,78 +128,101 @@ class Vision(Node):
         # 输出调试信息
         self.logger.debug(f"Robot position: ({self.self_pos[0]:.2f}, {self.self_pos[1]:.2f})")
         self.logger.debug(f"Robot yaw: {self.self_yaw:.2f} radians")
-
-        ball_objects = [obj for obj in msg.detected_objects if obj.label == "ball"]
-        if not ball_objects:
-            self.logger.info("No ball objects detected")
-            # 没有检测到球时重置相关变量
-            self._ball_pos_accuracy = 0
-            return  
         
-        # Find the best ball with highest confidence
-        best_ball = max(ball_objects, key=lambda obj: obj.confidence)
+        # 用于存储所有检测到的物体信息
+        self._detected_objects = []
+        self._ball_pos_accuracy = 0  # 默认无球
         
-        # 更新球位置的置信度
-        self._ball_pos_accuracy = best_ball.confidence
-
-        # Validate message
-        if best_ball.xmin >= best_ball.xmax or best_ball.ymin >= best_ball.ymax:
-            self.logger.warning("Invalid bounding box received for best ball")
-            self._ball_pos_accuracy = 0
-            return
+        # 处理所有检测到的物体
+        for obj in msg.detected_objects:
+            label = obj.label
             
-        # Calculate target center coordinates
-        curr_coord = (np.array([best_ball.xmin, best_ball.ymin]) + 
-                      np.array([best_ball.xmax, best_ball.ymax])) * 0.5
-        
-        # 获取position_projection (x, y) 坐标
-        # 假设_position_projection格式为 [x, y]，其中y朝前，z朝上
-        position_projection = np.array(best_ball.position_projection)
-        # 裁剪前两个值
-        position_projection = position_projection[:2]
-        if position_projection.shape != (2,):
-            self.logger.error("Invalid position_projection format, expected 2D coordinates")
-            self._ball_pos_accuracy = 0
-            return
+            # 验证边界框是否有效
+            if obj.xmin >= obj.xmax or obj.ymin >= obj.ymax:
+                self.logger.warning(f"Invalid bounding box received for {label}")
+                continue
+                
+            # 计算目标中心坐标
+            curr_coord = (np.array([obj.xmin, obj.ymin]) + 
+                        np.array([obj.xmax, obj.ymax])) * 0.5
+            
+            # 获取position_projection (x, y) 坐标
+            position_projection = np.array(obj.position_projection)
+            # 裁剪前两个值
+            position_projection = position_projection[:2]
+            if position_projection.shape != (2,):
+                self.logger.error(f"Invalid position_projection format for {label}, expected 2D coordinates")
+                continue
 
-        # 如果有nan值，记录错误并返回
-        if np.isnan(position_projection).any():
-            self.logger.error("NaN values found in position_projection")
-            self._ball_pos_accuracy = 0
-            return
+            # 如果有nan值，记录错误并跳过
+            if np.isnan(position_projection).any():
+                self.logger.error(f"NaN values found in position_projection for {label}")
+                continue
 
-        # 保存相对坐标
-        self._ball_pos = position_projection / 1000
+            # 保存相对坐标（单位：米）
+            relative_pos = position_projection / 1000
+            
+            # 计算到物体的距离
+            distance = np.linalg.norm(position_projection) / 1000  # 转换为米
+            
+            # 计算物体在球场中的绝对坐标
+            # 创建旋转矩阵 (假设机器人坐标系与全局坐标系的转换)
+            # 注意: 这里假设self_yaw是绕z轴的旋转角（符合ROS惯例）
+            rotation_matrix = np.array([
+                [np.cos(self.self_yaw/180*math.pi), -np.sin(self.self_yaw/180*math.pi)],
+                [np.sin(self.self_yaw/180*math.pi), np.cos(self.self_yaw/180*math.pi)]
+            ])
+            
+            # 将相对坐标旋转到全局坐标系
+            rotated_relative = rotation_matrix @ relative_pos
+            
+            # 计算绝对坐标（全局坐标系，单位：米）
+            absolute_coord = self.self_pos + rotated_relative
+            
+            # 保存该物体的计算结果
+            object_info = {
+                'label': label,
+                'relative_pos': relative_pos,
+                'absolute_pos': absolute_coord,
+                'distance': distance,
+                'confidence': obj.confidence,
+                'bounding_box_center': curr_coord / 1000,
+                'bound_left_low': np.array(obj.bound_left_low[:2]) if obj.bound_left_low else None,
+                'bound_right_low': np.array(obj.bound_right_low[:2]) if obj.bound_right_low else None,
+                'timestamp': time.time()
+            }
+            
+            self._detected_objects.append(object_info)
+            
+            # 输出该物体信息
+            self.logger.debug(f"Detected {label}:")
+            self.logger.debug(f"  Relative coordinates: ({relative_pos[0]:.2f}, {relative_pos[1]:.2f})")
+            self.logger.debug(f"  Absolute coordinates on field: ({absolute_coord[0]:.2f}, {absolute_coord[1]:.2f})")
+            self.logger.debug(f"  Distance: {distance:.2f} meters")
+            self.logger.debug(f"  Confidence: {obj.confidence:.2f}")
         
-        # 计算到球的距离
-        distance = np.linalg.norm(position_projection) / 1000  # 转换为米
-        
-        # 计算球在球场中的绝对坐标
-        # 创建旋转矩阵 (假设机器人坐标系与全局坐标系的转换)
-        # 注意: 这里假设self_yaw是绕z轴的旋转角（符合ROS惯例）
-        rotation_matrix = np.array([
-            [np.cos(self.self_yaw/180*math.pi), -np.sin(self.self_yaw/180*math.pi)],
-            [np.sin(self.self_yaw/180*math.pi), np.cos(self.self_yaw/180*math.pi)]
-        ])
-        
-        # 将相对坐标旋转到全局坐标系
-        rotated_relative = rotation_matrix @ self._ball_pos
-        
-        # 计算绝对坐标（全局坐标系）
-        absolute_coord = self.self_pos * 1000 + rotated_relative * 1000
-        
-        # 保存计算结果
-        self.ball_distance = distance
-        self._ball_pos_in_map = absolute_coord / 1000
-        self._ball_pos_in_vis = curr_coord / 1000
+        # 特别处理球（如果存在）
+        ball_objects = [obj for obj in self._detected_objects if obj['label'] == 'ball']
+        if ball_objects:
+            # 选择置信度最高的球
+            best_ball = max(ball_objects, key=lambda b: b['confidence'])
+            
+            # 更新球相关的变量
+            self._ball_pos = best_ball['relative_pos']
+            self._ball_pos_in_map = best_ball['absolute_pos']
+            self._ball_pos_in_vis = best_ball['bounding_box_center']
+            self._ball_pos_accuracy = best_ball['confidence']
+            self.ball_distance = best_ball['distance']
+            self._last_ball_time = best_ball['timestamp']
 
-        self._last_ball_time = time.time()
+    def get_objects(self):
+        """
+        获取检测到的所有物体信息
         
-        # 输出信息
-        self.logger.info(f"self position: ({self.self_pos[0]:.2f}, {self.self_pos[1]:.2f}, {self.self_yaw:.2f})")
-        self.logger.info(f"Ball relative coordinates: ({self._ball_pos[0]:.2f}, {self._ball_pos[1]:.2f})")
-        self.logger.info(f"Estimated distance to ball: {distance:.2f} meters")
-        self.logger.info(f"Ball absolute coordinates on field: ({self._ball_pos_in_map[0]:.2f}, {self._ball_pos_in_map[1]:.2f})")
+        Returns:
+            list: 包含所有检测到物体的字典列表
+        """
+        return self._detected_objects
 
     def get_ball_pos(self):
         return self._ball_pos
