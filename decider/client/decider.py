@@ -213,7 +213,10 @@ class Agent(Node):
                 self.get_logger().info("Running: goalkeeper (is_goalkeeper)")
                 self._state_machine_runners['goalkeeper']()
             elif current_time - self._last_play_time < 10.0 and not self.receiver.kick_off:
-                self._state_machine_runners['chase_ball']()
+                if not self.get_if_ball():
+                    self._state_machine_runners['find_ball']()
+                elif self.get_ball_distance() > 0.45:
+                    self._state_machine_runners['chase_ball']()
             elif current_time - self._last_command_time > self.offline_time:
                 self._handle_offline_state()
             else:
