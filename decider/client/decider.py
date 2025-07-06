@@ -321,6 +321,7 @@ class Agent(Node):
         self.obstacle_max_distance = self._config.get("obstacle_avoidance",{}).get("obstacle_max_distance", 0.5)
         self.obstacle_safe_width = self._config.get("obstacle_avoidance",{}).get("safe_width", 0.5)
         self.obstacle_safe_angle_degrees = self._config.get("obstacle_avoidance",{}).get("safe_angle_degrees", 10)
+        self.obstacle_stop_distance = self._config.get("obstacle_avoidance",{}).get("obstacle_stop_distance", 0.7)
 
     def relocalize(self):
         """Perform relocalization to reset vision data."""
@@ -364,7 +365,6 @@ class Agent(Node):
     # 归一化角度(-pi,pi)
     def angle_normalize(self, angle: float) -> float:
         """Normalize angle to the range (-pi, pi)."""
-        self.get_logger().info("Normalizing angle")
         if angle is None:
             return None
         angle = angle % (2 * math.pi)
@@ -595,7 +595,7 @@ class Agent(Node):
                 # 直接返回障碍物的左右边界坐标
                 obstacles_list.append((bound_left_low, bound_right_low))
 
-        self.get_logger().debug(f"Detected {len(obstacles_list)} obstacles: {obstacles_list}")
+        self.get_logger().info(f"Detected {len(obstacles_list)} obstacles: {obstacles_list}")
         return obstacles_list
     
     def get_obstacle_avoidance_velocity(self):
@@ -697,7 +697,9 @@ class Agent(Node):
         if abs(target_y) < 0.01:  # 目标位置接近中心，不需要横向移动
             lateral_velocity = 0.0
         else:
-            lateral_velocity = (-1 if target_y > 0 else 1)
+            lateral_velocity = (-0.5 if target_y > 0 else 0.5)
+
+        self.get_logger().info(f"Obstacle avoidance velocities: longitudinal={longitudinal_velocity}, lateral={lateral_velocity}")
         
         return longitudinal_velocity, lateral_velocity
 

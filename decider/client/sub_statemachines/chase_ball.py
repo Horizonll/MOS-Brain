@@ -131,6 +131,7 @@ class ChaseBallStateMachine:
 
         if self.obstacle_avoidance:
             # Check for obstacles and adjust y velocity accordingly
+            self.logger.info("[CHASE BALL FSM] Using obstacle avoidance...")
             x_vel, y_vel = self.agent.get_obstacle_avoidance_velocity()
             if x_vel > self.walk_vel_x or x_vel is None:
                 x_vel = self.walk_vel_x

@@ -83,9 +83,10 @@ search_ball_head_angle:
 if_can_kick: false
 
 obstacle_avoidance:
-  obstacle_max_distance: 2.0
+  obstacle_max_distance: 4.0
+  obstacle_stop_distance: 1.5
   obstacle_min_size: 0.1
-  safe_width: 0.5
+  safe_width: 0.8
   safe_angle_degrees: 10
 
 # statemachines params
@@ -111,7 +112,7 @@ dribble:
   dribble_forward_vel_y: 0.5
   camera_bias: 0.06  # camera bias in x direction
   blind_dribble_thres_percent: 1.0
-  obstacle_avoidance: true
+  obstacle_avoidance: false
 find_ball:
   angle_threshold_degrees: 10
   rotation_vel_theta: 1
