@@ -48,17 +48,17 @@ class Network:
             pass
         return None
     
-    def _find_server_ip():
+    def _find_server_ip(self):
         udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         udp_socket.bind(('', self._config["auto_find_server_ip_listen_port"]))
         print("[+] interfaces/network.py: Network._find_server_ip(): " + \
                 "listening for server on port " + \
-                str(self._config["auto_find_server_ip_listen_port"] + \
-                " token = " = self._config["auto_find_server_ip_token"]
+                str(self._config["auto_find_server_ip_listen_port"]) + \
+                " token = " + self._config["auto_find_server_ip_token"])
         while True:
-                    message, address = udp_socket.recvfrom(self._config["max_buffer_size"])
-                    if(message == self._config["auto_find_server_ip_token"]):
-                        return (address[0], self_config["server_port"])
-                    time.sleep(0.1)
+            message, address = udp_socket.recvfrom(self._config["max_buffer_size"])
+            if(message == self._config["auto_find_server_ip_token"]):
+                return (address[0], self._config["server_port"])
+            time.sleep(0.1)
 
 
