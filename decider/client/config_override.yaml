@@ -1,13 +1,14 @@
 id: 2
 
 if_goalkeeper: true
+if_can_kick: true
 
 go_back_to_field:
   aim_x: 0
-  aim_y: 3
+  aim_y: 0
   aim_yaw: 0
 
 initial_pos:
-  x: 3
-  y: 1
-  theta: 90
+  x: 0
+  y: 0
+  theta: 0

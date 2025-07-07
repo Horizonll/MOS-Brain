@@ -70,7 +70,7 @@ class Action:
 
     # kick()
     #   publish a kick command
-    def kick(self):
+    def do_kick(self):
         kick_msg = Int32()
         kick_msg.data = 1
         self._kick_pub.publish(kick_msg)

@@ -105,9 +105,8 @@ class KickStateMachine:
             self.logger.info("\n[KICK FSM] Positioning complete! Executing kick...")
             self.agent.cmd_vel(0, 0, 0)
             self.agent.move_head(0.0, 0.0)
-            time.sleep(2)
             self.agent.kick()
-            time.sleep(2)
+            time.sleep(5)
             self.agent.move_head(inf, inf)
             self.logger.info("[KICK FSM] Kick executed successfully!")
             self.adjust_position()
@@ -142,10 +141,11 @@ class KickStateMachine:
 
     def good_angle(self):
         """Check if angle is within acceptable range"""
-        if self.agent.get_self_pos()[1] > 4000:
+        field_length = self.agent.get_config().get("field_size", {}).get(self.agent.league, "kid")[0]
+        if self.agent.get_self_pos()[1] > field_length/2:
             target_angle_rad = 0.0
         else:
-            target_angle_rad = math.atan2(self.agent.get_self_pos()[0], 5000 - self.agent.get_self_pos()[1])
+            target_angle_rad = math.atan2(self.agent.get_self_pos()[0], field_length/2 - self.agent.get_self_pos()[1])
         ang_tar = math.degrees(target_angle_rad)
         ang_delta = ang_tar - self.agent.get_self_yaw()
         result = abs(ang_delta) < self.good_angle_threshold_degree
@@ -157,10 +157,11 @@ class KickStateMachine:
     
     def really_not_good_angle(self):
         """Check if angle is outside large acceptable range"""
-        if self.agent.get_self_pos()[1] > 4000:
+        field_length = self.agent.get_config().get("field_size", {}).get(self.agent.league, "kid")[0]
+        if self.agent.get_self_pos()[1] > field_length:
             target_angle_rad = 0.0
         else:
-            target_angle_rad = math.atan2(self.agent.get_self_pos()[0], 5000 - self.agent.get_self_pos()[1])
+            target_angle_rad = math.atan2(self.agent.get_self_pos()[0], field_length - self.agent.get_self_pos()[1])
         ang_tar = math.degrees(target_angle_rad)
         ang_delta = ang_tar - self.agent.get_self_yaw()
         result = abs(ang_delta) >= self.really_bad_angle_threshold_degree
@@ -181,20 +182,24 @@ class KickStateMachine:
     def adjust_horizontally(self):
         """Adjust left-right position relative to ball"""
         self.logger.info("\n[LR ADJUST] Starting lateral adjustment...")
-        
-        if not self.good_position_horizontally():
-            ball_angle = self.agent.get_ball_angle()
-            if ball_angle > self.horizontal_adjust_threshold_rad:
-                self.logger.info(f"[LR ADJUST] Moving left (Ball Angle: {math.degrees(ball_angle):.2f}°)")
-                self.agent.cmd_vel(0, self.horizontal_adjust_forward_vel, 0)
-            elif ball_angle < -self.horizontal_adjust_threshold_rad:
-                self.logger.info(f"[LR ADJUST] Moving right (Ball Angle: {math.degrees(ball_angle):.2f}°)")
-                self.agent.cmd_vel(0, -self.horizontal_adjust_forward_vel, 0)
+        ball_x = self.agent.get_ball_pos()[0]
+        center = (self.horizontal_position_lower_threshold_m + self.horizontal_position_upper_threshold_m) / 2
+        if abs(ball_x - center) < 0.2:
+            y_vel = 0.5
+        else:
+            y_vel = self.lateral_vel
+
+        if ball_x > center:
+            self.logger.info(f"[KICK LR ADJUST] Moving left (Ball X: {ball_x:.2f}mm)")
+            self.agent.cmd_vel(0, - y_vel, 0)
+        elif ball_x < center:
+            self.logger.info(f"[KICK LR ADJUST] Moving right (Ball X: {ball_x:.2f}mm)")
+            self.agent.cmd_vel(0, y_vel, 0)
 
     def good_position_horizontally(self):
         """Check if left-right position is correct"""
         ball_x = self.agent.get_ball_pos()[0]
-        result = abs(ball_x) < self.horizontal_position_threshold_mm
+        result = self.horizontal_position_lower_threshold_m < ball_x < self.horizontal_position_upper_threshold_m
 
         self.logger.info(
             f"[LR CHECK] Ball X offset: {ball_x:.2f}mm (OK? {'Yes' if result else 'No'})"
@@ -236,7 +241,8 @@ class KickStateMachine:
         dribble_config = self._config.get("kick", {})
         self.good_angle_threshold_degree = dribble_config.get("good_angle_threshold_degree", 10)
         self.really_bad_angle_threshold_degree = dribble_config.get("really_bad_angle_threshold_degree", 30)
-        self.horizontal_position_threshold_mm = dribble_config.get("horizontal_position_threshold_mm", 30)
+        self.horizontal_position_upper_threshold_m = dribble_config.get("horizontal_position_upper_threshold_m", 30)
+        self.horizontal_position_lower_threshold_m = dribble_config.get("horizontal_position_lower_threshold_m", -30)
         self.horizontal_adjust_threshold_rad = math.radians(dribble_config.get("horizontal_adjust_threshold_degree", 5))
         
         self.min_kick_distance_m = dribble_config.get("min_kick_distance_m", 0.3)

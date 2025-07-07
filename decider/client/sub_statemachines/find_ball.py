@@ -140,6 +140,7 @@ class FindBallStateMachine:
                     0,
                     ball_angle_from_other_robots/np.pi * self.walk_vel_theta * 2
                 )
+                return
             elif abs(target_angle_rad) > math.pi * 0.8:
                 rotate_vel = self.last_rotaion * self.rotation_vel_theta
             else:

@@ -132,20 +132,20 @@ class ChaseBallStateMachine:
         if self.obstacle_avoidance:
             # Check for obstacles and adjust y velocity accordingly
             self.logger.info("[CHASE BALL FSM] Using obstacle avoidance...")
-            x_vel, y_vel = self.agent.get_obstacle_avoidance_velocity()
+            x_vel, theta_vel = self.agent.get_obstacle_avoidance_velocity()
             if x_vel > self.walk_vel_x or x_vel is None:
                 x_vel = self.walk_vel_x
-            if y_vel is None:
-                self.logger.warn("[CHASE BALL FSM] Obstacle avoidance failed, using default y velocity.")
-                y_vel = 0.0
+            if theta_vel is None:
+                self.logger.warn("[CHASE BALL FSM] Obstacle avoidance failed, using default theta velocity.")
+                theta_vel = 0.0
         else:
             # No obstacle avoidance, use default y velocity
-            y_vel = 0.0
+            theta_vel = 0.0
 
         self.agent.cmd_vel(
             x_vel,
-            y_vel,
-            self.agent.get_ball_angle()/np.pi * self.walk_vel_theta * 2
+            0.0,
+            self.agent.get_ball_angle()/np.pi * self.walk_vel_theta * 2 + theta_vel
         )
         self.logger.info("[CHASE BALL FSM] Forward movement step completed.")
 

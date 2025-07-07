@@ -153,6 +153,8 @@ class GoalkeeperStateMachine:
         elif yaw <= -math.pi / 2:
             yaw = -math.pi / 2
 
+        yaw = 0
+
         self.agent._state_machine_runners['dribble'](aim_yaw=yaw)
 
     def run(self):

@@ -21,7 +21,7 @@ initial_pos:
   y: 0
   theta: 0
 
-league: "kid" # "kid"adult
+league: "adult" # "kid"adult
 
 # ball
 close_to_ball_threshold: 0.5
@@ -96,21 +96,22 @@ dribble:
   goal_center_bias_m: 0.5
   walk_vel_x: 1
   back_vel: 0.05
-  horizontal_adjust_vel_y: 0.6  # 0.6
+  rotate_vel_theta: 0.7
+  horizontal_adjust_vel_y: 0.5  # 0.6
   horizontal_adjust_vel_theta: 1 #0.5
   walk_vel_theta: 1
-  adjust_angle_to_goal_vel_y: 1  #0.5
+  adjust_angle_to_goal_vel_y: 1.0  #0.5
   adjust_angle_to_goal_vel_theta: 1 #0.5
   min_ball_distance_m: 0.0
-  max_ball_distance_m: 0.40
-  good_horizontal_position_to_ball_upper_threshold_m: 0.15
-  good_horizontal_position_to_ball_lower_threshold_m: 0.05
+  max_ball_distance_m: 0.5
+  good_horizontal_position_to_ball_upper_threshold_m: 0.08
+  good_horizontal_position_to_ball_lower_threshold_m: 0.00
   lost_angle_to_target_threshold_degree: 20
-  lost_ball_x_threshold_m: 0.15
+  lost_ball_x_threshold_m: 0.16
   lost_ball_distance_threshold_m: 0.8
   dribble_0_y: 7
   dribble_forward_vel_y: 1 #0.5
-  camera_bias: 0.06  # camera bias in x direction
+  camera_bias: 0.035  # camera bias in x direction
   blind_dribble_thres_percent: 1.0
   obstacle_avoidance: false
 find_ball:
@@ -124,7 +125,7 @@ go_back_to_field:
   aim_x: 1.5
   aim_y: 2.0
   aim_yaw: 0
-  min_dist: 0.5
+  min_dist: 1.0
   coarse_yaw_threshold_degree: 30
   fine_yaw_start_threshold_degree: 20
   fine_yaw_end_threshold_degree: 5
@@ -142,13 +143,14 @@ chase:
 kick:
   good_angle_threshold_degree: 10
   really_bad_angle_threshold_degree: 30
-  horizontal_position_threshold_mm: 30
+  horizontal_position_lower_threshold_m: 0.06
+  horizontal_position_upper_threshold_m: 0.10
   horizontal_adjust_threshold_degree: 5
   min_kick_distance_m: 0
-  max_kick_distance_m: 0.38
+  max_kick_distance_m: 0.15
   lost_ball_distance_threshold_m: 0.8
-  forward_vel: 0.1
-  lateral_vel: 0.04
+  forward_vel: 0.3
+  lateral_vel: 0.8
   rotate_vel_theta: 0.5
   horizontal_adjust_forward_vel: 0.05
   rotate_vel_y: 0.05

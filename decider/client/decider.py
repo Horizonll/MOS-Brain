@@ -118,7 +118,9 @@ class Agent(Node):
         self.penalize_end_time = self._get_initial_time()
 
         # relocalization
-        self.relocalize()
+        for i in range(4):
+            self.relocalize()
+
         
         # 创建定时器，替代ROS 1中的while循环
         timer_period = 1.0 / self.loop_rate  # 默认10Hz
@@ -209,7 +211,7 @@ class Agent(Node):
                 self._state_machine_runners['go_back_to_field']()
             elif current_time - self.penalize_end_time < self.start_walk_into_field_time:
                 self._state_machine_runners['go_back_to_field']()
-            elif self.receiver.is_goalkeeper:
+            elif self._config.get("if_goalkeeper", False):
                 self.get_logger().info("Running: goalkeeper (is_goalkeeper)")
                 self._state_machine_runners['goalkeeper']()
             elif current_time - self._last_play_time < 10.0 and not self.receiver.kick_off:
@@ -283,7 +285,7 @@ class Agent(Node):
         """Debug mode execution loop."""
         try:
             # self.get_logger().info(f"ball angle: {self.get_ball_angle()}")
-            # self.get_logger().info(f"ball pos: {self.get_ball_pos()}")
+            self.get_logger().info(f"ball pos: {self.get_ball_pos()}")
             self.get_logger().info(f"self_pos: {self.get_self_pos()}")
             self.get_logger().info(f"self_yaw: {self.get_self_yaw()}")
             cmd = self._command["command"]
@@ -294,7 +296,7 @@ class Agent(Node):
                 self._state_machine_runners[cmd]()
                 pass
             else:
-                self.get_logger().error(f"Error: State machine {cmd} not found. Stopping.")
+                # self.get_logger().error(f"Error: State machine {cmd} not found. Stopping.")
                 self.stop()
                 
         except Exception as e:
@@ -603,7 +605,7 @@ class Agent(Node):
         Calculate the velocity to avoid obstacles based on their positions.
         
         Returns:
-            tuple: (x_velocity, y_velocity) for obstacle avoidance
+            tuple: (linear_velocity, angular_velocity) for obstacle avoidance
         """
         obstacles = self.get_obstacles(behind_ball=False, return_radians=False)
         if not obstacles:
@@ -689,19 +691,19 @@ class Agent(Node):
         
         # 纵向速度控制：低于阈值时停止，否则保持最大速度
         if closest_distance < self.obstacle_stop_distance:
-            longitudinal_velocity = 0.0  # 低于阈值，停止前进
+            linear_velocity = 0.0  # 低于阈值，停止前进
         else:
-            longitudinal_velocity = 1.0  # 保持最大速度
+            linear_velocity = 1.0  # 保持最大速度
         
-        # 横向速度控制：二值决策（动或不动）
-        if abs(target_y) < 0.01:  # 目标位置接近中心，不需要横向移动
-            lateral_velocity = 0.0
-        else:
-            lateral_velocity = (-0.5 if target_y > 0 else 0.5)
+        # 旋转速度控制：基于目标位置计算旋转速度
+        # 使用比例控制，使旋转速度与目标位置偏离中心的程度成正比
+        # 最大旋转速度限制为50%
+        max_angular_velocity = 0.5
+        angular_velocity = -target_y * (max_angular_velocity / safe_width)
 
-        self.get_logger().info(f"Obstacle avoidance velocities: longitudinal={longitudinal_velocity}, lateral={lateral_velocity}")
+        self.get_logger().info(f"Obstacle avoidance velocities: linear={linear_velocity}, angular={angular_velocity}")
         
-        return longitudinal_velocity, lateral_velocity
+        return linear_velocity, angular_velocity
 
     def get_obstacle_avoidance_angle_degree(self, aim_yaw: float = 0.0) -> float:
         """
