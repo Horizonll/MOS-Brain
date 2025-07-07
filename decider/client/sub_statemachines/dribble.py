@@ -332,6 +332,8 @@ class DribbleStateMachine:
             f"[ANGLE CHECK] Bad yaw angle: {'Yes' if result else 'No'} (angle delta: {abs(self.aim_yaw - self.agent.get_self_yaw()):.2f}°)"
         )
         return result
+    
+
 
     def adjust_yaw_angle(self):
         """Adjust robot's yaw angle relative to the goal"""
@@ -341,12 +343,14 @@ class DribbleStateMachine:
         target_angle_deg = self.aim_yaw
         current_yaw = self.agent.get_self_yaw()
         yaw_delta = target_angle_deg - current_yaw
-        yaw_delta = self.agent.angle_normalize(yaw_delta * math.pi/180) * 180 / math.pi  # Convert to degrees
+        yaw_delta_rad = yaw_delta * math.pi / 180
+        yaw_delta_rad_normalized = self.agent.angle_normalize(yaw_delta_rad)
+        yaw_delta = yaw_delta_rad_normalized * 180 / math.pi
 
         self.logger.info(
             f"[DRIBBLE FSM] Target yaw: {target_angle_deg:.2f}°, Current yaw: {current_yaw:.2f}°, Delta: {yaw_delta:.2f}°"
         )
-
+        
         if yaw_delta > self.good_angle_to_goal_threshold_degree:
             self.logger.info(f"[DRIBBLE FSM] Rotating CCW (Δ={yaw_delta:.2f}°)")
             self.agent.cmd_vel(0, -self.adjust_angle_to_goal_vel_y, self.adjust_angle_to_goal_vel_theta)

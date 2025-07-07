@@ -24,7 +24,7 @@ COMMANDS_DATA = {
     "find_ball": {},
     "chase_ball": {},
     "kick": {},
-    "go_back_to_field": {'aim_x': 0.0, 'aim_y': 0, 'aim_yaw': 0},
+    "go_back_to_field": {'aim_x': 0.0, 'aim_y': 2.0, 'aim_yaw': 0},
     "exit": {},
     "goalkeeper": {}
 }
