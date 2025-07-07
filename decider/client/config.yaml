@@ -1,4 +1,4 @@
-id: 21
+id: 0
 team_id: 12
 
 # kick
@@ -82,6 +82,13 @@ search_ball_head_angle:
 # sundry
 if_can_kick: false
 
+obstacle_avoidance:
+  obstacle_max_distance: 4.0
+  obstacle_stop_distance: 1.5
+  obstacle_min_size: 0.1
+  safe_width: 0.8
+  safe_angle_degrees: 10
+
 # statemachines params
 dribble:
   angle_to_ball_adjust_threshold_rad: 11.46
@@ -99,15 +106,18 @@ dribble:
   good_horizontal_position_to_ball_upper_threshold_m: 0.15
   good_horizontal_position_to_ball_lower_threshold_m: 0.05
   lost_angle_to_target_threshold_degree: 20
-  lost_ball_x_threshold_m: 0.08
+  lost_ball_x_threshold_m: 0.15
   lost_ball_distance_threshold_m: 0.8
   dribble_0_y: 7
   dribble_forward_vel_y: 1 #0.5
   camera_bias: 0.06  # camera bias in x direction
   blind_dribble_thres_percent: 1.0
+  obstacle_avoidance: false
 find_ball:
   angle_threshold_degrees: 10
   rotation_vel_theta: 1
+  walk_vel_x: 1
+  walk_vel_theta: 1
   rotation_timeout_seconds: 10
   protection_pose_duration: 0.5
 go_back_to_field:
@@ -122,11 +132,13 @@ go_back_to_field:
   walk_vel_x: 0.5
   walk_vel_theta: 1
   arrive_trust_time: 20
+  obstacle_avoidance: true
 chase:
   close_angle_threshold_rad: 0.8
   walk_vel_x: 1
   walk_vel_theta: 2
   default_chase_distance: 0.4
+  obstacle_avoidance: true
 kick:
   good_angle_threshold_degree: 10
   really_bad_angle_threshold_degree: 30

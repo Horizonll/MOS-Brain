@@ -8,6 +8,7 @@ import os
 import json
 import math
 from pathlib import Path
+import random
 import time
 import signal
 import asyncio
@@ -99,7 +100,8 @@ class Agent(Node):
         self.receiver = Receiver(
             team=self.get_config()["team_id"], 
             player=self.get_config()["id"]-1, 
-            logger=self.get_logger().get_child("receiver")
+            logger=self.get_logger().get_child("receiver"),
+            is_goalkeeper=self.get_config().get("if_goal_keeper", False),
         )
         self.receiver.start()
         self._robot_client = network.Network(self)
@@ -177,8 +179,8 @@ class Agent(Node):
                 pass
             
             # Handle penalized state
-            if penalty == 34:
-                self.get_logger().info(f"Stopping: Player is penalized for {penalty} seconds")
+            if penalty != 0:
+                self.get_logger().info(f"Stopping: Player is penalized for {penalty}")
                 self.stop()
                 self.penalize_end_time = time.time()
                 return
@@ -207,8 +209,14 @@ class Agent(Node):
                 self._state_machine_runners['go_back_to_field']()
             elif current_time - self.penalize_end_time < self.start_walk_into_field_time:
                 self._state_machine_runners['go_back_to_field']()
+            elif self.receiver.is_goalkeeper:
+                self.get_logger().info("Running: goalkeeper (is_goalkeeper)")
+                self._state_machine_runners['goalkeeper']()
             elif current_time - self._last_play_time < 10.0 and not self.receiver.kick_off:
-                self._state_machine_runners['chase_ball']()
+                if not self.get_if_ball():
+                    self._state_machine_runners['find_ball']()
+                elif self.get_ball_distance() > 0.45:
+                    self._state_machine_runners['chase_ball']()
             elif current_time - self._last_command_time > self.offline_time:
                 self._handle_offline_state()
             else:
@@ -309,6 +317,12 @@ class Agent(Node):
         
         self.start_walk_into_field_time = self._config.get("start_walk_into_field_time", 3)
 
+        self.obstacle_min_size = self._config.get("obstacle_avoidance",{}).get("obstacle_min_size", 0.1)
+        self.obstacle_max_distance = self._config.get("obstacle_avoidance",{}).get("obstacle_max_distance", 0.5)
+        self.obstacle_safe_width = self._config.get("obstacle_avoidance",{}).get("safe_width", 0.5)
+        self.obstacle_safe_angle_degrees = self._config.get("obstacle_avoidance",{}).get("safe_angle_degrees", 10)
+        self.obstacle_stop_distance = self._config.get("obstacle_avoidance",{}).get("obstacle_stop_distance", 0.7)
+
     def relocalize(self):
         """Perform relocalization to reset vision data."""
         x = self._config.get("initial_pos", {}).get("x", 0.0)
@@ -351,7 +365,6 @@ class Agent(Node):
     # 归一化角度(-pi,pi)
     def angle_normalize(self, angle: float) -> float:
         """Normalize angle to the range (-pi, pi)."""
-        self.get_logger().info("Normalizing angle")
         if angle is None:
             return None
         angle = angle % (2 * math.pi)
@@ -538,6 +551,295 @@ class Agent(Node):
             return angle_relative
             
         return None
+    
+    def get_obstacles(self, behind_ball=False, return_radians=False) -> List[tuple]:
+        """
+        Return list of obstacles detected by the robot.
+        
+        Args:
+            behind_ball (bool): 是否包含球后方的障碍物
+            return_radians (bool): 是否返回弧度角度范围，否则返回坐标边界
+        
+        Returns:
+            List[tuple]: 障碍物列表，格式取决于 return_radians 参数
+        """
+        objects = self._vision.get_objects()
+        robot_objects = [obj for obj in objects if obj['label'] == 'robot']
+        obstacles_list = []
+
+        ball_distance = self.get_ball_distance()
+        for obj in robot_objects:
+            bound_left_low = obj.get('bound_left_low', None)
+            bound_right_low = obj.get('bound_right_low', None)
+            distance = obj.get('distance', None)
+            
+            # 过滤无效或不符合条件的障碍物
+            if bound_left_low is None or bound_right_low is None:
+                continue
+            elif distance is None or distance > self.obstacle_max_distance:
+                continue
+            elif np.linalg.norm(bound_left_low-bound_right_low) < self.obstacle_min_size:
+                continue
+            elif (not behind_ball) and distance > ball_distance - 0.3:
+                continue
+                
+            # 根据参数决定返回角度范围还是坐标边界
+            if return_radians:
+                # 计算障碍物左右边界的角度（弧度）
+                left_angle = math.atan2(bound_left_low[1], bound_left_low[0]) + math.pi / 2
+                left_angle = self.angle_normalize(left_angle)
+                right_angle = math.atan2(bound_right_low[1], bound_right_low[0]) + math.pi / 2
+                right_angle = self.angle_normalize(right_angle)
+                obstacles_list.append((right_angle, left_angle))
+            else:
+                # 直接返回障碍物的左右边界坐标
+                obstacles_list.append((bound_left_low, bound_right_low))
+
+        self.get_logger().info(f"Detected {len(obstacles_list)} obstacles: {obstacles_list}")
+        return obstacles_list
+    
+    def get_obstacle_avoidance_velocity(self):
+        """
+        Calculate the velocity to avoid obstacles based on their positions.
+        
+        Returns:
+            tuple: (x_velocity, y_velocity) for obstacle avoidance
+        """
+        obstacles = self.get_obstacles(behind_ball=False, return_radians=False)
+        if not obstacles:
+            return 1.0, 0.0  # 无障碍时保持前进
+        
+        safe_width = self.obstacle_safe_width / 2
+        
+        # 转换障碍物坐标单位：毫米 → 米
+        obstacles_meters = []
+        for left_bound, right_bound in obstacles:
+            left_m = np.array(left_bound) / 1000.0
+            right_m = np.array(right_bound) / 1000.0
+            obstacles_meters.append((left_m, right_m))
+        
+        # 构建所有障碍物的区间列表（用于寻找安全间隙）
+        all_obstacle_intervals = []
+        for left_m, right_m in obstacles_meters:
+            left_x = left_m[0]
+            right_x = right_m[0]
+            all_obstacle_intervals.append((left_x, right_x))
+        
+        # 按左边界排序障碍物区间
+        all_obstacle_intervals.sort(key=lambda x: x[0])
+        
+        # 计算全局安全区域（考虑所有障碍物）
+        safe_regions = []
+        last_right = -float('inf')
+        
+        for left, right in all_obstacle_intervals:
+            if left > last_right:
+                safe_regions.append((last_right, left))
+            last_right = max(last_right, right)
+        
+        # 添加最后一个安全区域
+        safe_regions.append((last_right, float('inf')))
+        
+        # 过滤出与安全宽度有交集的安全区域
+        valid_regions = [
+            (left, right) for left, right in safe_regions 
+            if left < safe_width and right > -safe_width
+        ]
+        
+        if not valid_regions:
+            # 如果没有安全区域，选择距离最近的边界
+            leftmost = min([left for left, _ in all_obstacle_intervals]) if all_obstacle_intervals else -safe_width
+            rightmost = max([right for _, right in all_obstacle_intervals]) if all_obstacle_intervals else safe_width
+            
+            if abs(leftmost + safe_width) < abs(rightmost - safe_width):
+                target_y = -safe_width  # 向左移动
+            else:
+                target_y = safe_width   # 向右移动
+        else:
+            # 计算每个安全区域的中心和到当前位置的距离
+            region_scores = []
+            for left, right in valid_regions:
+                center = (left + right) / 2
+                distance = abs(center)  # 距离当前位置的绝对值
+                bias = -center * 0.1    # 右侧区域加分（负值表示右侧）
+                region_scores.append((distance + bias, center))
+            
+            # 选择分数最低的区域（距离最近且偏右侧）
+            _, target_y = min(region_scores, key=lambda x: x[0])
+            
+            # 限制目标位置在安全宽度范围内
+            target_y = max(-safe_width, min(safe_width, target_y))
+        
+        # 仅考虑安全宽度内的障碍物来调整纵向速度
+        safe_obstacles = []
+        for left_m, right_m in obstacles_meters:
+            left_x = left_m[0]
+            right_x = right_m[0]
+            if left_x <= safe_width and right_x >= -safe_width:
+                safe_obstacles.append((left_m, right_m))
+        
+        if not safe_obstacles:
+            return 1.0, 0.0  # 安全宽度内无障碍物
+        
+        # 计算安全宽度内最近障碍物的距离
+        closest_distance = min([
+            np.linalg.norm(np.array([left_m[0], left_m[1]]))
+            for left_m, _ in safe_obstacles
+        ])
+        
+        # 纵向速度控制：低于阈值时停止，否则保持最大速度
+        if closest_distance < self.obstacle_stop_distance:
+            longitudinal_velocity = 0.0  # 低于阈值，停止前进
+        else:
+            longitudinal_velocity = 1.0  # 保持最大速度
+        
+        # 横向速度控制：二值决策（动或不动）
+        if abs(target_y) < 0.01:  # 目标位置接近中心，不需要横向移动
+            lateral_velocity = 0.0
+        else:
+            lateral_velocity = (-0.5 if target_y > 0 else 0.5)
+
+        self.get_logger().info(f"Obstacle avoidance velocities: longitudinal={longitudinal_velocity}, lateral={lateral_velocity}")
+        
+        return longitudinal_velocity, lateral_velocity
+
+    def get_obstacle_avoidance_angle_degree(self, aim_yaw: float = 0.0) -> float:
+        """
+        Return the obstacle avoidance angle in degrees relative to robot's forward direction,
+        considering an aim yaw preference. If aim yaw is within safe interval, return it;
+        otherwise, find an angle within aim_yaw ± 60 degrees.
+        
+        Args:
+            aim_yaw (float): 目标朝向（度），相对于机器人正前方
+        
+        Returns:
+            float: 避障角度（度），相对于机器人正前方
+        """
+        obstacles = self.get_obstacles(behind_ball=True, return_radians=True)
+        if not obstacles:
+            return aim_yaw  # 无障碍物时直接返回目标朝向
+        
+        safe_angle_rad = math.radians(self.obstacle_safe_angle_degrees)
+        aim_yaw_rad = math.radians(aim_yaw)
+        
+        # 标准化目标朝向到[-π, π]
+        aim_yaw_rad = math.fmod(aim_yaw_rad, 2 * math.pi)
+        if aim_yaw_rad > math.pi:
+            aim_yaw_rad -= 2 * math.pi
+        elif aim_yaw_rad < -math.pi:
+            aim_yaw_rad += 2 * math.pi
+        
+        # 合并障碍物角度区间
+        merged_intervals = []
+        for right_angle, left_angle in obstacles:
+            merged_intervals.append((left_angle, right_angle))
+        merged_intervals.sort()
+        
+        # 合并重叠或相邻的区间（内联合并逻辑）
+        merged = []
+        for interval in sorted(merged_intervals):
+            if not merged:
+                merged.append(interval)
+            else:
+                last = merged[-1]
+                if interval[0] <= last[1]:
+                    merged[-1] = (last[0], max(last[1], interval[1]))
+                else:
+                    merged.append(interval)
+        
+        # 定义安全角度范围（以机器人正前方为中心）
+        safe_interval = (-safe_angle_rad, safe_angle_rad)
+        
+        # 检查目标朝向是否在安全区间内且安全区间无障碍物
+        is_aim_safe = (safe_interval[0] <= aim_yaw_rad <= safe_interval[1])
+        is_safe_interval_clear = True
+        for obs_left, obs_right in merged:
+            obs_left = math.fmod(obs_left, 2 * math.pi)
+            if obs_left > math.pi:
+                obs_left -= 2 * math.pi
+            obs_right = math.fmod(obs_right, 2 * math.pi)
+            if obs_right > math.pi:
+                obs_right -= 2 * math.pi
+                
+            if not (obs_right < safe_interval[0] or obs_left > safe_interval[1]):
+                is_safe_interval_clear = False
+                break
+        
+        if is_aim_safe and is_safe_interval_clear:
+            return aim_yaw  # 目标朝向安全且无障碍物
+        
+        # 目标朝向不可行，定义搜索区间（aim_yaw ± 60度）
+        search_left_rad = aim_yaw_rad - math.radians(60)
+        search_right_rad = aim_yaw_rad + math.radians(60)
+        
+        # 标准化搜索区间到[-π, π]
+        search_left_rad = math.fmod(search_left_rad, 2 * math.pi)
+        if search_left_rad > math.pi:
+            search_left_rad -= 2 * math.pi
+        search_right_rad = math.fmod(search_right_rad, 2 * math.pi)
+        if search_right_rad > math.pi:
+            search_right_rad -= 2 * math.pi
+        
+        search_interval = (search_left_rad, search_right_rad)
+        
+        # 寻找安全区域（内联寻找逻辑）
+        safe_regions = []
+        last_right = -math.pi
+        for obs_left, obs_right in merged:
+            obs_left = math.fmod(obs_left, 2 * math.pi)
+            if obs_left > math.pi:
+                obs_left -= 2 * math.pi
+            obs_right = math.fmod(obs_right, 2 * math.pi)
+            if obs_right > math.pi:
+                obs_right -= 2 * math.pi
+                
+            if obs_left > last_right:
+                safe_regions.append((last_right, obs_left))
+            last_right = max(last_right, obs_right)
+        safe_regions.append((last_right, math.pi))
+        
+        # 过滤与搜索区间有交集的安全区域
+        valid_regions = []
+        for left, right in safe_regions:
+            overlap_left = max(left, search_interval[0])
+            overlap_right = min(right, search_interval[1])
+            if overlap_left < overlap_right:
+                valid_regions.append((overlap_left, overlap_right))
+        
+        if not valid_regions:
+            # 无有效区域时，随机选择aim_yaw±60度
+            return aim_yaw + (60 if random.random() > 0.5 else -60)
+        
+        # 选择最接近aim_yaw的安全区域中心
+        closest_region = None
+        min_distance = float('inf')
+        for left, right in valid_regions:
+            center = (left + right) / 2
+            distance = abs(math.fmod(center - aim_yaw_rad, 2 * math.pi))
+            if distance > math.pi:
+                distance = 2 * math.pi - distance
+            if distance < min_distance:
+                min_distance = distance
+                closest_region = (left, right)
+        
+        if closest_region:
+            target_angle = (closest_region[0] + closest_region[1]) / 2
+            avoidance_angle = math.degrees(target_angle)
+        else:
+            # 异常处理：理论上不会到达这里
+            avoidance_angle = aim_yaw + (60 if random.random() > 0.5 else -60)
+        
+        # 限制角度在aim_yaw±60度范围内并标准化
+        min_angle = aim_yaw - 60
+        max_angle = aim_yaw + 60
+        avoidance_angle = max(min_angle, min(max_angle, avoidance_angle))
+        
+        # 标准化角度到[-180, 180]
+        avoidance_angle = math.fmod(avoidance_angle + 180, 360) - 180
+        return avoidance_angle
+        
+        return avoidance_angle
+        
 
     def get_config(self) -> Dict:
         """Return agent configuration."""

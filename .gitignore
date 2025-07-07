@@ -15,4 +15,3 @@ agent.log
 *.png
 log/*
 decider/client/config_override.yaml
-decider/client/config_override.yaml
