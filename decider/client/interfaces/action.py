@@ -42,6 +42,7 @@ class Action:
             JointState, "/THMOS/head_control/manual_command", 1
         )
         self._kick_pub = self.agent.create_publisher(Int32, "/THMOS/motion/kick", 1)
+        self._save_pub = self.agent.create_publisher(Int32, "/THMOS/motion/save", 1)
 
     def _move_head(self, pitch, yaw):
 
@@ -75,3 +76,15 @@ class Action:
         kick_msg.data = 1
         self._kick_pub.publish(kick_msg)
         self.logger.info("Kick command published")
+
+    def save_l(self):
+        save_msg = Int32()
+        save_msg.data = 1
+        self._kick_pub.publish(save_msg)
+        self.logger.info("Save command published")
+
+    def save_r(self):
+        save_msg = Int32()
+        save_msg.data = 2
+        self._kick_pub.publish(save_msg)
+        self.logger.info("Save command published")
