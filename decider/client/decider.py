@@ -364,6 +364,12 @@ class Agent(Node):
         self._action.do_kick()
         self.get_logger().info("Executing the kicking action")
 
+    def save_ball(self, direction):
+        if direction not in [1, 2]:
+            return False
+            
+        self._action.save_ball(direction)
+
     # 归一化角度(-pi,pi)
     def angle_normalize(self, angle: float) -> float:
         """Normalize angle to the range (-pi, pi)."""
@@ -605,11 +611,11 @@ class Agent(Node):
         Calculate the velocity to avoid obstacles based on their positions.
         
         Returns:
-            tuple: (linear_velocity, angular_velocity) for obstacle avoidance
+            tuple: (vx, vy, vtheta) for obstacle avoidance
         """
         obstacles = self.get_obstacles(behind_ball=False, return_radians=False)
         if not obstacles:
-            return 1.0, 0.0  # 无障碍时保持前进
+            return 1.0, 0.0, 0.0  # 无障碍时保持前进
         
         safe_width = self.obstacle_safe_width / 2
         
@@ -681,7 +687,7 @@ class Agent(Node):
                 safe_obstacles.append((left_m, right_m))
         
         if not safe_obstacles:
-            return 1.0, 0.0  # 安全宽度内无障碍物
+            return 1.0, 0.0, 0.0  # 安全宽度内无障碍物
         
         # 计算安全宽度内最近障碍物的距离
         closest_distance = min([
@@ -691,19 +697,23 @@ class Agent(Node):
         
         # 纵向速度控制：低于阈值时停止，否则保持最大速度
         if closest_distance < self.obstacle_stop_distance:
-            linear_velocity = 0.0  # 低于阈值，停止前进
+            vx = 0.0  # 低于阈值，停止前进
+            
+            # 横向速度控制：离障碍物近时使用横向移动
+            max_lateral_velocity = 1.0
+            vy = -target_y * (max_lateral_velocity / safe_width)
+            vtheta = 0.0  # 停止旋转
         else:
-            linear_velocity = 1.0  # 保持最大速度
-        
-        # 旋转速度控制：基于目标位置计算旋转速度
-        # 使用比例控制，使旋转速度与目标位置偏离中心的程度成正比
-        # 最大旋转速度限制为50%
-        max_angular_velocity = 0.5
-        angular_velocity = -target_y * (max_angular_velocity / safe_width)
+            vx = 1.0  # 保持最大前进速度
+            vy = 0.0  # 停止横向移动
+            
+            # 旋转速度控制：离障碍物远时使用旋转
+            max_angular_velocity = 1.0
+            vtheta = -target_y * (max_angular_velocity / safe_width)
 
-        self.get_logger().info(f"Obstacle avoidance velocities: linear={linear_velocity}, angular={angular_velocity}")
+        self.get_logger().info(f"Obstacle avoidance velocities: vx={vx}, vy={vy}, vtheta={vtheta}")
         
-        return linear_velocity, angular_velocity
+        return vx, vy, vtheta
 
     def get_obstacle_avoidance_angle_degree(self, aim_yaw: float = 0.0) -> float:
         """
@@ -841,7 +851,10 @@ class Agent(Node):
         return avoidance_angle
         
         return avoidance_angle
-        
+
+    def get_ball_history(self):
+        """Return the history of ball positions."""
+        return self._vision.get_ball_history()
 
     def get_config(self) -> Dict:
         """Return agent configuration."""

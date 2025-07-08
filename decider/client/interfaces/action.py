@@ -77,14 +77,8 @@ class Action:
         self._kick_pub.publish(kick_msg)
         self.logger.info("Kick command published")
 
-    def save_l(self):
+    def save_ball(self, direction):
         save_msg = Int32()
-        save_msg.data = 1
-        self._kick_pub.publish(save_msg)
-        self.logger.info("Save command published")
-
-    def save_r(self):
-        save_msg = Int32()
-        save_msg.data = 2
+        save_msg.data = direction
         self._kick_pub.publish(save_msg)
         self.logger.info("Save command published")
