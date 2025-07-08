@@ -83,7 +83,7 @@ GameState = Struct(
 
 
 class Receiver:
-    def __init__(self, team=12, player=0, debug=False,  logger=None):
+    def __init__(self, team=12, player=0, debug=False):
         # 基本设置
         self.team = team  # 队伍序号（0或1）
         self.player = player  # 球员序号（0-10，上场只有4个）
@@ -133,9 +133,12 @@ class Receiver:
             self.player_info = self.data.teams[self.team_id].players[self.player]
             self.penalty = self.player_info.penalty
 
+        except socket.timeout:
+            logging.warning("Socket timeout")
+        except ConstError:
+            logging.error("ConstError")
         except Exception as e:
-            print(f"Error receiving data: {e}")
-            pass
+            logging.error("Exception: %s", e)
 
     def receive(self):
         while True:
