@@ -8,10 +8,9 @@ decider/test.py
 **/__pycache__
 *.pyc
 .env/
-config_override.json
 *.swp
 agent.log
 *.log
 *.png
 log/*
-decider/client/config_override.yaml
+config_override.yaml
