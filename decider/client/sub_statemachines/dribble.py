@@ -25,7 +25,7 @@ class DribbleStateMachine:
                 "trigger": "dribble",
                 "source": "forward",
                 "dest": "forward",
-                "conditions": ["not_lost_ball", "not_lost_yaw"],
+                "conditions": ["not_lost_ball_distance", "not_lost_yaw"],
                 "after": "dribble_forward",
             },
             {
@@ -45,21 +45,21 @@ class DribbleStateMachine:
                 "trigger": "dribble",
                 "source": ["forward"],
                 "dest": "pos_to_ball_adjust",
-                "conditions": ["lost_ball"]
+                "conditions": ["lost_ball_x"]
             },
             {
                 "trigger": "dribble",
                 "source": ["horizontal_position_adjust"],
                 "dest": "pos_to_ball_adjust",
-                "conditions": ["lost_ball"],
+                "conditions": ["lost_ball_distance"],
             },
-            {
-                "trigger": "dribble",
-                "source": ["yaw_adjust"],
-                "dest": "pos_to_ball_adjust",
-                "conditions": "bad_distance_for_yaw_adjust",
-                "after": "adjust_pos_to_ball",
-            },
+            # {
+            #     "trigger": "dribble",
+            #     "source": ["yaw_adjust"],
+            #     "dest": "pos_to_ball_adjust",
+            #     "conditions": "bad_distance_for_yaw_adjust",
+            #     "after": "adjust_pos_to_ball",
+            # },
             {
                 "trigger": "dribble",
                 "source": ["pos_to_ball_adjust"],
@@ -395,24 +395,24 @@ class DribbleStateMachine:
         self.logger.info(f"[DRIBBLE FSM] Bad position: {'Yes' if result else 'No'}")
         return result
 
-    def lost_ball(self):
+    def lost_ball_distance(self):
         """
         检查是否丢球
         :return: True 表示丢球，False 表示未丢球
         """
         # neck_angle = self.agent.get_ball_angle()
-        ball_x = self.agent.get_ball_pos()[0] - self.camera_bias
+        # ball_x = self.agent.get_ball_pos()[0] - self.camera_bias
         ball_distance = self.agent.get_ball_distance()
-        ball_x_lost = abs(ball_x) > self.lost_ball_x_threshold_m  # 0.08
-        ball_distance_lost = ball_distance > self.lost_ball_distance_threshold_m # 0.6
+        # ball_x_lost = abs(ball_x) > self.lost_ball_x_threshold_m  # 0.08
+        ball_distance_lost = ball_distance > self.lost_ball_distance_threshold_m
         # yaw_angle = self.agent.get_self_yaw()
         # yaw_angle_lost = abs(yaw_angle) > 30 * math.pi / 180
-        result = ball_distance_lost or ball_x_lost
+        result = ball_distance_lost
         # if yaw_angle_lost:
         #     print(f"[DRIBBLE FSM] Yaw angle lost: {yaw_angle:.2f} rad")
 
         self.logger.info(f"[DRIBBLE FSM] Ball distance: {ball_distance:.2f} m")
-        self.logger.info(f"[DRIBBLE FSM] Lost ball: {'Yes' if result else 'No'}")
+        self.logger.info(f"[DRIBBLE FSM] Lost ball distance: {'Yes' if result else 'No'}")
         return result
 
     def lost_yaw(self):
@@ -442,13 +442,13 @@ class DribbleStateMachine:
     def not_lost_ball_x(self):
         return not self.lost_ball_x()
 
-    def not_lost_ball(self):
+    def not_lost_ball_distance(self):
         """
         检查是否未丢球
         :return: True 表示未丢球，False 表示丢球
         """
-        result = not self.lost_ball() and not self.lost_ball_x()
-        self.logger.info(f"[DRIBBLE FSM] Not lost ball: {'Yes' if result else 'No'}")
+        result = not self.lost_ball_distance()
+        self.logger.info(f"[DRIBBLE FSM] Not lost ball distance: {'Yes' if result else 'No'}")
         return result
     
     def not_lost_yaw(self):

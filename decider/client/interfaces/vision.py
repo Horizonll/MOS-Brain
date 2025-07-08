@@ -9,6 +9,7 @@ from geometry_msgs.msg import Quaternion, Twist, Pose2D, Point
 from nav_msgs.msg import Odometry
 from thmos_msgs.msg import VisionDetections, VisionObj, HeadPose
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+from queue import Queue
 
 class Vision(Node):
     # @public variants:
@@ -70,6 +71,7 @@ class Vision(Node):
         self._ball_pos_accuracy = 0
         self.ball_distance = 6000
         self._search_ball_phase = 0
+        self._ball_history = Queue(maxsize=20)
 
         self._config = self.agent._config
         
@@ -214,6 +216,13 @@ class Vision(Node):
             self._ball_pos_accuracy = best_ball['confidence']
             self.ball_distance = best_ball['distance']
             self._last_ball_time = best_ball['timestamp']
+            self._ball_history.put({
+                'pos': best_ball['relative_pos'],
+                'pos_in_map': best_ball['absolute_pos'],
+                'pos_in_vis': best_ball['bounding_box_center'],
+                'distance': best_ball['distance'],
+                'timestamp': best_ball['timestamp']
+            })
 
     def get_objects(self):
         """
@@ -252,6 +261,15 @@ class Vision(Node):
         
         # 如果所有检查都通过，返回True表示检测到球
         return True
+
+    def get_ball_history(self):
+        """
+        获取球的历史位置数据
+        
+        Returns:
+            list: 包含球的历史位置和时间戳的字典列表
+        """
+        return list(self._ball_history.queue)
 
     def relocal(self, x=0, y=0, theta=0):
         """

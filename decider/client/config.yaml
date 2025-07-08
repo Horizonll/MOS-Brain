@@ -78,6 +78,7 @@ search_ball_head_angle:
   - [0.0, 0.9]
   - [0.9, 0.0]
 # camera is looking around
+camera_bias: 0.035
 
 # sundry
 if_can_kick: false
@@ -161,3 +162,7 @@ goalkeeper:
   rotate_vel_theta: 1.0
   walk_vel_x: 1.0
   walk_vel_y: 1.0
+  ball_acceleration: 0.6
+  no_saving_area_width_m: 0.2
+  unreachable_area_lower_bound_m: 1.5
+  early_time: 2.5
