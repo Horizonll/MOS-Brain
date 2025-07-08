@@ -9,7 +9,7 @@ from geometry_msgs.msg import Quaternion, Twist, Pose2D, Point
 from nav_msgs.msg import Odometry
 from thmos_msgs.msg import VisionDetections, VisionObj, HeadPose
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
-from queue import Queue
+from collections import deque
 
 class Vision(Node):
     # @public variants:
@@ -71,7 +71,7 @@ class Vision(Node):
         self._ball_pos_accuracy = 0
         self.ball_distance = 6000
         self._search_ball_phase = 0
-        self._ball_history = Queue(maxsize=20)
+        self._ball_history = deque(maxlen=20)
 
         self._config = self.agent._config
         
@@ -216,7 +216,7 @@ class Vision(Node):
             self._ball_pos_accuracy = best_ball['confidence']
             self.ball_distance = best_ball['distance']
             self._last_ball_time = best_ball['timestamp']
-            self._ball_history.put({
+            self._ball_history.append({
                 'pos': best_ball['relative_pos'],
                 'pos_in_map': best_ball['absolute_pos'],
                 'pos_in_vis': best_ball['bounding_box_center'],
@@ -269,7 +269,7 @@ class Vision(Node):
         Returns:
             list: 包含球的历史位置和时间戳的字典列表
         """
-        return list(self._ball_history.queue)
+        return list(self._ball_history)
 
     def relocal(self, x=0, y=0, theta=0):
         """

@@ -50,7 +50,7 @@ class ChaseBallStateMachine:
             initial="rotate",
             transitions=self.transitions,
         )
-        self.logger.info(f"[CHASE BALL FSM] Initialized. Starting state: {self.state}")
+        self.logger.debug(f"[CHASE BALL FSM] Initialized. Starting state: {self.state}")
 
     def read_params(self):
         """从配置中读取参数"""
@@ -68,7 +68,7 @@ class ChaseBallStateMachine:
             return False
         angle_close = abs(self.agent.get_ball_angle()) < self.close_angle_threshold_rad
         result = distance_close and angle_close
-        self.logger.info(
+        self.logger.debug(
             f"[CHASE BALL FSM] Close to ball? Distance: {distance_close}, Angle: {angle_close}, Result: {result}"
         )
         return result
@@ -82,7 +82,7 @@ class ChaseBallStateMachine:
         if self.agent.get_ball_angle() is None:
             return False
         target_angle_rad = self.agent.get_ball_angle()
-        self.logger.info(f"[CHASE BALL FSM] Large angle check: {abs(target_angle_rad) > self.close_angle_threshold_rad}")
+        self.logger.debug(f"[CHASE BALL FSM] Large angle check: {abs(target_angle_rad) > self.close_angle_threshold_rad}")
         return abs(target_angle_rad) > self.close_angle_threshold_rad
 
     def small_angle(self):
@@ -96,7 +96,7 @@ class ChaseBallStateMachine:
         """Main execution loop for the state machine"""
         self.agent.move_head(inf, inf)
         command = self.agent.get_command()["command"]
-        self.logger.info(
+        self.logger.debug(
             f"[CHASE BALL FSM] agent.command: {command}, state: {self.state}"
         )
         # if no ball, then stop
@@ -107,13 +107,13 @@ class ChaseBallStateMachine:
 
         self.chase_distance = self.agent.get_command().get("data", {}).get("chase_distance", self.default_chase_distance)
 
-        self.logger.info(f"\n[CHASE BALL FSM] Current state: {self.state}")
-        self.logger.info(f"[CHASE BALL FSM] Triggering 'chase_ball' transition")
+        self.logger.debug(f"\n[CHASE BALL FSM] Current state: {self.state}")
+        self.logger.debug(f"[CHASE BALL FSM] Triggering 'chase_ball' transition")
         self.machine.model.trigger("chase_ball")
 
     def rotate_to_ball(self):
         """Rotate the agent towards the ball"""
-        self.logger.info("[CHASE BALL FSM] Starting to rotate towards the ball...")
+        self.logger.debug("[CHASE BALL FSM] Starting to rotate towards the ball...")
         target_angle_rad = self.agent.get_ball_angle()
         if self.agent.get_if_ball() == False:
             self.logger.warn("[CHASE BALL FSM] Noball,cant rotate")
@@ -123,15 +123,15 @@ class ChaseBallStateMachine:
             0,
             np.sign(target_angle_rad) * self.walk_vel_theta
         )
-        self.logger.info("[CHASE BALL FSM] Rotation step completed.")
+        self.logger.debug("[CHASE BALL FSM] Rotation step completed.")
 
     def move_forward_to_ball(self):
         """Move the agent forward towards the ball"""
-        self.logger.info("[CHASE BALL FSM] Starting to move forward towards the ball...")
+        self.logger.debug("[CHASE BALL FSM] Starting to move forward towards the ball...")
 
         if self.obstacle_avoidance:
             # Check for obstacles and adjust y velocity accordingly
-            self.logger.info("[CHASE BALL FSM] Using obstacle avoidance...")
+            self.logger.debug("[CHASE BALL FSM] Using obstacle avoidance...")
             x_vel, y_vel, theta_vel = self.agent.get_obstacle_avoidance_velocity()
             if x_vel > self.walk_vel_x or x_vel is None:
                 x_vel = self.walk_vel_x
@@ -149,18 +149,18 @@ class ChaseBallStateMachine:
             y_vel,
             self.agent.get_ball_angle()/np.pi * self.walk_vel_theta * 2 + theta_vel
         )
-        self.logger.info("[CHASE BALL FSM] Forward movement step completed.")
+        self.logger.debug("[CHASE BALL FSM] Forward movement step completed.")
 
     def stop_moving(self):
         """Stop the agent's movement"""
-        self.logger.info("[CHASE BALL FSM] Stopping movement...")
+        self.logger.debug("[CHASE BALL FSM] Stopping movement...")
         self.agent.cmd_vel(0, 0, 0)
-        self.logger.info("[CHASE BALL FSM] Movement stopped.")
+        self.logger.debug("[CHASE BALL FSM] Movement stopped.")
 
     def stop_moving_and_set_head(self):
         """Stop the agent's movement and set head position"""
-        self.logger.info("[CHASE BALL FSM] Stopping movement and setting head position...")
+        self.logger.debug("[CHASE BALL FSM] Stopping movement and setting head position...")
         self.agent.cmd_vel(0, 0, 0)
-        self.logger.info("[CHASE BALL FSM] Movement stopped and head position set.")
+        self.logger.debug("[CHASE BALL FSM] Movement stopped and head position set.")
 
     

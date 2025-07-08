@@ -79,15 +79,15 @@ class KickStateMachine:
             initial="angle_adjust",
             transitions=self.transitions,
         )
-        self.logger.info(f"[KICK FSM] Initialized. Starting state: {self.state}")
+        self.logger.debug(f"[KICK FSM] Initialized. Starting state: {self.state}")
 
     def run(self):
         """Main execution loop for the state machine"""
-        self.logger.info("[KICK FSM] Starting kick sequence...")
-        self.logger.info(f"[KICK FSM] if_ball: {self.agent.get_if_ball()} state: {self.state}")
+        self.logger.debug("[KICK FSM] Starting kick sequence...")
+        self.logger.debug(f"[KICK FSM] if_ball: {self.agent.get_if_ball()} state: {self.state}")
         self.agent.move_head(inf, inf)
         if (self.agent.get_ball_distance() > self.lost_ball_distance_threshold_m) and (self.state != "finished"):
-            self.logger.info("[KICK FSM] Ball is too far. Stopping robot.")
+            self.logger.debug("[KICK FSM] Ball is too far. Stopping robot.")
             self.agent.stop()
             return
 
@@ -95,31 +95,31 @@ class KickStateMachine:
             self.state != "finished"
             and self.agent.get_if_ball()
         ):
-            self.logger.info(f"\n[KICK FSM] Current state: {self.state}")
-            self.logger.info(f"[KICK FSM] Triggering 'adjust_position' transition")
+            self.logger.debug(f"\n[KICK FSM] Current state: {self.state}")
+            self.logger.debug(f"[KICK FSM] Triggering 'adjust_position' transition")
             self.adjust_position()  # Changed from trigger to direct call
 
         if (
             self.state == "finished"
         ):
-            self.logger.info("\n[KICK FSM] Positioning complete! Executing kick...")
+            self.logger.debug("\n[KICK FSM] Positioning complete! Executing kick...")
             self.agent.cmd_vel(0, 0, 0)
             self.agent.move_head(0.0, 0.0)
             self.agent.kick()
             time.sleep(5)
             self.agent.move_head(inf, inf)
-            self.logger.info("[KICK FSM] Kick executed successfully!")
+            self.logger.debug("[KICK FSM] Kick executed successfully!")
             self.adjust_position()
 
     def stop(self):
         """Stop the robot's movement"""
-        self.logger.info("[KICK FSM] Stopping robot...")
+        self.logger.debug("[KICK FSM] Stopping robot...")
         self.agent.stop(1)
-        self.logger.info("[KICK FSM] Robot stopped.")
+        self.logger.debug("[KICK FSM] Robot stopped.")
 
     def adjust_angle(self):
         """Adjust robot's angle relative to goal"""
-        self.logger.info("[ANGLE ADJUST] Starting angle adjustment...")
+        self.logger.debug("[ANGLE ADJUST] Starting angle adjustment...")
         
         if self.agent.get_self_pos()[1] > 4000:
             target_angle_rad = 0.0
@@ -128,15 +128,15 @@ class KickStateMachine:
         ang_tar = math.degrees(target_angle_rad)
         ang_delta = ang_tar - self.agent.get_self_yaw()
 
-        self.logger.info(
+        self.logger.debug(
             f"[ANGLE ADJUST] Target angle: {ang_tar:.2f}°, Current yaw: {self.agent.get_self_yaw():.2f}°, Delta: {ang_delta:.2f}°"
         )
 
         if ang_delta > self.good_angle_threshold_degree:
-            self.logger.info(f"[ANGLE ADJUST] Rotating CCW (Δ={ang_delta:.2f}°)")
+            self.logger.debug(f"[ANGLE ADJUST] Rotating CCW (Δ={ang_delta:.2f}°)")
             self.agent.cmd_vel(0, -self.rotate_vel_y, self.rotate_vel_theta)
         elif ang_delta < -self.good_angle_threshold_degree:
-            self.logger.info(f"[ANGLE ADJUST] Rotating CW (Δ={ang_delta:.2f}°)")
+            self.logger.debug(f"[ANGLE ADJUST] Rotating CW (Δ={ang_delta:.2f}°)")
             self.agent.cmd_vel(0, self.rotate_vel_y, -self.rotate_vel_theta)
 
     def good_angle(self):
@@ -150,7 +150,7 @@ class KickStateMachine:
         ang_delta = ang_tar - self.agent.get_self_yaw()
         result = abs(ang_delta) < self.good_angle_threshold_degree
 
-        self.logger.info(
+        self.logger.debug(
             f"[ANGLE CHECK] Angle delta: {abs(ang_delta):.2f}° (OK? {'Yes' if result else 'No'})"
         )
         return result
@@ -166,7 +166,7 @@ class KickStateMachine:
         ang_delta = ang_tar - self.agent.get_self_yaw()
         result = abs(ang_delta) >= self.really_bad_angle_threshold_degree
 
-        self.logger.info(
+        self.logger.debug(
             f"[ANGLE CHECK] Large angle delta: {abs(ang_delta):.2f}° (Bad? {'Yes' if result else 'No'})"
         )
         return result
@@ -181,7 +181,7 @@ class KickStateMachine:
 
     def adjust_horizontally(self):
         """Adjust left-right position relative to ball"""
-        self.logger.info("\n[LR ADJUST] Starting lateral adjustment...")
+        self.logger.debug("\n[LR ADJUST] Starting lateral adjustment...")
         ball_x = self.agent.get_ball_pos()[0]
         center = (self.horizontal_position_lower_threshold_m + self.horizontal_position_upper_threshold_m) / 2
         if abs(ball_x - center) < 0.2:
@@ -190,10 +190,10 @@ class KickStateMachine:
             y_vel = self.lateral_vel
 
         if ball_x > center:
-            self.logger.info(f"[KICK LR ADJUST] Moving left (Ball X: {ball_x:.2f}mm)")
+            self.logger.debug(f"[KICK LR ADJUST] Moving left (Ball X: {ball_x:.2f}mm)")
             self.agent.cmd_vel(0, - y_vel, 0)
         elif ball_x < center:
-            self.logger.info(f"[KICK LR ADJUST] Moving right (Ball X: {ball_x:.2f}mm)")
+            self.logger.debug(f"[KICK LR ADJUST] Moving right (Ball X: {ball_x:.2f}mm)")
             self.agent.cmd_vel(0, y_vel, 0)
 
     def good_position_horizontally(self):
@@ -201,7 +201,7 @@ class KickStateMachine:
         ball_x = self.agent.get_ball_pos()[0]
         result = self.horizontal_position_lower_threshold_m < ball_x < self.horizontal_position_upper_threshold_m
 
-        self.logger.info(
+        self.logger.debug(
             f"[LR CHECK] Ball X offset: {ball_x:.2f}mm (OK? {'Yes' if result else 'No'})"
         )
         return result
@@ -212,14 +212,14 @@ class KickStateMachine:
     
     def adjust_back_forth(self):
         """Adjust forward-backward position relative to ball"""
-        self.logger.info("\n[FB ADJUST] Starting forward adjustment...")
+        self.logger.debug("\n[FB ADJUST] Starting forward adjustment...")
         ball_distance = self.agent.get_ball_distance()
         
         if ball_distance > self.max_kick_distance_m:
-            self.logger.info(f"[FB ADJUST] Moving forward (Distance: {ball_distance:.2f}m)")
+            self.logger.debug(f"[FB ADJUST] Moving forward (Distance: {ball_distance:.2f}m)")
             self.agent.cmd_vel(self.forward_vel, 0, 0)
         elif ball_distance < self.min_kick_distance_m:
-            self.logger.info(f"[FB ADJUST] Moving backward (Distance: {ball_distance:.2f}m)")
+            self.logger.debug(f"[FB ADJUST] Moving backward (Distance: {ball_distance:.2f}m)")
             self.agent.cmd_vel(-self.lateral_vel, 0, 0)
 
     def good_back_forth(self):
@@ -227,7 +227,7 @@ class KickStateMachine:
         ball_distance = self.agent.get_ball_distance()
         result = (self.min_kick_distance_m < ball_distance < self.max_kick_distance_m)
 
-        self.logger.info(
+        self.logger.debug(
             f"[FB CHECK] Ball Distance: {ball_distance:.2f}m (OK? {'Yes' if result else 'No'})"
         )
         return result

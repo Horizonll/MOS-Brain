@@ -12,8 +12,8 @@ class RobotClient:
         self.config = self.agent._config
         # 设置默认的 HOST_IP
         self.HOST_IP = self.config.get('server_ip', '127.0.0.1')
-        self.logger.info("Default Host ip = " + self.HOST_IP)
-        self.logger.info("Default Host ip = " + self.HOST_IP)
+        self.logger.debug("Default Host ip = " + self.HOST_IP)
+        self.logger.debug("Default Host ip = " + self.HOST_IP)
 
         # Start network-related threads
         self.start_network_threads()
@@ -23,20 +23,20 @@ class RobotClient:
         listen_ip_thread = threading.Thread(target=self.listen_server_ip_loop)
         listen_ip_thread.daemon = True
         listen_ip_thread.start()
-        self.logger.info("Started the server IP listening thread")
+        self.logger.debug("Started the server IP listening thread")
 
         # Start the sending thread
         send_thread = threading.Thread(target=self.send_loop)
         send_thread.daemon = True
         send_thread.start()
-        self.logger.info("send_thread started")
-        self.logger.info("Started the sending loop thread")
+        self.logger.debug("send_thread started")
+        self.logger.debug("Started the sending loop thread")
 
         # Start the TCP client thread
         tcp_thread = threading.Thread(target=self.start_tcp_listener_loop)
         tcp_thread.daemon = True
         tcp_thread.start()
-        self.logger.info("Started the TCP client thread")
+        self.logger.debug("Started the TCP client thread")
 
     def listen_server_ip_loop(self):
         while True:
@@ -47,8 +47,8 @@ class RobotClient:
                     new_ip = loop.run_until_complete(self.listen_host_ip())
                     if new_ip:
                         self.HOST_IP = new_ip
-                        self.logger.info("Host ip updated to = " + self.HOST_IP)
-                        self.logger.info("Host ip updated to = " + self.HOST_IP)
+                        self.logger.debug("Host ip updated to = " + self.HOST_IP)
+                        self.logger.debug("Host ip updated to = " + self.HOST_IP)
                 except Exception as e:
                     self.logger.error(f"Error listening for server IP: {e}")
                 finally:
@@ -106,16 +106,16 @@ class RobotClient:
         server = await asyncio.start_server(self.handle_connection,
                                             "0.0.0.0", self.agent._config.get("server_port"))
         addr = server.sockets[0].getsockname()
-        self.logger.info(f"Started listening for TCP command messages at address: {addr}")
+        self.logger.debug(f"Started listening for TCP command messages at address: {addr}")
         try:
             async with server:
                 await server.serve_forever()
         except KeyboardInterrupt:
-            self.logger.info("User interrupted the program, exiting...")
+            self.logger.debug("User interrupted the program, exiting...")
         finally:
             server.close()
             await server.wait_closed()
-            self.logger.info("Server has been closed")
+            self.logger.debug("Server has been closed")
 
     async def handle_connection(self, reader, writer):
         try:
@@ -152,7 +152,7 @@ class RobotClient:
             lambda: UDPProtocol(self, expected_token),
             local_addr=('0.0.0.0', port)
         )
-        self.logger.info(f"Listening for UDP broadcast on port {port}...")
+        self.logger.debug(f"Listening for UDP broadcast on port {port}...")
         try:
             while True:
                 await asyncio.sleep(0.1)
@@ -160,7 +160,7 @@ class RobotClient:
             pass
         finally:
             transport.close()
-        self.logger.info("UDP listener stopped.")
+        self.logger.debug("UDP listener stopped.")
         return getattr(self, 'HOST_IP', None)
 
 
@@ -173,7 +173,7 @@ class UDPProtocol(asyncio.DatagramProtocol):
         received_message = data.decode("utf-8").strip()
         if received_message == self.expected_token:
             self.client.HOST_IP = addr[0]
-            self.logger.info(f"Host IP found: {self.client.HOST_IP}")
+            self.logger.debug(f"Host IP found: {self.client.HOST_IP}")
         else:
             self.logger.warn(f"Received unexpected message: {received_message}")
             self.logger.warn(f"Expected token: {self.expected_token}")

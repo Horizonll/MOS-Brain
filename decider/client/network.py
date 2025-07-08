@@ -12,7 +12,7 @@ class Network:
     def __init__(self, agent):
         self.agent = agent
         self.logger = self.agent.get_logger().get_child("network")
-        self.logger.info("Submodule started")
+        self.logger.debug("Submodule started")
 
         # TODO: read config from file or transfer in from agent
         self.config = {
@@ -42,7 +42,7 @@ class Network:
         except Exception as e:
             self.logger.warn(f"Error stopping send_loop thread: {e}")
             pass
-        self.logger.info("Starting the send_loop thread")
+        self.logger.debug("Starting the send_loop thread")
         self._send_loop_thread = threading.Thread(target=self._send_loop)
         self._send_loop_thread.daemon = True
         self._send_loop_thread.start()
@@ -52,7 +52,7 @@ class Network:
             self._recv_loop_thread.stop()
         except Exception as e:
             pass
-        self.logger.info("Starting the recv_loop thread")
+        self.logger.debug("Starting the recv_loop thread")
         self._recv_loop_thread = threading.Thread(target=self._receive_loop)
         self._recv_loop_thread.daemon = True
         self._recv_loop_thread.start()
@@ -62,7 +62,7 @@ class Network:
             self._find_srv_ip_thread.stop()
         except Exception as e:
             pass
-        self.logger.info("Starting the find_srv_ip thread")
+        self.logger.debug("Starting the find_srv_ip thread")
         self._find_srv_ip_thread = threading.Thread(target=self._find_server_ip)
         self._find_srv_ip_thread.daemon = True
         self._find_srv_ip_thread.start()

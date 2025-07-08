@@ -69,7 +69,7 @@ class Agent(Node):
     def __init__(self, args=None):
         """Initialize the Agent instance and set up ROS 2 node and components."""
         super().__init__('decider')
-        self.get_logger().info("Initializing the Agent instance")
+        self.get_logger().debug("Initializing the Agent instance")
 
         # Parse command line arguments
         self.debug_mode = args.debug if args else False
@@ -94,31 +94,29 @@ class Agent(Node):
         self._last_play_time = time.time()
         
         # Initialize interfaces
-        self.get_logger().info("Registering interfaces")
+        self.get_logger().debug("Registering interfaces")
         self._action = interfaces.action.Action(self)
         self._vision = interfaces.vision.Vision(self)
         self.receiver = Receiver(
             team=self.get_config()["team_id"], 
             player=self.get_config()["id"]-1, 
             logger=self.get_logger().get_child("receiver"),
-            is_goalkeeper=self.get_config().get("if_goal_keeper", False),
         )
-        self.receiver.start()
         self._robot_client = network.Network(self)
         self._robot_client.start_send_loop()
         self._robot_client.start_receive_loop()
         
         # Initialize state machines
-        self.get_logger().info("Initializing sub-state machines")
+        self.get_logger().debug("Initializing sub-state machines")
         self._initialize_state_machines()
         
-        self.get_logger().info(f"Agent instance initialization completed, sleeping for {self.start_wait_time}")
+        self.get_logger().debug(f"Agent instance initialization completed, sleeping for {self.start_wait_time}")
         
         self.decider_start_time = time.time()
         self.penalize_end_time = self._get_initial_time()
 
         # relocalization
-        for i in range(4):
+        for i in range(10):
             self.relocalize()
 
         
@@ -129,7 +127,7 @@ class Agent(Node):
     def timer_callback(self):
         """定时器回调函数，替代ROS 1中的主循环"""
         try:
-            self.get_logger().info(f"Command: {self._command}")
+            self.get_logger().debug(f"Command: {self._command}")
             if self.debug_mode:
                self.debug_run()
             else:
@@ -171,10 +169,10 @@ class Agent(Node):
     def run(self) -> None:
         """Main decision-making loop based on game state and commands."""
         try:
-            state = self.receiver._game_state
+            state = self.receiver.game_state
             # penalized_time = self.receiver.penalized_time
-            penalty = self.receiver._penalty
-            self.get_logger().info(f"penalized = {penalty}")
+            penalty = self.receiver.penalty
+            self.get_logger().debug(f"penalized = {penalty}")
 
             if state == "STATE_INITIAL":
                 # self.relocalize()
@@ -182,7 +180,7 @@ class Agent(Node):
             
             # Handle penalized state
             if penalty != 0:
-                self.get_logger().info(f"Stopping: Player is penalized for {penalty}")
+                self.get_logger().debug(f"Stopping: Player is penalized for {penalty}")
                 self.stop()
                 self.penalize_end_time = time.time()
                 return
@@ -194,13 +192,13 @@ class Agent(Node):
             if state in ['STATE_SET', 'STATE_FINISHED', 'STATE_INITIAL', None]:
                 if state is None:
                     self.decider_start_time = time.time()
-                self.get_logger().info(f"Stopping: Game state is {state}")
+                self.get_logger().debug(f"Stopping: Game state is {state}")
                 self.stop()
                 return
                 
             # Handle ready state
             if state == 'STATE_READY':
-                self.get_logger().info("Running: go_back_to_field (STATE_READY)")
+                self.get_logger().debug("Running: go_back_to_field (STATE_READY)")
                 self._state_machine_runners['go_back_to_field']()
                 return
                 
@@ -212,7 +210,7 @@ class Agent(Node):
             elif current_time - self.penalize_end_time < self.start_walk_into_field_time:
                 self._state_machine_runners['go_back_to_field']()
             elif self._config.get("if_goalkeeper", False):
-                self.get_logger().info("Running: goalkeeper (is_goalkeeper)")
+                self.get_logger().debug("Running: goalkeeper (is_goalkeeper)")
                 self._state_machine_runners['goalkeeper']()
             elif current_time - self._last_play_time < 10.0 and not self.receiver.kick_off:
                 if not self.get_if_ball():
@@ -231,13 +229,13 @@ class Agent(Node):
     def _handle_offline_state(self) -> None:
         """Handle state when command is offline based on ball detection."""
         if not self.get_if_ball():
-            self.get_logger().info("Running: find_ball (lost command, no ball)")
+            self.get_logger().debug("Running: find_ball (lost command, no ball)")
             self._state_machine_runners['find_ball']()
         elif self.get_ball_distance() > 0.45:
-            self.get_logger().info("Running: chase_ball (lost command, far ball)")
+            self.get_logger().debug("Running: chase_ball (lost command, far ball)")
             self._state_machine_runners['chase_ball']()
         else:
-            self.get_logger().info("Running: dribble (lost command, close ball)")
+            self.get_logger().debug("Running: dribble (lost command, close ball)")
             if self.if_can_kick:
                 self._state_machine_runners['kick']()
             else:
@@ -249,10 +247,10 @@ class Agent(Node):
         print("================server cmd = ", cmd)
         
         if not self.get_if_ball() and cmd in ['chase_ball', 'kick', 'dribble']:
-            self.get_logger().info(f"Running: find_ball (server cmd {cmd}, no ball)")
+            self.get_logger().debug(f"Running: find_ball (server cmd {cmd}, no ball)")
             self._state_machine_runners['find_ball']()
         elif cmd in self._state_machine_runners:
-            self.get_logger().info(f"Running: {cmd} (server command)")
+            self.get_logger().debug(f"Running: {cmd} (server command)")
             
             if cmd == 'kick':
                 self._handle_kick_command()
@@ -264,35 +262,35 @@ class Agent(Node):
 
     def _handle_kick_command(self) -> None:
         """Handle kick command with special logic for dribbling vs kicking."""
-        self.get_logger().info(f"=======================> cmd = kick")
+        self.get_logger().debug(f"=======================> cmd = kick")
         self_pos_y = self.get_self_pos()[1]
         
         if self_pos_y < self.dribble_to_kick[0] or self_pos_y > self.dribble_to_kick[1]:
-            self.get_logger().info(f"=======================> cmd = kick case 1")
+            self.get_logger().debug(f"=======================> cmd = kick case 1")
             self.attack_method = "kick"
         if self_pos_y > self.kick_to_dribble[0] and self_pos_y < self.kick_to_dribble[1]:
-            self.get_logger().info(f"=======================> cmd = kick case 2")
+            self.get_logger().debug(f"=======================> cmd = kick case 2")
             self.attack_method = "dribble"
             
         if self.attack_method == "dribble" or not self.if_can_kick:
-            self.get_logger().info(f"=======================> cmd = kick action 1")
+            self.get_logger().debug(f"=======================> cmd = kick action 1")
             self._state_machine_runners['dribble']()
         else:
-            self.get_logger().info(f"=======================> cmd = kick action 2")
+            self.get_logger().debug(f"=======================> cmd = kick action 2")
             self._state_machine_runners["kick"]()
 
     def debug_run(self) -> None:
         """Debug mode execution loop."""
         try:
-            # self.get_logger().info(f"ball angle: {self.get_ball_angle()}")
-            self.get_logger().info(f"ball pos: {self.get_ball_pos()}")
-            self.get_logger().info(f"self_pos: {self.get_self_pos()}")
-            self.get_logger().info(f"self_yaw: {self.get_self_yaw()}")
+            # self.get_logger().debug(f"ball angle: {self.get_ball_angle()}")
+            self.get_logger().debug(f"ball pos: {self.get_ball_pos()}")
+            self.get_logger().debug(f"self_pos: {self.get_self_pos()}")
+            self.get_logger().debug(f"self_yaw: {self.get_self_yaw()}")
             cmd = self._command["command"]
-            # self.get_logger().info(f"Debug_mode: {cmd}")
+            # self.get_logger().debug(f"Debug_mode: {cmd}")
             
             if cmd in self._state_machine_runners:
-                self.get_logger().info(f"Running: {cmd} (server command)")
+                self.get_logger().debug(f"Running: {cmd} (server command)")
                 self._state_machine_runners[cmd]()
                 pass
             else:
@@ -331,7 +329,7 @@ class Agent(Node):
         y = self._config.get("initial_pos", {}).get("y", 0.0)
         theta = self._config.get("initial_pos", {}).get("theta", 0.0)
 
-        self.get_logger().info(f"Relocalizing to position: x={x}, y={y}, theta={theta}")
+        self.get_logger().debug(f"Relocalizing to position: x={x}, y={y}, theta={theta}")
         
         # Reset vision data
         self._vision.relocal(x, y, theta)
@@ -343,7 +341,7 @@ class Agent(Node):
         vel_y *= self._config.get("max_walk_vel_y", 0.1)
         vel_theta *= self._config.get("max_walk_vel_theta", 0.5)
         self._action.cmd_vel(vel_x, vel_y, vel_theta)
-        self.get_logger().info(f"Setting the robot's speed: linear velocity x={vel_x}, y={vel_y}, angular velocity theta={vel_theta}")
+        self.get_logger().debug(f"Setting the robot's speed: linear velocity x={vel_x}, y={vel_y}, angular velocity theta={vel_theta}")
 
     def look_at(self, args) -> None:
         """Set robot's head and neck to look at specified position."""
@@ -352,7 +350,7 @@ class Agent(Node):
     def move_head(self, pitch: float, yaw: float) -> None:
         """Set robot's head and neck angles."""
         self._action._move_head(pitch, yaw)
-        self.get_logger().info(f"Setting the robot's head to {pitch} and neck to {yaw}")
+        self.get_logger().debug(f"Setting the robot's head to {pitch} and neck to {yaw}")
 
     def stop(self, sleep_time: float = 0) -> None:
         """Stop the robot's movement and optionally sleep."""
@@ -362,13 +360,15 @@ class Agent(Node):
     def kick(self) -> None:
         """Execute the kicking action."""
         self._action.do_kick()
-        self.get_logger().info("Executing the kicking action")
+        self.get_logger().debug("Executing the kicking action")
 
     def save_ball(self, direction):
         if direction not in [1, 2]:
+            self.get_logger().info("Save ball direction must be 1 or 2, actually: {}".format(direction))
             return False
-            
-        self._action.save_ball(direction)
+        
+        for _ in range(1):
+            self._action.save_ball(direction)
 
     # 归一化角度(-pi,pi)
     def angle_normalize(self, angle: float) -> float:
@@ -457,7 +457,7 @@ class Agent(Node):
         self_pos = self.get_self_pos()
         goal_x = 0.0
         goal_y = - self._config["field_size"].get(self.league,[9,6])[0] / 2
-        self.get_logger().info(f"Calculating angle to our goal: self_pos={self_pos}, goal_x={goal_x}, goal_y={goal_y}")
+        self.get_logger().debug(f"Calculating angle to our goal: self_pos={self_pos}, goal_x={goal_x}, goal_y={goal_y}")
 
         if self_pos is not None:
             angle_rad = math.atan2(self_pos[0] - goal_x, goal_y - self_pos[1])
@@ -493,13 +493,13 @@ class Agent(Node):
             np.ndarray | None: Averaged ball position in map coordinates (x, y), 
             returns None if no valid data
         """
-        self.get_logger().info("Calculating ball position in map from other robots")
+        self.get_logger().debug("Calculating ball position in map from other robots")
         
         valid_positions = []  # Stores valid (x,y) coordinates
         
         # Iterate through all robot data
         for robot_id, robot_data in self.get_robots_data().items():
-            self.get_logger().info(f"Robot ID: {robot_id}, Data: {robot_data}")
+            self.get_logger().debug(f"Robot ID: {robot_id}, Data: {robot_data}")
             # Convert robot id to int
             robot_id = int(robot_id)
             # Skip self and disconnected robots
@@ -545,16 +545,16 @@ class Agent(Node):
         if ball_pos_in_map is not None:
             # Calculate angle in radians
             ball_pos_relative = ball_pos_in_map - np.array(self.get_self_pos())
-            self.get_logger().info(f"Ball position relative to self: {ball_pos_relative}")
+            self.get_logger().debug(f"Ball position relative to self: {ball_pos_relative}")
             angle_rad = math.atan2(ball_pos_relative[1], ball_pos_relative[0])
-            self.get_logger().info(f"Ball angle in radians: {angle_rad}")
+            self.get_logger().debug(f"Ball angle in radians: {angle_rad}")
             angle_relative = angle_rad - (self.get_self_yaw() / 180 * np.pi) - np.pi / 2
-            self.get_logger().info(f"Ball angle relative to self: {angle_relative}")
+            self.get_logger().debug(f"Ball angle relative to self: {angle_relative}")
             
             # Normalize angle to [-pi, pi)
             angle_relative = (angle_relative + math.pi) % (2 * math.pi) - math.pi
             
-            self.get_logger().info(f"Ball angle from other robots: {angle_relative}")
+            self.get_logger().debug(f"Ball angle from other robots: {angle_relative}")
             
             return angle_relative
             
@@ -603,7 +603,7 @@ class Agent(Node):
                 # 直接返回障碍物的左右边界坐标
                 obstacles_list.append((bound_left_low, bound_right_low))
 
-        self.get_logger().info(f"Detected {len(obstacles_list)} obstacles: {obstacles_list}")
+        self.get_logger().debug(f"Detected {len(obstacles_list)} obstacles: {obstacles_list}")
         return obstacles_list
     
     def get_obstacle_avoidance_velocity(self):
@@ -711,7 +711,7 @@ class Agent(Node):
             max_angular_velocity = 1.0
             vtheta = -target_y * (max_angular_velocity / safe_width)
 
-        self.get_logger().info(f"Obstacle avoidance velocities: vx={vx}, vy={vy}, vtheta={vtheta}")
+        self.get_logger().debug(f"Obstacle avoidance velocities: vx={vx}, vy={vy}, vtheta={vtheta}")
         
         return vx, vy, vtheta
 

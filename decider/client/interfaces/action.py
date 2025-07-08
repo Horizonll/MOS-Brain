@@ -75,10 +75,11 @@ class Action:
         kick_msg = Int32()
         kick_msg.data = 1
         self._kick_pub.publish(kick_msg)
-        self.logger.info("Kick command published")
+        self.logger.debug("Kick command published")
 
     def save_ball(self, direction):
+        
         save_msg = Int32()
         save_msg.data = direction
-        self._kick_pub.publish(save_msg)
+        self._save_pub.publish(save_msg)
         self.logger.info("Save command published")

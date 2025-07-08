@@ -163,6 +163,9 @@ goalkeeper:
   walk_vel_x: 1.0
   walk_vel_y: 1.0
   ball_acceleration: 0.6
-  no_saving_area_width_m: 0.2
-  unreachable_area_lower_bound_m: 1.5
-  early_time: 2.5
+  no_saving_area_width_m: 0.0
+  unreachable_area_lower_bound_m: 2.5
+  unreachable_area_y_distance_m: 3
+  early_time: 3.0
+  close_to_ball_threshold_y_m: 0.5
+  close_to_ball_threshold_x_m: 0.5
