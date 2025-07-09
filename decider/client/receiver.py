@@ -83,8 +83,9 @@ GameState = Struct(
 
 
 class Receiver:
-    def __init__(self, team=12, player=0, debug=False,  logger=None):
+    def __init__(self, team=12, player=0, debug=False,  logger=logging.getLogger(__name__)):
         # 基本设置
+        self.logger = logger
         self.team = team  # 队伍序号（0或1）
         self.player = player  # 球员序号（0-10，上场只有4个）
         self.debug = debug
@@ -134,7 +135,7 @@ class Receiver:
             self.penalty = self.player_info.penalty
 
         except Exception as e:
-            print(f"Error receiving data: {e}")
+            self.logger.debug(f"Error receiving data: {e}")
             pass
 
     def receive(self):

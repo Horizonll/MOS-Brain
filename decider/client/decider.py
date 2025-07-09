@@ -215,7 +215,7 @@ class Agent(Node):
             elif current_time - self._last_play_time < 10.0 and not self.receiver.kick_off:
                 if not self.get_if_ball():
                     self._state_machine_runners['find_ball']()
-                elif self.get_ball_distance() > 0.45:
+                elif self.get_ball_distance() > 0.55:
                     self._state_machine_runners['chase_ball']()
             elif current_time - self._last_command_time > self.offline_time:
                 self._handle_offline_state()

@@ -153,12 +153,12 @@ class Vision(Node):
             # 裁剪前两个值
             position_projection = position_projection[:2]
             if position_projection.shape != (2,):
-                self.logger.error(f"Invalid position_projection format for {label}, expected 2D coordinates")
+                self.logger.debug(f"Invalid position_projection format for {label}, expected 2D coordinates")
                 continue
 
             # 如果有nan值，记录错误并跳过
             if np.isnan(position_projection).any():
-                self.logger.error(f"NaN values found in position_projection for {label}")
+                self.logger.debug(f"NaN values found in position_projection for {label}")
                 continue
 
             # 保存相对坐标（单位：米）

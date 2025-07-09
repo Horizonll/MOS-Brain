@@ -136,7 +136,7 @@ class FindBallStateMachine:
             target_angle_rad = ball_angle_from_other_robots
             if abs(target_angle_rad) < 0.7:
                 self.agent.cmd_vel(
-                    self.walk_vel_x,
+                    0,
                     0,
                     ball_angle_from_other_robots/np.pi * self.walk_vel_theta * 2
                 )

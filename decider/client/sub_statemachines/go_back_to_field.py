@@ -133,8 +133,16 @@ class GoBackToFieldStateMachine:
         #    self.agent.stop(0.5)
         #    return
         if self.state != "arrived_at_target":
-            # self.agent.move_head(0, 0)
-            self.agent.move_head(inf, inf)
+            yaw = np.radians(self.agent.get_self_yaw())  # 确保yaw是弧度制
+            print(f"[Go Back to Field FSM] Current yaw: {yaw:.2f} degrees, aim_yaw: {np.radians(aim_yaw):.2f} rad")
+            if abs(yaw) > np.pi / 2:
+                if yaw > 0:
+                    self.agent.move_head(0, np.pi - yaw)
+                else:
+                    self.agent.move_head(0, - np.pi - yaw)
+            else:
+                self.agent.move_head(0, - yaw)
+            # self.agent.move_head(inf, inf)
         else:
             self.agent.move_head(inf, inf)
 
