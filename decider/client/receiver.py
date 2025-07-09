@@ -139,12 +139,7 @@ class Receiver:
         except ConstError:
             logging.error("ConstError")
         except Exception as e:
-<<<<<<< HEAD
-            self.logger.debug(f"Error receiving data: {e}")
-            pass
-=======
             logging.error("Exception: %s", e)
->>>>>>> 7c21cb4edf6ff75c58af1adfb96e8fc10316ae36
 
     def receive(self):
         while True:
