@@ -75,7 +75,7 @@ class GoalkeeperStateMachine:
         self.close_to_ball_threshold_x_m = goalkeeper_config.get("close_to_ball_threshold_x_m", 0.5)
         self.close_to_ball_threshold_y_m = goalkeeper_config.get("close_to_ball_threshold_y_m", 0.5)
         self.unreachable_area_y_distance_m = goalkeeper_config.get("unreachable_area_y_distance_m", 3.0)
-        self.self._ignore_ball_vel = goalkeeper_config.get("ignore_ball_vel", 3.0)
+        self._ignore_ball_vel = goalkeeper_config.get("ignore_ball_vel", 3.0)
 
     def close_to_ball(self):
         """Check if the agent is close to the ball"""
@@ -93,7 +93,7 @@ class GoalkeeperStateMachine:
         """Check if the ball is in a safe area (not close to the goal)"""
         ball_pos_in_map = self.agent.get_ball_pos_in_map()
         if ball_pos_in_map is None:
-            self.logger.warning("[GOALKEEPER FSM] Ball position in map is None, assuming safe area.")
+            self.logger.debug("[GOALKEEPER FSM] Ball position in map is None, assuming safe area.")
             return True
         self.logger.debug(f"[GOALKEEPER FSM] Ball position in map: {ball_pos_in_map}")
         safe_area_threshold = self._config.get("safe_area_threshold", -1) + 0.3
@@ -104,7 +104,7 @@ class GoalkeeperStateMachine:
         """Check if the ball is in a dangerous area (close to the goal)"""
         ball_pos_in_map = self.agent.get_ball_pos_in_map()
         if ball_pos_in_map is None:
-            self.logger.warning("[GOALKEEPER FSM] Ball position in map is None, assuming not dangerous area.")
+            self.logger.debug("[GOALKEEPER FSM] Ball position in map is None, assuming not dangerous area.")
             return False
         self.logger.debug(f"[GOALKEEPER FSM] Ball position in map: {ball_pos_in_map}")
         safe_area_threshold = self._config.get("safe_area_threshold", -1)
@@ -203,18 +203,18 @@ class GoalkeeperStateMachine:
         ball_distance = self.agent.get_ball_distance()
         if_ball = self.agent.get_if_ball()
         if ball_pos is None or ball_pos[0] is None or ball_pos[1] is None:
-            self.logger.debug("[GOALKEEPER FSM] Ball position is None, assuming no goal risk.")
+            self.logger.info("[GOALKEEPER FSM] Ball position is None, assuming no goal risk.")
             return False
 
         ball_pos = ball_pos
         ball_vx, ball_vy, x_at_y0, t_delta = self.calculate_ball_velocity_and_prediction()
 
         if not if_ball:
-            self.logger.debug("[GOALKEEPER FSM] Not holding the ball, assuming no goal risk.")
+            self.logger.info("[GOALKEEPER FSM] Not holding the ball, assuming no goal risk.")
             return False
 
         if ball_vx is None or ball_vy is None:
-            self.logger.debug("[GOALKEEPER FSM] Insufficient data to calculate ball velocity and prediction.")
+            self.logger.info("[GOALKEEPER FSM] Insufficient data to calculate ball velocity and prediction.")
             return False
         
         if x_at_y0 is None or t_delta is None:
@@ -222,23 +222,23 @@ class GoalkeeperStateMachine:
             return False
 
         if abs(x_at_y0) < self.no_saving_area_width_m:
-            self.logger.debug("[GOALKEEPER FSM] Ball is outside saving area, assuming no goal risk.")
+            self.logger.info("[GOALKEEPER FSM] Ball is outside saving area, assuming no goal risk.")
             return False
 
         if abs(x_at_y0) > self.unreachable_area_lower_bound_m:
-            self.logger.debug("[GOALKEEPER FSM] Ball is in unreachable area, assuming no goal risk.")
+            self.logger.info("[GOALKEEPER FSM] Ball is in unreachable area, assuming no goal risk.")
             return False
 
         if t_delta > self.early_time:
-            self.logger.debug("[GOALKEEPER FSM] Ball is too late, assuming no goal risk.")
+            self.logger.info("[GOALKEEPER FSM] Ball is too late, assuming no goal risk.")
             return False
 
         if abs(ball_pos[0]) < self.close_to_ball_threshold_x_m and abs(ball_pos[1]) < self.close_to_ball_threshold_y_m:
-            self.logger.debug("[GOALKEEPER FSM] Ball is close, assuming no goal risk.")
+            self.logger.info("[GOALKEEPER FSM] Ball is close, assuming no goal risk.")
             return False
 
         if ball_pos[1] > self.unreachable_area_y_distance_m:
-            self.logger.debug("[GOALKEEPER FSM] Ball is too far, assuming no goal risk.")
+            self.logger.info("[GOALKEEPER FSM] Ball is too far, assuming no goal risk.")
             return False
 
         return True
@@ -249,14 +249,20 @@ class GoalkeeperStateMachine:
 
         ball_vx, ball_vy, x_at_y0, t_delta = self.calculate_ball_velocity_and_prediction()
         if x_at_y0 is None:
-            self.logger.debug("[GOALKEEPER FSM] No valid prediction for ball position, cannot save the ball.")
+            self.logger.info("[GOALKEEPER FSM] No valid prediction for ball position, cannot save the ball.")
             pass
         else:
-            self.logger.debug(f"[GOALKEEPER FSM] Ball will reach y=0 at x={x_at_y0} in {t_delta:.2f} seconds.")
+            self.logger.info(f"[GOALKEEPER FSM] Ball will reach y=0 at x={x_at_y0} in {t_delta:.2f} seconds.")
             if x_at_y0 < 0:
                 self.agent.save_ball(1) # Save the left side
+                self.logger.info(f"[GOALKEEPER FSM] LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL")
+                self.logger.info(f"[GOALKEEPER FSM] LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL")
+                self.logger.info(f"[GOALKEEPER FSM] LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL")
             else:
                 self.agent.save_ball(2) # Save the right side
+                self.logger.info(f"[GOALKEEPER FSM] RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR")
+                self.logger.info(f"[GOALKEEPER FSM] RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR")
+                self.logger.info(f"[GOALKEEPER FSM] RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR")
 
     def calculate_ball_velocity_and_prediction(self):
         """
@@ -279,7 +285,7 @@ class GoalkeeperStateMachine:
         for item in self.agent.get_ball_history():
             self.logger.debug("===============================================")
             self.logger.debug(f"[GOALKEEPER FSM] Ball history item: {item['timestamp']} position{ item['pos']}")
-            if current_time - item['timestamp'] <= 0.5:  # 限制在0.5秒内提高精度
+            if current_time - item['timestamp'] <= 0.3:  # 限制在0.5秒内提高精度
                 recent_positions.append(item)
 
         # 至少需要三个点来进行线性拟合（两个点只能计算平均速度）

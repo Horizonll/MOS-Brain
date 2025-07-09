@@ -135,7 +135,7 @@ class Receiver:
             self.penalty = self.player_info.penalty
 
         except socket.timeout:
-            logging.warning("Socket timeout")
+            logging.debug("Socket timeout")
         except ConstError:
             logging.error("ConstError")
         except Exception as e:
