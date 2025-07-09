@@ -75,6 +75,7 @@ class GoalkeeperStateMachine:
         self.close_to_ball_threshold_x_m = goalkeeper_config.get("close_to_ball_threshold_x_m", 0.5)
         self.close_to_ball_threshold_y_m = goalkeeper_config.get("close_to_ball_threshold_y_m", 0.5)
         self.unreachable_area_y_distance_m = goalkeeper_config.get("unreachable_area_y_distance_m", 3.0)
+        self.self._ignore_ball_vel = goalkeeper_config.get("ignore_ball_vel", 3.0)
 
     def close_to_ball(self):
         """Check if the agent is close to the ball"""
@@ -309,6 +310,11 @@ class GoalkeeperStateMachine:
             # 拟合y方向速度
             vy, _ = np.linalg.lstsq(A, positions[:, 1], rcond=None)[0]
         except np.linalg.LinAlgError:
+            return (None, None, None, None)
+
+        # 忽略太大的速度（可能是异常值）
+        if math.sqrt(vx**2 + vy**2) > self._ignore_ball_vel:  # 假设10m/s为异常速度
+            self.logger.warning("[GOALKEEPER FSM] Detected abnormal ball velocity, returning None.")
             return (None, None, None, None)
 
         # 当前位置（最新记录）

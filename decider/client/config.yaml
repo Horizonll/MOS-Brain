@@ -169,3 +169,4 @@ goalkeeper:
   early_time: 3.0
   close_to_ball_threshold_y_m: 0.5
   close_to_ball_threshold_x_m: 0.5
+  ignore_ball_vel: 3.0
