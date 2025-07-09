@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=%h/Workspace/THMOS/MOS-Brain/decider/scripts/booster_interface.sh
+ExecStart=%h/Workspace/THMOS/MOS-Brain/decider/scripts/interface_booster.sh
 WorkingDirectory=%h/Workspace/interface-booster
 Restart=on-failure
 RestartSec=5s
