@@ -1,0 +1,13 @@
+[Unit]
+Description=Head control service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/Workspace/THMOS/MOS-Brain/decider/scripts/head_control.sh
+WorkingDirectory=%h/Workspace/THMOS/MOS-Brain
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=default.target
