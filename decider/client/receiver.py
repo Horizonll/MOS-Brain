@@ -2,6 +2,7 @@ import socket
 import threading
 import struct
 import logging
+import time
 from construct import ConstError, Byte, Struct, Enum, Bytes, Const, Array, Int16ul
 
 Short = Int16ul
@@ -83,7 +84,9 @@ GameState = Struct(
 
 
 class Receiver:
-    def __init__(self, team=12, player=0, debug=False,  logger=logging.getLogger(__name__)):
+    def __init__(
+        self, team=12, player=0, debug=False, logger=logging.getLogger(__name__)
+    ):
         # 基本设置
         self.logger = logger
         self.team = team  # 队伍序号（0或1）
@@ -103,6 +106,11 @@ class Receiver:
         self.player_info = None
         self.penalty = 0
         self.team_id = None
+        self.corner_kick = None
+        self.throw_in = None
+        self.goal_kick = None
+        self.can_kick = True
+        self.t1 = None
 
         # 创建socket
         self.socket1 = socket.socket(
@@ -134,6 +142,21 @@ class Receiver:
             self.player_info = self.data.teams[self.team_id].players[self.player]
             self.penalty = self.player_info.penalty
 
+            self.corner_kick = (
+                self.data.secondary_state == SecondaryStateEnum.STATE2_CORNER_KICK
+            )
+            self.throw_in = (
+                self.data.secondary_state == SecondaryStateEnum.STATE2_THROW_IN
+            )
+            self.goal_kick = (
+                self.data.secondary_state == SecondaryStateEnum.STATE2_GOAL_KICK
+            )
+            if self.corner_kick or self.throw_in or self.goal_kick:
+                self.can_kick = self.data.secondary_state_info[0] == self.team
+                self.t1 = time.time()
+            elif time.time() - self.t1 > 10:
+                self.can_kick = True
+
         except socket.timeout:
             logging.debug("Socket timeout")
         except ConstError:
@@ -154,6 +177,9 @@ class Receiver:
         print("Kick Off:", self.kick_off)
         print("Penalty:", self.penalty)
         print("Player Info:", self.player_info)
+        print(self.data.secondary_state)
+        print(self.can_kick)
+        # print("secondary_state_info (hex):", self.data.secondary_state_info.hex())
 
     def send_status_to_gamecontroller(self):
         header = b"RGrt"
