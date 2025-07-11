@@ -114,6 +114,7 @@ dribble:
   dribble_forward_vel_y: 1 #0.5
   camera_bias: 0.035  # camera bias in x direction
   blind_dribble_thres_percent: 1.0
+  not_lost_ball_min_ball_y: 0.4
   obstacle_avoidance: false
 find_ball:
   angle_threshold_degrees: 10
