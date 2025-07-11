@@ -120,9 +120,6 @@ class Receiver:
         try:
             data, self.peer = self.socket1.recvfrom(GameState.sizeof())
             self.data = GameState.parse(data)
-            self.game_state = self.data.state
-            self.kick_off = self.data.kick_off_team == self.team
-
             # 确定队伍ID
             if self.data.teams[0].team_number == self.team:
                 self.team_id = 0
@@ -130,6 +127,9 @@ class Receiver:
                 self.team_id = 1
             else:
                 raise AssertionError("Team number does not match!")
+                return
+            self.game_state = self.data.state
+            self.kick_off = self.data.kick_off_team == self.team
 
             self.player_info = self.data.teams[self.team_id].players[self.player]
             self.penalty = self.player_info.penalty
