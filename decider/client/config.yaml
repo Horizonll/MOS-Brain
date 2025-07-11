@@ -21,7 +21,7 @@ initial_pos:
   y: 0
   theta: 0
 
-league: "kid" # "kid"adult
+league: "adult" # "kid"adult
 
 # ball
 close_to_ball_threshold: 0.5
