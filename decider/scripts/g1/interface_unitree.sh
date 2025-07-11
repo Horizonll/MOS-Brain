@@ -6,4 +6,4 @@ export PATH=/usr/local/cuda-11.4/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64:$LD_LIBRARY_PATH
 export LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libgomp.so.1:$LD_PRELOAD
 
-/usr/bin/python3 ~/Workspace/THMOS/interface-booster/interface.py
+~/Workspace/THMOS/interface-unitree/interface-unitree

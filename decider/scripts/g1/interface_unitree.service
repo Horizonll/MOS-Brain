@@ -1,0 +1,13 @@
+[Unit]
+Description=interface for unitree g1 
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/Workspace/THMOS/MOS-Brain/decider/scripts/g1/interface_unitree.sh
+WorkingDirectory=%h/Workspace/THMOS/interface-unitree
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=default.target

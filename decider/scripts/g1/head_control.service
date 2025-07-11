@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=%h/Workspace/THMOS/MOS-Brain/decider/scripts/head_control.sh
+ExecStart=%h/Workspace/THMOS/MOS-Brain/decider/scripts/g1/head_control.sh
 WorkingDirectory=%h/Workspace/THMOS/MOS-Brain
 Restart=on-failure
 RestartSec=5s

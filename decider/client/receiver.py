@@ -151,8 +151,12 @@ class Receiver:
             self.goal_kick = (
                 self.data.secondary_state == SecondaryStateEnum.STATE2_GOAL_KICK
             )
+            self.secondary_state = self.data.secondary_state
+            self.secondary_state_info = self.data.secondary_state_info
+            self.secondary_seconds_remaining = self.data.secondary_seconds_remaining
             if self.corner_kick or self.throw_in or self.goal_kick:
                 self.can_kick = self.data.secondary_state_info[0] == self.team
+                print("secondary_state_info[0]:", self.data.secondary_state_info[0])
                 self.t1 = time.time()
             elif time.time() - self.t1 > 10:
                 self.can_kick = True
@@ -177,9 +181,8 @@ class Receiver:
         print("Kick Off:", self.kick_off)
         print("Penalty:", self.penalty)
         print("Player Info:", self.player_info)
-        print(self.data.secondary_state)
-        print(self.can_kick)
-        # print("secondary_state_info (hex):", self.data.secondary_state_info.hex())
+        print("secondary_state:", self.secondary_state)
+        print("secondary_state_info:", self.data.secondary_state_info)
 
     def send_status_to_gamecontroller(self):
         header = b"RGrt"
