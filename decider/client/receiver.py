@@ -110,7 +110,7 @@ class Receiver:
         self.throw_in = None
         self.goal_kick = None
         self.can_kick = True
-        self.t1 = None
+        self.t1 = 0
 
         # 创建socket
         self.socket1 = socket.socket(
