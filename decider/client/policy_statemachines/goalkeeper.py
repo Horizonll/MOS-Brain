@@ -160,7 +160,7 @@ class GoalkeeperStateMachine:
         """Perform a clearance action"""
         self.logger.debug("[GOALKEEPER FSM] Performing clearance action...")
         
-        yaw = self.agent.get_self_yaw()
+        yaw = self.agent.get_self_yaw() / 180 * math.pi
         if yaw < math.pi / 2 and yaw > -math.pi / 2:
             yaw = 0
         elif yaw >= math.pi / 2:

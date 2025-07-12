@@ -25,7 +25,7 @@ class DribbleStateMachine:
                 "trigger": "dribble",
                 "source": "forward",
                 "dest": "forward",
-                "conditions": ["not_lost_ball_distance", "not_lost_yaw"],
+                "conditions": ["not_lost_ball_distance", "not_lost_yaw", "not_lost_ball_x"],
                 "after": "dribble_forward",
             },
             {
@@ -440,7 +440,11 @@ class DribbleStateMachine:
         return result
 
     def not_lost_ball_x(self):
-        return not self.lost_ball_x()
+        ball_y = self.agent.get_ball_pos()[1]
+        if ball_y < self.not_lost_ball_min_ball_y:
+            return not self.lost_ball_x()
+        else:
+            return True
 
     def not_lost_ball_distance(self):
         """
@@ -589,3 +593,4 @@ class DribbleStateMachine:
         self.camera_bias = self._config.get("dribble", {}).get("camera_bias", 0.06)
         self.blind_dribble_thres_percent = self._config.get("dribble", {}).get("blind_dribble_thres_percent", 1.0)
         self.obstacle_avoidance = self._config.get("dribble", {}).get("obstacle_avoidance", True)
+        self.not_lost_ball_min_ball_y = self._config.get("dribble", {}).get("not_lost_ball_min_ball_y", 0.4)

@@ -1,0 +1,13 @@
+[Unit]
+Description=localization service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/Workspace/THMOS/MOS-Brain/decider/scripts/g1/localization.sh
+WorkingDirectory=%h/Workspace/THMOS/vision/scripts
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=default.target
