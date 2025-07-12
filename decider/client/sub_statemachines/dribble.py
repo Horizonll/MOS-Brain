@@ -160,7 +160,7 @@ class DribbleStateMachine:
     #     """
     #     self.logger.debug("[DRIBBLE FSM] Moving forward...")
 
-    #     vel_x = self.walk_vel_x
+    #     vel_x = self.adjust_pos_to_ball_vel_x
     #     self.agent.cmd_vel(vel_x, 0, (self.agent.get_self_yaw()-self.aim_yaw)/30)
     #     self.logger.debug("[DRIBBLE FSM] Forward movement done")
 
@@ -192,7 +192,7 @@ class DribbleStateMachine:
                 f"[DRIBBLE FSM] ball_distance ({ball_distance}) > {self.max_ball_distance_m}. Moving forward..."
             )
             self.agent.cmd_vel(
-                0.5*self.walk_vel_x,
+                0.5*self.adjust_pos_to_ball_vel_x,
                 0,
                 0,
             )
@@ -201,7 +201,7 @@ class DribbleStateMachine:
                 f"[DRIBBLE FSM] ball_distance ({ball_distance}) > {self.max_ball_distance_m}. Moving forward..."
             )
             self.agent.cmd_vel(
-                self.walk_vel_x,
+                self.adjust_pos_to_ball_vel_x,
                 0,
                 0,
             )
@@ -210,7 +210,7 @@ class DribbleStateMachine:
                 f"[DRIBBLE FSM] ball_distance ({ball_distance}) < 0.35. Moving backward..."
             )
             self.agent.cmd_vel(
-                -self.walk_vel_x,
+                -self.adjust_pos_to_ball_vel_x,
                 0,
                 0,
             )
@@ -500,19 +500,19 @@ class DribbleStateMachine:
         向前带球
         """
         self.logger.debug("[DRIBBLE FSM] Dribbling forward...")
-        vel_x = self.walk_vel_x
+        vel_x = self.adjust_pos_to_ball_vel_x
         ball_x = self.agent.get_ball_pos()[0] - self.camera_bias
         feet_center = (self.good_horizontal_position_to_ball_upper_threshold_m + self.good_horizontal_position_to_ball_lower_threshold_m) / 2
         if ball_x > 0:
             if ball_x > feet_center:
-                vel_theta = -self.horizontal_adjust_vel_theta * 0.2
+                vel_theta = -self.dribble_forward_vel_theta * 0.2
             else:
-                vel_theta = self.horizontal_adjust_vel_theta * 0.1
+                vel_theta = self.dribble_forward_vel_theta * 0.1
         elif ball_x < 0:
             if ball_x < -feet_center:
-                vel_theta = self.horizontal_adjust_vel_theta * 0.2
+                vel_theta = self.dribble_forward_vel_theta * 0.2
             else:
-                vel_theta = -self.horizontal_adjust_vel_theta * 0.1
+                vel_theta = -self.dribble_forward_vel_theta * 0.1
         else:
             vel_theta = 0.0
 
@@ -580,14 +580,12 @@ class DribbleStateMachine:
         )
       
     
-        self.walk_vel_x = self._config.get("dribble", {}).get("walk_vel_x", 0.1)
+        self.adjust_pos_to_ball_vel_x = self._config.get("dribble", {}).get("adjust_pos_to_ball_vel_x", 0.1)
         self.backward_vel = self._config.get("dribble", {}).get("back_vel", 0.05)
         self.horizontal_adjust_vel_y = self._config.get("dribble", {}).get("horizontal_adjust_vel_y", 1.0)
-        self.horizontal_adjust_vel_theta = self._config.get("dribble", {}).get("horizontal_adjust_vel_theta", 1)
+        self.dribble_forward_vel_theta = self._config.get("dribble", {}).get("dribble_forward_vel_theta", 1)
         self.rotate_vel_theta = self._config.get("dribble", {}).get("rotate_vel_theta", 0.3)
-        self.adjust_angle_to_goal_vel_y = self._config.get("dribble", {}).get("adjust_angle_to_goal_vel_y", 0.08)
         self.adjust_angle_to_goal_vel_theta = self._config.get("dribble", {}).get("adjust_angle_to_goal_vel_theta", 1.0)
-        self.drrible_forward_vel_y = self._config.get("dribble", {}).get("drrible_forward_vel_y", 0.5)
         self.camera_bias = self._config.get("dribble", {}).get("camera_bias", 0.06)
         self.blind_dribble_thres_percent = self._config.get("dribble", {}).get("blind_dribble_thres_percent", 1.0)
         self.obstacle_avoidance = self._config.get("dribble", {}).get("obstacle_avoidance", True)
