@@ -71,14 +71,18 @@ class Action:
 
     # kick()
     #   publish a kick command
-    def do_kick(self, death=False):
+    def do_kick(self, foot=0, death=0):
+        """
+        Args:
+            foot: 0 for right, 1 for left
+            death: 0 for normal kick, 1 for death kick
+        """
         kick_msg = Int32()
-        kick_msg.data = 1 if death else 0
+        kick_msg.data = foot + death * 10
         self._kick_pub.publish(kick_msg)
         self.logger.debug("Kick command published")
 
     def save_ball(self, direction):
-        
         save_msg = Int32()
         save_msg.data = direction
         self._save_pub.publish(save_msg)
