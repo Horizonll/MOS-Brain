@@ -89,7 +89,7 @@ class KickStateMachine:
 
         ######################
         field_length = self.agent.get_config().get("field_size", {}).get(self.agent.league, "kid")[0]
-        if self.agent.get_self_pos()[1] > field_length/2:
+        if self.agent.get_self_pos()[1] > field_length/2 * self.blind_kick_thres_percent:
             target_angle_rad = 0.0
         else:
             target_angle_rad = math.atan2(self.agent.get_self_pos()[0], field_length/2 - self.agent.get_self_pos()[1])
@@ -263,6 +263,7 @@ class KickStateMachine:
         self.adjust_angle_vel_y = dribble_config.get("adjust_angle_vel_y", 0.05)
         self.blind_dribble_thres_percent = dribble_config.get("blind_dribble_thres_percent", 1.0)
         self.camera_bias = dribble_config.get("camera_bias", 0.035)
+        self.blind_kick_thres_percent = dribble_config.get("blind_kick_thres_percent", 1.0)
 
 
     # 配置文件（JSON格式）

@@ -71,9 +71,9 @@ class Action:
 
     # kick()
     #   publish a kick command
-    def do_kick(self):
+    def do_kick(self, death=False):
         kick_msg = Int32()
-        kick_msg.data = 1
+        kick_msg.data = 1 if death else 0
         self._kick_pub.publish(kick_msg)
         self.logger.debug("Kick command published")
 

@@ -158,6 +158,7 @@ kick:
   horizontal_adjust_forward_vel: 0.05
   camera_bias: 0.035
   moonwalk_vel_ratio: 0.3
+  blind_kick_thres_percent: 1.0
 goalkeeper:
   safe_area_threshold: -3
   close_to_ball_threshold: 0.5
