@@ -64,11 +64,10 @@ class KickStateMachine:
                 "conditions": "good_position_horizontally",
             },
             {
-                "trigger": "adjust_position",
+                "trigger": "finish",
                 "source": "finished",
                 "dest": "angle_adjust",
-                "conditions": "not_finished",
-                "after": "stop",
+                "after": "stop"
             },
         ]
 
@@ -81,7 +80,7 @@ class KickStateMachine:
         )
         self.logger.debug(f"[KICK FSM] Initialized. Starting state: {self.state}")
 
-    def run(self):
+    def run(self, aim_theta = None):
         """Main execution loop for the state machine"""
         self.logger.debug("[KICK FSM] Starting kick sequence...")
         self.logger.debug(f"[KICK FSM] if_ball: {self.agent.get_if_ball()} state: {self.state}")
@@ -93,6 +92,10 @@ class KickStateMachine:
             target_angle_rad = 0.0
         else:
             target_angle_rad = math.atan2(self.agent.get_self_pos()[0], field_length/2 - self.agent.get_self_pos()[1])
+
+        if aim_theta is not None:
+            target_angle_rad = aim_theta / 180 * math.pi
+
         self.ang_tar = math.degrees(self.agent.angle_normalize(target_angle_rad))
         self.ang_delta = self.agent.angle_normalize((self.ang_tar - self.agent.get_self_yaw()) / 180 * math.pi) * 180 / math.pi
         ######################
@@ -117,10 +120,10 @@ class KickStateMachine:
             self.agent.cmd_vel(0, 0, 0)
             self.agent.move_head(0.0, 0.0)
             self.agent.kick()
-            time.sleep(5)
+            time.sleep(2)
             self.agent.move_head(inf, inf)
             self.logger.debug("[KICK FSM] Kick executed successfully!")
-            self.adjust_position()
+            self.finish()
 
     def stop(self):
         """Stop the robot's movement"""
@@ -174,7 +177,7 @@ class KickStateMachine:
     
     def not_finished(self):
         """Check if positioning is not finished"""
-        return not (self.good_angle() and self.good_back_forth())
+        return not (self.good_angle() or self.good_back_forth() or self.good_position_horizontally())
 
     def adjust_horizontally(self):
         """Adjust left-right position relative to ball"""
@@ -264,6 +267,7 @@ class KickStateMachine:
         self.blind_dribble_thres_percent = dribble_config.get("blind_dribble_thres_percent", 1.0)
         self.camera_bias = dribble_config.get("camera_bias", 0.035)
         self.blind_kick_thres_percent = dribble_config.get("blind_kick_thres_percent", 1.0)
+        self.moonwalk_vel_ratio = dribble_config.get("moonwalk_vel_ratio", 0.3)
 
 
     # 配置文件（JSON格式）
