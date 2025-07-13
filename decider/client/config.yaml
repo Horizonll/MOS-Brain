@@ -155,6 +155,7 @@ kick:
   rotate_vel_theta: 0.5
   horizontal_adjust_forward_vel: 0.05
   rotate_vel_y: 0.05
+  blind_dribble_thres_percent: 1.0
 goalkeeper:
   safe_area_threshold: -3
   close_to_ball_threshold: 0.5

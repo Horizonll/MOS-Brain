@@ -116,13 +116,17 @@ class Agent(Node):
         self.penalize_end_time = self._get_initial_time()
 
         # relocalization
-        for i in range(10):
-            self.relocalize()
+        # for i in range(10):
+        self.relocalize()
 
         
         # 创建定时器，替代ROS 1中的while循环
         timer_period = 1.0 / self.loop_rate  # 默认10Hz
+
         self.timer = self.create_timer(timer_period, self.timer_callback)
+        # self.debug_timer = self.create_timer(timer_period, self.timer_callback)
+
+        self.get_logger().info(f"[===Agent SUCCESSFULLY initialized===] ID: {self.id}, League: {self.league}, Debug mode: {self.debug_mode}")
 
     def timer_callback(self):
         """定时器回调函数，替代ROS 1中的主循环"""
@@ -132,6 +136,7 @@ class Agent(Node):
                self.debug_run()
             else:
                self.run()
+            self._log_info()
         except Exception as e:
             self.get_logger().error(f"Error in timer callback: {e}")
 
@@ -165,6 +170,22 @@ class Agent(Node):
             "stop": self.stop,
             "goalkeeper": self.goalkeeper_state_machine.run,
         }
+
+    def _log_info(self) -> None:
+        """Log current state and command information."""
+        self.get_logger().info(f"========================================")
+        self.get_logger().info(f"Current command: {self._command['command']}")
+        # self.get_logger().info(f"Self position: {self.get_self_pos()}")
+        # self.get_logger().info(f"Ball position: {self.get_ball_pos()}")
+        # self.get_logger().info(f"Ball distance: {self.get_ball_distance()}")
+        # self.get_logger().info(f"Last command time: {self._last_command_time}")
+        # self.get_logger().info(f"Last play time: {self._last_play_time}")
+        # self.get_logger().info(f"Robots data: {self._robots_data}")
+        self.get_logger().info(f"gamestate: {self.receiver.game_state}")
+        if time.time() - self._last_command_time < self.offline_time:
+            self.get_logger().info(f"SERVER CONNECTION: ACTIVE")
+        else:
+            self.get_logger().warning(f"SERVER CONNECTION: INACTIVE")
 
     def run(self) -> None:
         """Main decision-making loop based on game state and commands."""
@@ -863,7 +884,6 @@ class Agent(Node):
 
 def main(args=None):
     """Main entry point for the decider program."""
-    print("Decider started")
     
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Decider program arguments')

@@ -23,7 +23,7 @@ class Network:
             },
             "receive_from_server": {
                 "port": 8002, 
-                "timeout": 10,       # re-qeury server ip after timeout, in second
+                "timeout": None,       # re-qeury server ip after timeout, in second
                 "secret": "PIDcvpasdvfpIFES"
             }, 
             "find_server_ip": {
@@ -35,10 +35,13 @@ class Network:
 
         self.server_ip = None
         self.start_find_srv_ip()
+        self.logger.info("[===Network module initialized===]")
 
     def start_send_loop(self):
         try:
-            self._send_loop_thread.stop()
+            if hasattr(self, "_send_loop_thread") and self._send_loop_thread.is_alive():
+                self.logger.debug("Stopping the send_loop thread")
+                self._send_loop_thread.stop()
         except Exception as e:
             self.logger.warn(f"Error stopping send_loop thread: {e}")
             pass
@@ -78,7 +81,7 @@ class Network:
         
         config = self.config.get("send_robot_data")
         logger = self.logger.get_child("send_loop")
-        logger.info("Started loop")
+        logger.debug("Started loop")
         while True:
             time.sleep(1.0 / config.get("frequency"))
             if self.server_ip == None:
@@ -117,7 +120,7 @@ class Network:
     def _receive_loop(self):
         config = self.config.get("receive_from_server")
         logger = self.logger.get_child("receive_loop")
-        logger.info("Started loop")
+        logger.debug("Started loop")
         recv_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         recv_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
@@ -144,7 +147,7 @@ class Network:
                 else:
                     logger.warn("Received message does not contain 'command' or 'robots_data'")
             except socket.timeout:
-                logger.error(f"Server lost")
+                logger.info(f"Server lost")
                 self.server_ip = None
                 self.start_find_srv_ip()
             except json.JSONDecodeError as e:
@@ -173,7 +176,7 @@ class Network:
         except Exception as e:
             self.logger.warn("SO_REUSEPORT are not supported!")
         client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        logger.info(f"Listening for server ip on {port}")
+        logger.debug(f"Listening for server ip on {port}")
         logger.debug("Secret = {broadcast_secret}")
         client_socket.bind(('', port))
         while True:

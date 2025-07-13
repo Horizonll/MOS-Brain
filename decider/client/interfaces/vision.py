@@ -86,6 +86,12 @@ class Vision(Node):
             history=HistoryPolicy.KEEP_LAST,
             depth=10
         )
+
+        relc_qos_profile = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,  # 可靠传输
+            history=HistoryPolicy.KEEP_LAST,         # 只保留最新消息
+            depth=1                                 # 队列深度为1
+        )
         
         # Create subscribers
         self._location_sub = self.agent.create_subscription(
@@ -105,7 +111,7 @@ class Vision(Node):
         self._relocal_pub = self.agent.create_publisher(
             Pose2D,
             "/THMOS/relocalization",
-            1
+            relc_qos_profile
         )
 
 
