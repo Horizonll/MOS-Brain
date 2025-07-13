@@ -359,7 +359,7 @@ class DribbleStateMachine:
         ball_y_distance = self.agent.get_ball_pos()[1] if not self.agent.get_ball_pos()[1] is None else 0.5
         max_y_vel = self.agent.get_config().get("max_walk_vel_y")
         max_theta_vel = self.agent.get_config().get("max_walk_vel_theta")
-        ratio = max_y_vel / max_theta_vel * 0.3
+        ratio = max_y_vel / max_theta_vel * self.moonwalk_vel_ratio
         
 
 
@@ -594,3 +594,4 @@ class DribbleStateMachine:
         self.blind_dribble_thres_percent = self._config.get("dribble", {}).get("blind_dribble_thres_percent", 1.0)
         self.obstacle_avoidance = self._config.get("dribble", {}).get("obstacle_avoidance", True)
         self.not_lost_ball_min_ball_y = self._config.get("dribble", {}).get("not_lost_ball_min_ball_y", 0.4)
+        self.moonwalk_vel_ratio = self._config.get("dribble", {}).get("moonwalk_vel_ratio", 0.3)

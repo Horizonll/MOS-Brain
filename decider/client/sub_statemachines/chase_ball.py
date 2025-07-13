@@ -60,6 +60,7 @@ class ChaseBallStateMachine:
         self.walk_vel_theta = chase_config.get("walk_vel_theta", 0.3)
         self.default_chase_distance = self._config.get("close_to_ball_threshold", 0.5) - 0.05
         self.obstacle_avoidance = chase_config.get("obstacle_avoidance", True)
+        self.face_to_ball_threshold_degree = chase_config.get("face_to_ball_threshold_degree", 20)
 
     def close_to_ball(self):
         """Check if the agent is close to the ball (距离+角度检查)"""
@@ -159,8 +160,12 @@ class ChaseBallStateMachine:
 
     def stop_moving_and_set_head(self):
         """Stop the agent's movement and set head position"""
+        target_angle_degree = self.agent.get_ball_angle() * 180 / np.pi if self.agent.get_ball_angle() is not None else 0
         self.logger.debug("[CHASE BALL FSM] Stopping movement and setting head position...")
-        self.agent.cmd_vel(0, 0, 0)
+        if abs(target_angle_degree) > self.face_to_ball_threshold_degree:
+            self.agent.cmd_vel(0, 0, np.sign(target_angle_degree) * self.walk_vel_theta)
+        else:
+            self.agent.cmd_vel(0, 0, 0)
         self.logger.debug("[CHASE BALL FSM] Movement stopped and head position set.")
 
     

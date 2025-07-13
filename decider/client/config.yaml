@@ -114,6 +114,7 @@ dribble:
   camera_bias: 0.035  # camera bias in x direction
   blind_dribble_thres_percent: 1.0
   not_lost_ball_min_ball_y: 0.4
+  moonwalk_vel_ratio: 0.3
   obstacle_avoidance: false
 find_ball:
   angle_threshold_degrees: 10
@@ -147,14 +148,16 @@ kick:
   horizontal_position_lower_threshold_m: 0.06
   horizontal_position_upper_threshold_m: 0.10
   horizontal_adjust_threshold_degree: 5
-  min_kick_distance_m: 0
-  max_kick_distance_m: 0.15
+  min_kick_y_distance_m: 0
+  max_kick_y_distance_m: 0.15
   lost_ball_distance_threshold_m: 0.8
-  forward_vel: 0.3
+  forward_vel: 0.5
+  back_vel: 0.3
   lateral_vel: 0.8
-  rotate_vel_theta: 0.5
+  rotate_vel_theta: 1.0
   horizontal_adjust_forward_vel: 0.05
-  rotate_vel_y: 0.05
+  camera_bias: 0.035
+  moonwalk_vel_ratio: 0.3
 goalkeeper:
   safe_area_threshold: -3
   close_to_ball_threshold: 0.5
